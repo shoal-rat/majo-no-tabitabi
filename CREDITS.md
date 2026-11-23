@@ -6,27 +6,18 @@
 
 ## 音乐与音效
 
+### 原创配乐
+
+游戏的背景音乐是本项目的原创配乐，共 13 首：`bgm_title`、`bgm_sun`、`bgm_dusk`、`bgm_night`、`bgm_town`、`bgm_battle`、`bgm_duel`、`bgm_boss`、`bgm_final`、`bgm_ending`、`bgm_flight`、`bgm_home`、`bgm_pages`。全部旋律、和声与编配都以乐谱数据写在仓库里，由仓库内的合成器逐音渲染，不含采样。战斗类曲目另有与主曲同步播放的强度层（`bgm_battle_hot`、`bgm_boss_hot`、`bgm_duel_hot`、`bgm_final_hot`）。[配乐工具与乐谱](tools/music/)
+
 ### PeriTune（Sei Mutsuki）
 
-下列作品的原曲发布于 2016 至 2024 年。作者明确保留 2026 年 2 月及以前已发布作品的 CC BY 4.0 许可。游戏版本做了响度调整与 Ogg/Opus 转码，循环曲和短提示音使用原曲提供的相应版本。[CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) · [PeriTune 许可变更公告](https://peritune.com/blog/2026/03/01/terms-update/)
+下列提示音取自 PeriTune 发布的作品。作者明确保留 2026 年 2 月及以前已发布作品的 CC BY 4.0 许可。游戏版本做了响度调整与 Ogg/Opus 转码，短提示音使用原曲提供的相应版本。[CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) · [PeriTune 许可变更公告](https://peritune.com/blog/2026/03/01/terms-update/)
 
 | 游戏内素材 | 原曲与作者发布页 |
 | --- | --- |
-| `bgm_title` | [Sakuya4](https://peritune.com/blog/2018/12/21/sakuya4/) |
-| `bgm_sun` | [Otogi4](https://peritune.com/blog/2020/04/01/otogi4/) |
-| `bgm_shrine` | [Hanagoyomi2](https://peritune.com/blog/2021/03/29/hanagoyomi2/) |
-| `bgm_dusk` | [Otogi3](https://peritune.com/blog/2019/11/01/otogi3/) |
-| `bgm_night` | [Oboro](https://peritune.com/blog/2019/04/08/oboro/) |
-| `bgm_town` | [Michikusa3](https://peritune.com/blog/2019/11/05/michikusa3/) |
-| `bgm_battle` | [Amenoshita2](https://peritune.com/blog/2016/10/13/amenoshita2/) |
-| `bgm_duel` | [Amenoshita3](https://peritune.com/blog/2020/08/13/amenoshita3/) |
-| `bgm_boss` | [EpicBattle_J](https://peritune.com/blog/2021/09/16/epicbattle_j/) |
-| `bgm_ending` | [Awayuki](https://peritune.com/blog/2023/01/07/awayuki/) |
-| `bgm_flight` | [Zephyr_Fields](https://peritune.com/blog/2024/01/20/zephyr_fields/) |
 | `sfx_learn_fanfare` | [Zephyr_Fields (Jingle)](https://peritune.com/blog/2024/01/20/zephyr_fields/) |
 | `sfx_jingle_festival` | [Ohayashi (Jingle)](https://peritune.com/blog/2019/01/12/ohayashi/) |
-
-终战音乐《Epic Boss Battle》来自 FreePD 公有领域音乐库，游戏中以 `bgm_final` 播放。[FreePD](https://freepd.com/) · [CC0](https://creativecommons.org/publicdomain/zero/1.0/)
 
 ### 其他署名音效
 
@@ -79,7 +70,6 @@
 - **baryy** · 1 项。[Freesound 409146](https://freesound.org/people/baryy/sounds/409146/)
 - **cicifyre** · 9 项。[female rpg voice starter pack](https://opengameart.org/content/female-rpg-voice-starter-pack)
 - **ERR0** · 1 项。[Freesound 210220](https://freesound.org/people/ERR0/sounds/210220/)
-- **FreePD (Public Domain Music)** · 1 项。[freepd.com](https://freepd.com/)
 - **IgnasD** · 3 项。[wind](https://opengameart.org/content/wind) · [ice breakingshattering](https://opengameart.org/content/ice-breakingshattering)
 - **iPoly3D** · 2 项。[nat_crystal_cluster_4](https://poly.pizza/m/WzWPKHFMkL) · [nat_crystal_cluster_5](https://poly.pizza/m/dxCmHfpqc5)
 - **Isa Lousberg** · 2 项。[plant_vine_1](https://poly.pizza/m/HG1d091bLo) · [plant_vine_2](https://poly.pizza/m/BLebrBKjcH)

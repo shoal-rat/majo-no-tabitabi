@@ -278,13 +278,33 @@ export const STEP = {
   flesh: 'step_soft', spirit: 'step_soft', shade: 'step_soft', terrain: 'step_grass', static: 'step_stone', body: 'step_wood',
 };
 
-// Music moods -> track ids.
+// Music moods -> track ids. The score is original (tools/music/, see its README): every track is rendered from a score
+// file there and mastered to -18 LUFS, so MUSIC_TRIM only holds deliberate exceptions.
 export const MUSIC = {
-  title: 'bgm_title', sun: 'bgm_sun', dusk: 'bgm_dusk', night: 'bgm_night', shrine: 'bgm_shrine', town: 'bgm_town',
+  title: 'bgm_title', home: 'bgm_home', sun: 'bgm_sun', dusk: 'bgm_dusk', night: 'bgm_night', town: 'bgm_town', pages: 'bgm_pages',
   flight: 'bgm_flight', battle: 'bgm_battle', duel: 'bgm_duel', boss: 'bgm_boss', final: 'bgm_final', ending: 'bgm_ending',
 };
-// Per-track loudness trim (some tracks are mastered hotter).
-export const MUSIC_TRIM = { bgm_battle: 0.85, bgm_boss: 0.85, bgm_final: 0.85, bgm_duel: 0.85, bgm_town: 0.9 };
+export const MUSIC_TRIM = {};
+// Loop start (seconds) per track. A file is  intro | loop body | the body's first bars again ; it plays from 0 and then
+// loops from here to its end, so the seam lands inside settled music. Written by `node tools/music/render.mjs --install`.
+export const MUSIC_LOOP = {
+  bgm_battle: 3.24325,
+  bgm_boss: 4.285708,
+  bgm_duel: 3.157896,
+  bgm_dusk: 5.869562,
+  bgm_ending: 18.260875,
+  bgm_final: 3,
+  bgm_flight: 3.478271,
+  bgm_home: 4,
+  bgm_night: 10.909083,
+  bgm_pages: 10.909083,
+  bgm_sun: 4.137937,
+  bgm_title: 22.325583,
+  bgm_town: 4.090917,
+};
+// Intensity layers: a second file of the same length, started in sync with its track and faded in with the director's
+// fight intensity (0..1). Track + layer = the full mix.
+export const MUSIC_LAYERS = { bgm_battle: 'bgm_battle_hot', bgm_boss: 'bgm_boss_hot', bgm_duel: 'bgm_duel_hot', bgm_final: 'bgm_final_hot' };
 
 // Ambience beds: base beds (by land) + local layers. vol = full-weight level on the ambience bus.
 export const AMB = {
