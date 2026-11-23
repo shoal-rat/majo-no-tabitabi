@@ -1,0 +1,36 @@
+{
+ "sculpt_lm_cairn": {
+  "file": "models/sculpt/lm_cairn.glb",
+  "type": "model",
+  "license": "CC0 (original work)",
+  "author": "sculpted for this project",
+  "source": "tools/sculpt/assets/lm_cairn.mjs (node tools/sculpt/assets/landmarks_lib.mjs)",
+  "scale": 1,
+  "size": [
+   1.979,
+   2.309,
+   2.154
+  ],
+  "tris": 4200,
+  "lods": [
+   4200,
+   1300,
+   420
+  ],
+  "materials": [
+   "Stone",
+   "Moss"
+  ],
+  "mats": {
+   "Stone": {
+    "surface": "stone",
+    "look": {}
+   },
+   "Moss": {
+    "surface": "none",
+    "look": {}
+   }
+  },
+  "notes": "Sculpted hilltop cairn (landmarks cairn): stacked field stones, chinking, a pointed top stone; 2.1 m like the old stack. Vertex colours on every LOD. Stone -> carved-stone family, Moss -> ivy."
+ }
+}
