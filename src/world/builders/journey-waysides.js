@@ -50,8 +50,32 @@ function sculptedMill(site,ctx,y) {
   ctx.tick((dt)=>{if(G.state?.flags?.journey_mill) sails.rotation.z+=dt*.34*(G.journeyWeather?.state.wind||1);});
   return true;
 }
+// The island's crown: family stones along the brink of the mill island's plateau, where the painted cliff begins, so
+// the rim reads as rock from the lake and the meadow. They sit just inside the brink (the plateau's height is the same
+// before and after the flood; only the slope below changes), skip the causeway and the road, and carry colliders.
+function millCrown(site) {
+  if(!G.sculpt?.on?.('rockfam')) return;
+  const q=G.quality||{}, n=q.mobile||q.name==='low'?10:16, rnd=mulberry32(1818), shapes=['ledge','shelf','field','split','ledge','crag'];
+  const tint=new THREE.Color(0x9c968a).toArray();
+  for(let k=0;k<n;k++) {
+    const phi=(k+.5)/n*Math.PI*2+(rnd()-.5)*.25, dx=Math.cos(phi), dz=Math.sin(phi);
+    if(Math.abs(Math.atan2(dz,dx))<.45) { rnd(); rnd(); continue; }          // the causeway runs east
+    const W=G.world, top=W.heightAt(site.x+dx*10,site.z+dz*10);
+    let rb=0; for(let r=11;r<27;r+=.5) if(W.heightAt(site.x+dx*r,site.z+dz*r)<top-.8){rb=r;break;}
+    const w=2+1.2*rnd(), h=1.1+.8*rnd();
+    if(!rb) continue;
+    const r=rb-1.1-w*.2, x=site.x+dx*r, z=site.z+dz*r;
+    if(W.roadDist?.(x,z)<5) continue;
+    const lx=site.lx(x,z), lz=site.lz(x,z), y=W.heightAt(x,z);
+    const g=siteRock(shapes[k%shapes.length],{w,h,d:w*(.75+.2*rnd()),tint,sink:.18});
+    if(!g) return;
+    site.add(g,lx,y,lz,-phi-site.rot+Math.PI/2+(rnd()-.5)*.6);
+    site.colCyl(lx,lz,w*.38,y-.3,y+h*.85);
+  }
+}
 function mill(site,ctx) {
   const y=site.h(0,0);
+  millCrown(site);
   if(sculptedMill(site,ctx,y)) { site.colCyl(0,0,3.1,y-.7,y+8.65); site.platDisc(0,0,2.25,y+8.4,.6); return; }
   site.add(cyl(2.45,3.15,8.7,limestone,0,y+4.05,0,12));
   site.add(cyl(2.57,2.62,.34,dark,0,y+8.25,0,12));
