@@ -133,6 +133,8 @@ export class PressureField {
         this.h[k] += h;
         this.prev[k] += h;
         this.froth[k] = Math.min(1, this.froth[k] + Math.max(0, ridge*push-.021)*.62);
+        // whitewater churned right behind the bristles: shows at once, before the trail foam
+        if (along < .4 && along > -2.5) this.froth[k] = Math.max(this.froth[k], Math.min(1, 1.5 * s.drive) * Math.exp(-u * u * 1.4));
       }
     }
   }

@@ -300,18 +300,22 @@ Miller 2026; notice in `world/flora/wake-field.js`). Ground/meadow side: docs/ap
 - `world/broom-air-trail.js` — sections now carry `wet` (over water) separately from `bare`, and `gust` (unsteady
   shedding, ±14%, scales the circulation). `sample(pos, t, out, hint = -1)`: with a hint (the ring slot returned last
   time in `trail.hit`) only the newest 4 and the 11 sections around the hint are searched.
-- `world/water/wake-spray.js` — `WakeSpray`: the white plume torn off the water, soft camera-facing sprites in one draw
-  (`ShaderMaterial`, fog, normal blending, never additive). Kinds: bead sheets thrown up and out (velocity-stretched),
-  soft clots (the body), spindrift wound into the vortices (air-trail sampling), faint mist. Capacity 240 mobile,
-  280 / 420 / 560 low / med / high; rate ×0.6 / 0.6 / 0.8 / 1; the outside of a turn throws the taller sheet; sprites
-  thin out within ~3.6 m of the lens. Emitted from `FlightWake.update` while skimming (k = spray × (.55 + .65 drive)).
-  `flightWakeStats()` adds `plume` (live) and `plumeEmitted`.
+- `world/water/wake-spray.js` — `WakeSpray`: the white spray torn off the water, soft camera-facing sprites in one draw
+  (`ShaderMaterial`, fog, normal blending, never additive), stretched along their motion relative to the camera
+  (`uCamVel`). Kinds: a rooster tail of fine beads fanned up and out to both sides (a V) that falls straight back,
+  small clumps where it leaves the water, spindrift wound into the vortices (air-trail sampling), a thin low veil of
+  mist. No large puffs. Capacity 360 mobile, 400 / 600 / 720 low / med / high; rate ×0.6 / 0.6 / 0.8 / 1; the outside of
+  a turn throws the taller sheet; sprites thin out within ~3.6 m of the lens. Emitted from `FlightWake.update` while
+  skimming (k = spray × (.55 + .65 drive)). `flightWakeStats()` adds `plume` (live) and `plumeEmitted`.
+- Whitewater right behind the brush: `PressureField.press` writes froth under the bristles (up to 2.5 m aft), and the
+  water shader reads it as fresh trail foam (`max(vTrailFoam, froth × .85)`), so the patch shows before the trail foam
+  arrives. The trail-foam layer is copied every 0.12 s while skimming (0.25 s otherwise).
 - Trail foam on water: `PressureField.texture` is now a 2-layer `DataArrayTexture` — layer 0 the pressure waves as
   before, layer 1 the trail foam copied (`paintFoam`) from the wake map's alpha into a wider, coarser window
   (n cells × 2.2 / 1.9 / 1.6 m by water tier) every 0.25 s while `wakeFoam.until` lasts. One sampler: the water program
   was at WebGL 2's 16 texture units. `wFoamRegion` (vec4 like `wPressureRegion`). The vertex stage reads it into
   `vTrailFoam`; the fragment turns freshness into churn → lace → flecks (settling into its mean cover beyond ~20–70 m)
-  and adds a little self-light so the foam holds against a bright sky reflection. The fine water grid stays on while
+  and adds self-light (×.62) so the foam holds against a bright sky reflection at grazing angles. The fine water grid stays on while
   foam is out.
 - `player/broom.js` — the gold lantern trail and the day glow of the broom light (`player.js`, `L.intensity`) exist
   only while boosting: `B.glow` rises over 0.15 s when the boost starts and falls over 0.4 s after it ends; the lantern

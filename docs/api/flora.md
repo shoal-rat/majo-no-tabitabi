@@ -363,7 +363,7 @@ laid channel behind a low broom, petals and grass bits torn off and swirled up, 
     `plantWakeAt(root)` in `plantWakeGLSL` hides the toroidal addressing. `wakeFoam.until` = game time until which foam
     may show (the water keeps its fine grid and copies the foam meanwhile).
 - `flora/slipstream.js` — flakes on one instanced mesh (petal 5×5 grid, 32 tris; grass bits = the same mesh thin and
-  long). Capacity 300 / 380 / 640 / 1000 (mobile / low / med / high), emission rate ×0.55 / 0.6 / 0.8 / 1. Emission per
+  long). Capacity 260 / 380 / 640 / 800 (mobile / low / med / high), emission rate ×0.55 / 0.6 / 0.8 / 1. Emission per
   stamped texel ∝ √pressure (a low cruise sheds a clear stream, a boost fills the air): petals from the stripped share ×
   bloom cover (colour = the meadow's regional petal colour), grass bits from the raked grass. Flight: seeded weight /
   grip / flutter, air-trail sampling with a per-flake section hint, an air pocket that drags fresh flakes along with the
@@ -373,3 +373,18 @@ laid channel behind a low broom, petals and grass bits torn off and swirled up, 
   a ±13% sheen by lean vs view direction; the channel reads darker the harder the pass.
 - Known: the far terrain paint does not show the channel (it ends where blades end, ~60–90 m); flower strip is limited
   to meadow the survey accepts (no roads, farms, slopes, riverbanks), so the channel thins at those edges.
+
+### Round 2 (owner review, 2026-11-23)
+- Lay: along the middle the blades are combed flat in the direction of travel (one lay, like a mown stripe), fanning
+  outward toward the edges. `laidTone(col, lay, fromEye)` (in `plantWakeGLSL`): lighter, slightly silvery where the lay
+  runs away from the eye, darker and greener toward it, between the two across. Used by `grass.js`.
+- Closeness: `1 - smoothstep(.8, 6.5, clearance)` (was .55–4.8), so a broom 2–3 m up over a dip still lays a swath.
+- `flora/wake-swath.js` — `WakeSwath`: the swath as a ribbon on the ground (7 vertices across, 256 / 160 segments in
+  a ring, one draw), **multiplied** onto what is drawn (ground and blades) in the same stripe tones, fading with
+  `laidLeft` in the vertex shader. It carries the channel past the blade rings and shows from a look-back 10–15 m up.
+  The terrain program is already at 16 texture units, so the wake map cannot be sampled there.
+- Flakes: counted per metre flown (`MeadowWakeField.swath` = ∫ coreWeight·√pressure across the swath, `coreWeight` =
+  most under the two vortex cores), 26 per metre at full rate, ×(.8 + .2 drive), thinning above 1.2 m clearance and gone
+  by 4.8 m. A low cruise fills about half the boost's count. Born at core height and flicked up above the grass tips.
+  Size varies (petals .07–.25 m). Flakes moving fast relative to the camera are drawn out along that motion (up to
+  ×4.2, not within ~2 m of the lens).

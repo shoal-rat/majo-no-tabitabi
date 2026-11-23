@@ -2,7 +2,8 @@ import * as THREE from 'three';
 import { BELL } from '../../data/bellcrown.js';
 import { hookMaterial } from '../../core/mats.js';
 import { farmWeight } from '../terrain/paddyLayout.js';
-import { MeadowWakeField, wakeFieldSize } from './wake-field.js';
+import { MeadowWakeField, wakeFieldSize, coreWeight } from './wake-field.js';
+import { WakeSwath } from './wake-swath.js';
 
 const smooth=THREE.MathUtils.smoothstep;
 
@@ -70,12 +71,13 @@ function meadowSurvey(G, bed) {
 
 // Grass bits torn off the blades in the wake (never reddened, never grey).
 const BITS=[0x8fb45e,0x7aa24c,0xa9c46e,0x6b9443,0xb8c77a];
+const FLAKES_PER_METRE=26;   // at full rate and drive
 
 export function createSlipstream(G) {
   const q=G.quality||{};
   const tier=q.mobile?0:q.name==='low'?1:q.name==='med'?2:3;
   // Enough flakes that speed reads at a glance: a low cruise sheds a clear stream, a boost a dense one.
-  const capacity=[260,380,640,1000][tier];
+  const capacity=[260,380,640,800][tier];
   const rate=[.55,.6,.8,1][tier];
   const geo=new THREE.BufferGeometry();
   // Smooth spoon-shaped lobes, a tapering base and a small crease along the rib.
@@ -141,8 +143,11 @@ export function createSlipstream(G) {
   }));
   const field=new MeadowWakeField(wakeFieldSize(q)), bed={height:0,cover:0,color:new THREE.Color()};
   const survey=meadowSurvey(G,bed);
+  const swath=new WakeSwath(G,q);
   const water=(x,z)=>!!G.world?.isWater?.(x,z);
   const pose=new THREE.Object3D(),air=new THREE.Vector3(),lastPos=new THREE.Vector3();
+  const camVel=new THREE.Vector3(),lastCam=new THREE.Vector3();
+  let hasCam=false;
   const stats={petals:0,leaves:0,airborne:0};
   const area=field.cell*field.cell;
   let cursor=0,petalCredit=0,leafCredit=0,lastTime=-Infinity,previous=null,stamp=null,budget=0;
@@ -159,11 +164,14 @@ export function createSlipstream(G) {
     p.age=0; p.petal=petal; p.settled=false; p.hint=-1;
     p.seed=Math.random();
     p.life=petal?2.8+1.4*Math.random()+.6*drive:1.7+1.1*Math.random();
-    p.size=petal?.11+.08*Math.random()+.02*drive:.16+.12*Math.random();
+    const rs=Math.random();
+    p.size=petal?.07+.16*rs*rs+.02*drive:.10+.22*rs*rs;
     p.rx=Math.random()*6.283; p.ry=Math.random()*6.283; p.rz=Math.random()*6.283;
     p.sx=(Math.random()-.5)*9; p.sy=(Math.random()-.5)*7; p.sz=(Math.random()-.5)*9;
-    p.nx=-stamp.dz*side; p.nz=stamp.dx*side; p.lift=power;
-    p.pos.set(x+(Math.random()-.5)*2*j,bed.height+(petal?.30+.45*Math.random():.12+.28*Math.random()),z+(Math.random()-.5)*2*j);
+    // even a slow pass flicks them up above the grass tips, where they can be seen
+    p.nx=-stamp.dz*side; p.nz=stamp.dx*side; p.lift=Math.max(.6,power);
+    // born around the height of the vortex cores, so the pair winds them up at once
+    p.pos.set(x+(Math.random()-.5)*2*j,bed.height+.30+.75*Math.random(),z+(Math.random()-.5)*2*j);
     p.floor=bed.height+.025;
     p.nextGroundCheck=.15+.12*Math.random();
     // Torn loose with little speed of their own: the vortices take them from here.
@@ -171,7 +179,7 @@ export function createSlipstream(G) {
     const carry=stamp.speed*(.12+.30*drive)*(.4+.6*r), flick=Math.random()<.14?2+3*Math.random():0;
     const out=(.6+2.6*power)*Math.random()+flick;
     p.vel.set(stamp.dx*carry+p.nx*out+(Math.random()-.5)*1.6,
-      .8+3.2*power*Math.random()+flick,stamp.dz*carry+p.nz*out+(Math.random()-.5)*1.6);
+      1.6+3.2*Math.max(.5,power)*Math.random()+flick,stamp.dz*carry+p.nz*out+(Math.random()-.5)*1.6);
     if(petal) {
       p.color.copy(bed.color).multiplyScalar(.96+.14*Math.random());
       stats.petals++;
@@ -180,14 +188,15 @@ export function createSlipstream(G) {
       stats.leaves++;
     }
   }
-  function shed(x,z,side,pressure,loss) {
-    // Petals: the share this pass takes off the flowers on each square metre.
-    // Grass bits: torn off the blades wherever the downwash rakes the meadow.
-    // (both rise with speed less steeply than the stamped pressure: a low cruise already sheds a
-    // clear stream, a boost covers more ground with a wider swath and fills the air)
-    const p=Math.sqrt(pressure);
-    petalCredit+=(loss*4+p*.8)*bed.cover*area*rate;
-    leafCredit+=p*area*(1-.4*bed.cover)*3.2*rate;
+  function shed(x,z,side,pressure,loss,lat) {
+    // Petals: more where this pass strips the flowers. Grass bits: wherever the downwash rakes.
+    // Counted per metre flown (the field integrates the swath's weight), most from under the two
+    // vortex cores, so a low cruise sheds over 40% of the boost's stream per second; the stream
+    // thins out above 1.2 m and is gone by 4.8 m.
+    const p=Math.sqrt(pressure), w=coreWeight(lat??0,field.W)*p*area/Math.max(.3,field.swath);
+    const perMetre=FLAKES_PER_METRE*rate*(.8+.2*stamp.drive)*(1-smooth(stamp.clearance,1.2,4.8));
+    petalCredit+=w*perMetre*bed.cover*(.3+1.6*Math.min(1,loss*2));
+    leafCredit+=w*perMetre*(1-.4*bed.cover)*.75;
     while(petalCredit>=1){loft(x,z,side,pressure,true);petalCredit--;}
     while(leafCredit>=1){loft(x,z,side,pressure,false);leafCredit--;}
   }
@@ -211,17 +220,28 @@ export function createSlipstream(G) {
           Math.hypot(s.x-previous.x,s.z-previous.z)<9;
         stamp=s;
         const back=Math.min(1.4,s.half??1);
-        field.sweep(linked?previous.x:s.x-s.dx*back,linked?previous.z:s.z-s.dz*back,s,survey,shed,water);
+        const fx=linked?previous.x:s.x-s.dx*back, fz=linked?previous.z:s.z-s.dz*back;
+        field.sweep(fx,fz,s,survey,shed,water);
+        // the same stretch of swath as a ribbon on the ground (where the meadow grows)
+        if(!s.bare && field.force>.05 && survey((fx+s.x)/2,(fz+s.z)/2))
+          swath.add(fx,fz,s.x,s.z,field.W,field.shift,Math.min(1,field.force*1.2),18+22*Math.min(1,field.force),s.time);
         last.x=s.x; last.z=s.z; last.time=s.time; last.bare=s.bare; last.wet=!!s.wet; previous=last; // reused, no per-section object
       }
     } else previous=null;
     lastPos.copy(p.pos);
     hasPosition=true;
     field.refresh(p.pos.x,p.pos.z,time);
+    swath.update(time);
     flutter.value=time;
     glow.value=.42*(1-.65*smooth(G.env?.veil??0,.45,.85));
     let visible=0;
     const rv=p.state==='broom'?p.vel:null;
+    // the camera's own motion: flakes rushing past the lens are drawn out along their flight
+    const cam=G.camera?.position;
+    if(cam && dt>0) {
+      if(hasCam && cam.distanceToSquared(lastCam)<400) camVel.subVectors(cam,lastCam).divideScalar(dt); else camVel.set(0,0,0);
+      lastCam.copy(cam); hasCam=true;
+    }
     for(const q of pool) {
       if(q.age>=q.life)continue;
       q.age+=dt;
@@ -272,6 +292,16 @@ export function createSlipstream(G) {
       if(q.petal) pose.scale.set(size,size,size);
       else pose.scale.set(size*.26,size*.5,size);
       pose.updateMatrix();
+      if(!q.settled) {
+        // stretch along the flake's speed relative to the camera (a motion-blur streak)
+        const vx=q.vel.x-camVel.x, vy=q.vel.y-camVel.y, vz=q.vel.z-camVel.z, vl=Math.hypot(vx,vy,vz);
+        // (not right at the lens, where a streak would fill the frame)
+        const st=Math.min(3.2,vl*.075)*(cam?smooth(q.pos.distanceTo(cam),1.6,5):1);
+        if(st>.15) {
+          const ux=vx/vl, uy=vy/vl, uz=vz/vl, e=pose.matrix.elements;
+          for(let c=0;c<12;c+=4){const dp=(e[c]*ux+e[c+1]*uy+e[c+2]*uz)*st; e[c]+=ux*dp; e[c+1]+=uy*dp; e[c+2]+=uz*dp;}
+        }
+      }
       mesh.setMatrixAt(visible,pose.matrix);
       mesh.setColorAt(visible++,q.color);
     }
@@ -279,5 +309,5 @@ export function createSlipstream(G) {
     mesh.visible=visible>0;
     if(visible) {mesh.instanceMatrix.needsUpdate=true;mesh.instanceColor.needsUpdate=true;}
   }
-  return {mesh,field,stats,update};
+  return {mesh,field,swath,stats,update};
 }

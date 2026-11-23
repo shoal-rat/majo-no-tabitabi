@@ -235,13 +235,14 @@ if (pressureMask > .001) {
 }
 // The foam the broom leaves along its track: fresh churn, then lace, then flecks.
 float wTrailFoamA = 0.0;
-if (vTrailFoam > 0.012 && wDist < 260.0) {
-  float fresh = vTrailFoam;
+float trailFresh = max(vTrailFoam, vPressure.w * 0.85);   // + the whitewater just behind the brush
+if (trailFresh > 0.012 && wDist < 260.0) {
+  float fresh = trailFresh;
   vec2 fuv = wP.xz * 0.9 + vec2(0.05 * wt, -0.04 * wt);
   float lump = wWakeNoise(fuv * 0.55);
   float lace = wWakeNoise(fuv * 1.25 + 3.1);
   float web = 1.0 - smoothstep(0.07, 0.25, abs(lace - 0.5));
-  float churn = smoothstep(0.36, 0.74, fresh + 0.28 * (lump - 0.5));
+  float churn = smoothstep(0.30, 0.66, fresh + 0.28 * (lump - 0.5));
   float laceK = smoothstep(0.06, 0.42, fresh) * (0.85 * web + 0.4 * smoothstep(0.58, 0.82, lump));
   float fleck = smoothstep(0.02, 0.12, fresh) * smoothstep(0.78, 0.9, wWakeNoise(fuv * 2.9 - 1.7));
   float trail = clamp(max(churn, max(laceK, fleck)), 0.0, 1.0);
@@ -423,7 +424,7 @@ export function fragReflect(ringR) {
   }
 #endif
   // the trail's foam is churned white water: it holds its own against a bright sky in the mirror
-  X += wFoamC * wTrailFoamA * 0.42 * (1.0 - 0.8 * wNight);
+  X += wFoamC * wTrailFoamA * 0.62 * (1.0 - 0.8 * wNight);
 #if WQ > 0
   if (wRefrK > 0.5) {
     // refraction (round 2): the bed comes from the opaque scene captured before the water drew, bent by the wave

@@ -1,6 +1,7 @@
-// The white plume torn off the water behind a skimming broom: sheets of beads thrown up and out
-// to either side, soft clots that fill the gaps between them, fine spindrift wound up into the
-// vortex pair, and a faint mist left hanging behind. Soft camera-facing sprites, one draw.
+// The white spray torn off the water behind a skimming broom: a rooster tail of fine beads fanned
+// up and out to both sides (a V), small clumps where it leaves the water, spindrift wound up into
+// the vortex pair, and a thin low veil of mist. Soft camera-facing sprites stretched along their
+// flight, one draw.
 //
 // The recipe (which kinds, how they are thrown, how long they hang) is adapted from Petalwake
 // (src/fx/windfx.js, src/fx/particles.js), MIT License, Copyright (c) 2026 Jacob Miller; the full
@@ -16,13 +17,14 @@ const VERT = /* glsl */`
 #include <common>
 #include <fog_pars_vertex>
 attribute vec4 iPos, iVel, iMisc;   // xyz size · velocity, stretch (s) · alpha, seed
+uniform vec3 uCamVel;
 varying vec2 vUv;
 varying float vAlpha, vSeed;
 void main() {
   vUv = position.xy;
   vec4 mvPosition = modelViewMatrix * vec4(iPos.xyz, 1.0);
-  // beads in a thrown sheet are drawn out along their flight
-  vec2 sv = (modelViewMatrix * vec4(iVel.xyz, 0.0)).xy;
+  // beads in a thrown sheet are drawn out along their flight as the eye sees it (relative to the camera)
+  vec2 sv = (modelViewMatrix * vec4(iVel.xyz - uCamVel, 0.0)).xy;
   float sl = length(sv);
   vec2 dir = sl > 1e-3 ? sv / sl : vec2(0.0, 1.0);
   vec2 off = (vec2(dir.y, -dir.x) * position.x + dir * position.y * (1.0 + iVel.w * sl)) * iPos.w;
@@ -58,7 +60,7 @@ export class WakeSpray {
     const q = G.quality || {};
     this.G = G;
     // a dense plume so speed reads at a glance; phones keep a smaller one that is still plain to see
-    const n = this.capacity = q.mobile ? 240 : [280, 420, 560][tier];
+    const n = this.capacity = q.mobile ? 360 : [400, 600, 720][tier];
     this.rate = q.mobile ? .6 : [.6, .8, 1][tier];
     this.pos = new Float32Array(n * 3); this.vel = new Float32Array(n * 3);
     this.age = new Float32Array(n); this.life = new Float32Array(n);
@@ -68,7 +70,7 @@ export class WakeSpray {
     this.hint = new Int16Array(n).fill(-1);
     this.credit = new Float32Array(4);
     this.next = 0; this.live = 0; this.emitted = 0;
-    this.air = new THREE.Vector3(); this.probe = new THREE.Vector3();
+    this.air = new THREE.Vector3(); this.probe = new THREE.Vector3(); this.lastCam = new THREE.Vector3(); this.hasCam = false;
     this.range = { start: 0, count: 0 };
     const geo = new THREE.InstancedBufferGeometry();
     geo.setAttribute('position', new THREE.Float32BufferAttribute([-1, -1, 0, 1, -1, 0, -1, 1, 0, 1, 1, 0], 3));
@@ -79,7 +81,7 @@ export class WakeSpray {
     this.attrs = [this.aPos, this.aVel, this.aMisc];
     geo.instanceCount = 0;
     this.material = new THREE.ShaderMaterial({
-      uniforms: THREE.UniformsUtils.merge([THREE.UniformsLib.fog, { uTop: { value: DAY_TOP.clone() }, uLow: { value: DAY_LOW.clone() } }]),
+      uniforms: THREE.UniformsUtils.merge([THREE.UniformsLib.fog, { uTop: { value: DAY_TOP.clone() }, uLow: { value: DAY_LOW.clone() }, uCamVel: { value: new THREE.Vector3() } }]),
       vertexShader: VERT, fragmentShader: FRAG, transparent: true, depthWrite: false, fog: true, side: THREE.DoubleSide,
     });
     this.material.name = 'water:wake spray';
@@ -121,35 +123,36 @@ export class WakeSpray {
     if (k <= .01) return;
     const r = this.rate * k, rx = -dz, rz = dx;
     this.tip = tip; this.dx = dx; this.dz = dz;
-        // rooster tails: two sheets of beads thrown up and out to either side
-    let n = this.count(0, 280 * r, dt);
+    // rooster tail: two sheets of fine beads fanned up and out behind the bristles (a V), drawn
+    // out along their flight, falling straight back to the water
+    let n = this.count(0, 1100 * r, dt);
     for (let j = 0; j < n; j++) {
       const side = Math.random() < .5 + .3 * turn ? 1 : -1, outer = Math.max(0, side * turn);
-      const p = this.at(side * rand(.05, .7), rand(-.3, 2.4)), along = rand(.45, .85), out = side * rand(1.5, 8) * (1 + .5 * outer);
-      this.emit(p.x, surface + rand(0, .2), p.z, vx * along + rx * out, rand(2, 9) * (.6 + .4 * Math.min(1, k)) * (1 + .35 * outer),
-        vz * along + rz * out, surface, rand(.035, .075), .2, rand(.6, .95), rand(.6, 1.4), 9.8, .8, .025, .6);
+      const p = this.at(side * rand(.05, .45), rand(-.2, 1)), along = rand(.55, .9), out = side * rand(2, 7.5) * (1 + .5 * outer);
+      this.emit(p.x, surface + rand(0, .12), p.z, vx * along + rx * out, rand(1.8, 5.5) * (.6 + .4 * Math.min(1, k)) * (1 + .35 * outer),
+        vz * along + rz * out, surface, rand(.035, .085), .1, rand(.8, 1), rand(.45, .95), 15, .5, .09, .25);
     }
-    // the body of the plume: soft clots that hide the gaps between the beads
-    n = this.count(1, 180 * r, dt);
+    // small dense clumps right behind the brush, where the sheets leave the water
+    n = this.count(1, 220 * r, dt);
     for (let j = 0; j < n; j++) {
-      const side = Math.random() < .5 + .3 * turn ? 1 : -1, outer = Math.max(0, side * turn);
-      const p = this.at(side * rand(0, .6), rand(0, 2)), along = rand(.5, .75), out = side * rand(1, 6) * (1 + .4 * outer);
-      this.emit(p.x, surface + rand(0, .2), p.z, vx * along + rx * out, rand(1.5, 6.5) * (1 + .3 * outer), vz * along + rz * out,
-        surface, rand(.2, .42), rand(.6, 1.2), rand(.30, .52), rand(.45, .95), 7.5, .8, .012, 0);
+      const side = Math.random() < .5 + .3 * turn ? 1 : -1;
+      const p = this.at(side * rand(0, .35), rand(0, .8)), along = rand(.6, .85), out = side * rand(.8, 3.5);
+      this.emit(p.x, surface + rand(0, .1), p.z, vx * along + rx * out, rand(1, 3.5), vz * along + rz * out,
+        surface, rand(.08, .16), .5, rand(.5, .75), rand(.3, .6), 13, .8, .06, 0);
     }
-    // spindrift: fine spray light enough to be wound up into the two vortices
-    n = this.count(2, 220 * r, dt);
+    // spindrift: the finest beads are wound up into the two vortices
+    n = this.count(2, 260 * r, dt);
     for (let j = 0; j < n; j++) {
-      const lat = rand(-2.4, 2.4), p = this.at(lat, rand(-2, 3)), along = rand(.3, .6);
-      this.emit(p.x, surface + rand(.05, .45), p.z, vx * along + rx * lat * .8, rand(.4, 3), vz * along + rz * lat * .8,
-        surface, rand(.05, .11), .3, rand(.4, .75), rand(1, 2.2), 4.5, rand(14, 22), .006, 1);
+      const lat = rand(-2.2, 2.2), p = this.at(lat, rand(-1, 2.5)), along = rand(.35, .65);
+      this.emit(p.x, surface + rand(.05, .4), p.z, vx * along + rx * lat * .8, rand(.4, 2.4), vz * along + rz * lat * .8,
+        surface, rand(.025, .05), .1, rand(.6, .9), rand(.7, 1.5), 6, rand(10, 16), .06, 1);
     }
-    // mist hanging behind, too heavy with water to be carried far
-    n = this.count(3, 25 * r, dt);
+    // a thin low veil of mist over the track
+    n = this.count(3, 28 * r, dt);
     for (let j = 0; j < n; j++) {
-      const lat = rand(-1.6, 1.6), p = this.at(lat, rand(0, 3)), along = rand(.15, .4);
-      this.emit(p.x, surface + rand(.2, .9), p.z, vx * along + rx * lat * 1.2, rand(.8, 2.6), vz * along + rz * lat * 1.2,
-        surface, rand(.5, .9), rand(1.5, 2.5), rand(.04, .08), rand(1.2, 2.2), .3, 1.4, 0, .3);
+      const lat = rand(-1.4, 1.4), p = this.at(lat, rand(.5, 3)), along = rand(.2, .4);
+      this.emit(p.x, surface + rand(.05, .25), p.z, vx * along + rx * lat, rand(.05, .4), vz * along + rz * lat,
+        surface, rand(.45, .8), rand(1, 1.8), rand(.04, .08), rand(.8, 1.5), .1, 1.6, 0, .2);
     }
   }
 
@@ -183,6 +186,11 @@ export class WakeSpray {
       live++;
     }
     this.live = live;
+    const cam = this.G.camera?.position, cv = this.material.uniforms.uCamVel.value;
+    if (cam && dt > 0) {
+      if (this.hasCam && cam.distanceToSquared(this.lastCam) < 400) cv.subVectors(cam, this.lastCam).divideScalar(dt); else cv.set(0, 0, 0);
+      this.lastCam.copy(cam); this.hasCam = true;
+    }
     this.mesh.geometry.instanceCount = live;
     this.mesh.visible = live > 0;
     if (!live) return;

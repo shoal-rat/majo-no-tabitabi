@@ -459,13 +459,10 @@ vec3 gPos; vec3 gNrm; float gKill = 0.0;
   vGCol = mix(vGCol, vGCol * 1.2 + vec3(0.022, 0.026, 0.016), gSheen * t * 0.7 * (1.0 - .65 * nearGrass));
   // far: the blade becomes a soft stroke of the ground colour, a little lighter toward its tip (never darker than the soil)
   vGCol = mix(vGCol, col * ${GRASS_TOP} * mix(0.98, 1.12, t) * (1.0 + 0.12 * gSheen), far * 0.9 * (1.0 - g.cropK));
-  // A laid-over swath shows the deeper green under the tips (darker and greener the
-  // harder the pass), and like a mown stripe it reads lighter where the blades lie away
-  // from the viewer and darker where they lie toward it.
-  vec2 laidDir = memory.xy / max(length(memory.xy), .05);
-  float awayK = dot(laidDir, normalize(root - gCam.xz + vec2(1e-3)));
-  vec3 laidCol = vGCol * vec3(.66,.84,.62) * (1.0 + .13 * awayK) * (.92 + .16 * t);
-  vGCol = mix(vGCol, laidCol, smoothstep(.04, .7, memory.z));
+  // The laid swath reads like a mown stripe: blades lying away from the eye show their lit upper
+  // sides (lighter, a little silvery), blades lying toward it show the shaded undersides (darker,
+  // greener); a lay across the view sits between, still darker than the upright carpet.
+  vGCol = mix(vGCol, laidTone(vGCol, memory.xy, root - gCam.xz), smoothstep(.04, .6, memory.z));
   vGCol = mix(vGCol, ${lin(0xe8f4ff)}, smoothstep(0.0, 0.6, g.sc.b) * 0.8);
   float pulse = 0.65 + 0.35 * sin(gTime * 0.9 + root.x * 0.05 + root.y * 0.04);
   vec3 veinC = mix(${lin(0x3de0c0)}, ${lin(0x9c7cff)}, smoothstep(0.3, 0.7, g.n.x));

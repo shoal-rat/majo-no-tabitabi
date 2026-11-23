@@ -263,7 +263,8 @@ export function createWater(G, { data, noise }) {
       if (wakeFoam.until > t + 60) wakeFoam.until = -Infinity;   // the clock was reset
       // the broom's foam trail: copied from the shared wake map a few times a second while it lasts
       const foamy = wakeFoam.until > t;
-      if ((foamy || flightWake.field.foamInk) && (t - foamT > .25 || t < foamT)) {
+      // (faster while skimming, so the fresh foam joins the whitewater behind the brush)
+      if ((foamy || flightWake.field.foamInk) && (t - foamT > (flightWake.strength > .012 ? .12 : .25) || t < foamT)) {
         foamT = t;
         const P = G.player?.pos ?? c;
         flightWake.field.paintFoam(foamy ? plantWake.gMeadowMemory.value?.image?.data : null, plantWake.gMeadowBounds.value, P.x, P.z);

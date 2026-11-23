@@ -60,6 +60,12 @@ export function foamLeft(age) {
   return age < 0 || age > 5 * FOAM_TAU ? 0 : Math.exp(-age / FOAM_TAU);
 }
 
+/** Where flakes tear loose across a swath of half-width W: most under the two vortex cores. */
+export function coreWeight(lat, W) {
+  const d = (Math.abs(lat) - .45 * W) / (.35 * W);
+  return .3 + .7 * Math.exp(-d * d);
+}
+
 /** Window and pool size per quality tier (phones keep the map at 128²). */
 export function wakeFieldSize(q) {
   const small = !q || q.mobile || q.name === 'low';
@@ -84,6 +90,14 @@ vec4 plantWakeAt(vec2 root) {
   if (edge < gMeadowBounds.w) return vec4(0.);
   vec4 m = textureLod(gMeadowMemory, root / gMeadowBounds.z, 0.);
   return vec4((m.rg*255.-128.)/127., m.ba) * smoothstep(gMeadowBounds.w, 6.*gMeadowBounds.w, edge);
+}
+// Colour of laid grass: lay = blade lean (xy of plantWakeAt), toEye = ground point - eye (xz).
+vec3 laidTone(vec3 col, vec2 lay, vec2 fromEye) {
+  float away = dot(lay / max(length(lay), .05), normalize(fromEye + vec2(1e-3)));
+  vec3 across = col * vec3(.72, .85, .68);
+  vec3 shade = col * vec3(.50, .66, .48);
+  vec3 silver = mix(col, vec3(dot(col, vec3(.30, .59, .11))), .3) * 1.34 + vec3(.022, .03, .022);
+  return away < 0. ? mix(across, shade, -away) : mix(across, silver, away);
 }
 `;
 
@@ -175,8 +189,9 @@ export class MeadowWakeField {
    * release(x, z, side, pressure, petalLoss, lateral) is called per stamped meadow texel.
    */
   sweep(fromX, fromZ, s, survey, release, water) {
+    this.force = 0;
     if (s.bare && !s.wet) return;
-    const close = 1 - smooth(s.clearance, .55, 4.8);
+    const close = 1 - smooth(s.clearance, .8, 6.5);   // a broom 3 m up still lays a clear swath
     const force = Math.min(1.2, s.drive * close * (s.gust ?? 1));
     if (force < .02) return;
     const run = Math.hypot(s.x - fromX, s.z - fromZ);
@@ -188,6 +203,13 @@ export class MeadowWakeField {
     const reach = W * 2.4 * (1 + .4 * Math.abs(turn)) + Math.abs(shift) + cell;
     const stripPeak = 1 - Math.exp(-Math.pow(force / .55, 1.6));
     const laidDur = 18 + 22 * f1, stripDur = 70 + 50 * f1;
+    // ∫ coreWeight·√pressure across the swath (m): lets the flakes be counted per metre flown
+    // rather than per texel, so a narrow low-speed swath still sheds a clear stream
+    this.W = W; this.shift = shift; this.force = force; this.swath = 0;
+    for (let l = -2.4 * W; l <= 2.4 * W; l += .2 * W) {
+      const q = l * l / (.3844 * W * W), b = .74 * Math.exp(-q) + .26 * Math.exp(-q / 5.3);
+      this.swath += coreWeight(l, W) * Math.sqrt(Math.min(1, force * b * 1.3)) * .2 * W;
+    }
     const i0 = Math.floor((Math.min(fromX, s.x) - reach) / cell), i1 = Math.floor((Math.max(fromX, s.x) + reach) / cell);
     const j0 = Math.floor((Math.min(fromZ, s.z) - reach) / cell), j1 = Math.floor((Math.max(fromZ, s.z) + reach) / cell);
     const time = s.time;
@@ -228,14 +250,16 @@ export class MeadowWakeField {
       if (!survey(x, z)) continue;
       const tile = this.tileAt(Math.floor(ix / TILE), Math.floor(iz / TILE), time);
       const d = tile.data, i = ((iz - tile.iz) * TILE + ix - tile.ix) * STRIDE;
-      // laid over: blades comb outward from the middle of the track and a little forward
+      // laid over: along the middle the air dragged with the rider combs the blades flat in the
+      // direction of travel (one lay, like a mown stripe); toward the edges they fan outward
       const laidAge = time - d[i + 3], keep = laidLeft(laidAge, d[i + 4]);
       const oldLaid = d[i + 2] * keep;
       const laid = Math.max(oldLaid, Math.min(.96, pressure * .97));
       const fan = Math.max(-1, Math.min(1, lat / (.35 * W))) * bank;
+      const comb = .85 - .5 * Math.min(1, Math.abs(fan));
       const k = Math.min(1, pressure * 1.6);
-      d[i] = THREE.MathUtils.clamp(d[i] * keep * (1 - k) + pressure * (dx * .30 - dz * fan * .95), -1, 1);
-      d[i + 1] = THREE.MathUtils.clamp(d[i + 1] * keep * (1 - k) + pressure * (dz * .30 + dx * fan * .95), -1, 1);
+      d[i] = THREE.MathUtils.clamp(d[i] * keep * (1 - k) + pressure * (dx * comb - dz * fan * .8), -1, 1);
+      d[i + 1] = THREE.MathUtils.clamp(d[i + 1] * keep * (1 - k) + pressure * (dz * comb + dx * fan * .8), -1, 1);
       d[i + 4] = laid > oldLaid + .01 ? Math.max(laidDur, d[i + 4] - laidAge) : Math.max(1, d[i + 4] - laidAge);
       d[i + 2] = laid; d[i + 3] = time;
       // petals: most from the middle of the track, more the faster the pass, the outside of a
