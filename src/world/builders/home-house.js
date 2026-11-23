@@ -143,8 +143,12 @@ function awning(g, P, w, f, y, seed) {
 
 /** Build one hometown house and register it on the site (same records as bellcrown.js house()). */
 export function homeHouse(site, x, z, w, d, h, rot, seed, baseY) {
-  const g = new THREE.Group(), rnd = mulberry32(seed * 7919 + 13), lv = homeDetail();
-  const style = STYLE[seed % STYLE.length], P = palette(seed, rnd, style);
+  // `pick` makes the design choices (the same house on every tier), `rnd` jitters the parts (counts vary by tier)
+  const g = new THREE.Group(), pick = mulberry32(seed * 7919 + 13), rnd = mulberry32(seed * 104729 + 7), lv = homeDetail();
+  const style = STYLE[seed % STYLE.length], P = palette(seed, pick, style);
+  const shutters = pick() < 0.85, louvre = pick() < 0.55, boxes = pick() < 0.7, sideLow = pick() < 0.5;
+  const doorLight = pick() < 0.5, doorHood = pick() < 0.45, doorPotAt = pick() < 0.6 ? (pick() < 0.5 ? -1 : 1) : 0, pots = pick() < 0.5 ? 2 : 1;
+  const sideBoxes = boxes && pick() < 0.5;
   const f = d / 2, rise = w * (0.31 + 0.045 * (seed % 4)), hw = w / 2 + 0.425, hd = d / 2 + 0.5;
   const dw = 1.1, dh = 2.15, bay = w * 0.275, k = lv ? 1 : 0;
   // walls, plinth, storey band and cornice
@@ -172,7 +176,6 @@ export function homeHouse(site, x, z, w, d, h, rot, seed, baseY) {
     { rot: Math.PI / 2, len: d, at: [w / 2, 0] },
     { rot: -Math.PI / 2, len: d, at: [-w / 2, 0] },
   ];
-  const shutters = rnd() < 0.85, louvre = rnd() < 0.55, boxes = rnd() < 0.7, sideLow = rnd() < 0.5;
   const canopy = seed % 3 === 0;
   for (const F of faces) {
     const fg = new THREE.Group();
@@ -188,13 +191,13 @@ export function homeHouse(site, x, z, w, d, h, rot, seed, baseY) {
       for (const xx of [-bay, bay]) win(xx, yU, 1.0, 1.4, { panes: 4 });
       if (sideLow || lv >= 1) win((seed % 2 ? 1 : -1) * bay, yG, 0.95, 1.15, { panes: 4 });
     } else {
-      for (const xx of [-F.len * 0.25, F.len * 0.25]) win(xx, h * 0.7, 1.0, 1.47, { shutters: shutters && lv >= 1 && style !== 'timber', louvre, box: boxes && lv >= 2 && rnd() < 0.5 });
+      for (const xx of [-F.len * 0.25, F.len * 0.25]) win(xx, h * 0.7, 1.0, 1.47, { shutters: shutters && lv >= 1 && style !== 'timber', louvre, box: sideBoxes && lv >= 2 });
       if (sideLow) win(F.len * 0.25 * (F.rot > 0 ? 1 : -1), yG, 0.95, 1.2, { panes: 4 });
     }
     if (style === 'timber') timberFace(fg, P.timber, F.len - 0.16, h * 0.49 + 0.1, h - 0.2, wins, lv);
     if (F.front) {
-      homeDoor(fg, P.door, 0, 0, dw, dh, { lv, rnd, keystone: style === 'plain', light: rnd() < 0.5, hood: !canopy && rnd() < 0.45 });
-      if (lv >= 1 && !canopy && rnd() < 0.6) doorPot(fg, P, (rnd() < 0.5 ? -1 : 1) * (dw / 2 + 0.62), 0.45, rnd);
+      homeDoor(fg, P.door, 0, 0, dw, dh, { lv, rnd, keystone: style === 'plain', light: doorLight, hood: !canopy && doorHood });
+      if (lv >= 1 && !canopy && doorPotAt) doorPot(fg, P, doorPotAt * (dw / 2 + 0.62), 0.45, rnd);
     }
     // gable window (front) / vent (back), and the gable timbers on the half-timbered houses
     if (F.rot === 0 || F.rot === Math.PI) {
@@ -215,7 +218,7 @@ export function homeHouse(site, x, z, w, d, h, rot, seed, baseY) {
   tiledRoof(g, P.roofP, hw, hd, h, rise, { kind: P.roof === 0x5a6a7b || P.roof === 0x9a5938 ? 'slate' : 'roll', wall: w / 2, wallD: d / 2, lv, rnd, deckT });
   // chimney through the back half of one slope
   const cx = (seed % 2 ? 1 : -1) * w * 0.24, cz = -d * 0.22;
-  chimney(g, P.chim, cx, cz, h, Math.max(h + rise * 1.05 + 0.55, h + rise * (1 - Math.abs(cx) / hw) + 1.2), { lv, pots: rnd() < 0.5 ? 2 : 1 });
+  chimney(g, P.chim, cx, cz, h, Math.max(h + rise * 1.05 + 0.55, h + rise * (1 - Math.abs(cx) / hw) + 1.2), { lv, pots });
 
   site.add(g, x, baseY, z, rot);
   site.footprint(x, z, rot, w / 2, d / 2, baseY + h, seed);
