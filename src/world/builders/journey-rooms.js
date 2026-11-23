@@ -3,7 +3,9 @@
 import * as THREE from 'three';
 import { G } from '../../core/game.js';
 import { box, cyl, cone, sphere, torus, bakeStatic } from '../../core/geo.js';
-import { Site, mat, beam, texMat, textTexture } from './kit.js';
+import { Site, mat, beam, texMat, textTexture, bevelBox, shadeBaked, collapseFamilies } from './kit.js';
+import { siteRock } from '../rock-family.js';
+import { cbox, homeWindow, tiledRoof, chimney, flowerBox, vine, homeDetail } from './home-parts.js';
 import { t } from '../../core/i18n.js';
 import { procTree } from './decor.js';
 import { glow } from '../../core/mats.js';
@@ -234,6 +236,21 @@ const innPlaster = mat.plaster(0xc6a46d),
   blueCover = mat.cloth(0x4a6a9a);
 const lampGlow = glow(0xffb45c, 2.4),
   leafGlow = glow(0xffd88a, 1.9);
+// modelled shells (art round "home"): window parts, roofs and chimneys per room (builders/home-parts.js)
+const archStone = mat.stone(0xbab3a6),
+  flowerMats = [0xe8737c, 0xf6f1ec, 0xd889c8].map((c) => mat.paint(c));
+const winParts = (surround, sash, shutter) => ({ surround, head: surround, sill: stone, sash, glass, shutter, iron: ironM, box: wood, soil: mat.stone(0x6d5546), leaf: leafA, bloom: flowerMats });
+const WIN = {
+  home: winParts(wood, mat.paint(0xeee4d0), mat.wood(0x6f8f74, { detail: 0.5 })),
+  fran: winParts(dark, oak, dark),
+  inn: winParts(dark, oak, dark),
+};
+const roofParts = (c, deck) => ({
+  deck: mat.tile(deck, { detail: 0.22, bump: 0.3 }), tiles: [c, ...[1.08, 0.92].map((k) => new THREE.Color(c).multiplyScalar(k).getHex())].map((v) => mat.tile(v, { detail: 0.22, bump: 0.3 })),
+  ridge: mat.tile(new THREE.Color(c).multiplyScalar(0.85).getHex(), { detail: 0.22, bump: 0.3 }), mortar: mat.stone(0xd9cfbd), fascia: wood, rafter: dark, barge: wood,
+});
+const ROOF = { home: roofParts(0x566c70, 0x3a4a4e), fran: roofParts(0x4f6466, 0x354446), inn: roofParts(0xb6735a, 0x7a4a3a) };
+const CHIM = { stack: brick, joint: mat.stone(0xa47a66), cap: stone, pot: mat.stone(0xc57c56) };
 function shellMat(kind) {
   return kind === 'inn' ? innPlaster : kind === 'fran' ? franStone : wallMat;
 }
@@ -259,6 +276,15 @@ function archWindow(g, x, y0, z, ww, wh) {
     rect(g, x, y0 + y, z + 0.1, half * 2, 0.05, 0.04, ironM);
   }
   rect(g, x, y0 - 0.08, z + 0.12, ww + 0.5, 0.16, 0.4, stone);
+  // dressed stone surround: jambs, a ring of voussoirs and a keystone, so the opening reads as cut through the wall
+  const lv = homeDetail(), k = lv ? 0.025 : 0, R = r + 0.3, n = lv ? 9 : 5;
+  for (const s of [-1, 1]) g.add(cbox(0.26, rh + 0.02, 0.2, archStone, x + s * R, y0 + rh / 2, z + 0.04, k));
+  for (let i = 0; i < n; i++) {
+    const a = (Math.PI * (i + 0.5)) / n, key = i === (n - 1) / 2;
+    const v = cbox(key ? 0.3 : 0.27, (Math.PI * R) / n - 0.03, key ? 0.26 : 0.2, archStone, x + Math.cos(a) * R, y0 + rh + Math.sin(a) * R, z + (key ? 0.07 : 0.04), k);
+    v.rotation.z = a;
+    g.add(v);
+  }
 }
 function pilaster(g, u, height) {
   rect(g, u, height / 2, 0.36, 0.7, height, 0.3, pilasterM);
@@ -423,8 +449,21 @@ function wallLamp(g, x, z, ry) {
   l.position.set(x, 0, z);
   g.add(l);
 }
+/**
+ * Bake a room part in the site's frame (local x/z, absolute y) and give it the site's vertex shading and colour
+ * families, like the baked places (kit.js): a face of a room is a few draws whatever its parts.
+ */
+function bakeShaded(part, site) {
+  const holder = new THREE.Group();
+  holder.position.set(site.x, 0, site.z);
+  holder.add(part);
+  const baked = bakeStatic(holder);
+  try { shadeBaked(baked, site); collapseFamilies(baked); } catch (e) { G.reportError?.('structures:roomShade', e); }
+  return baked;
+}
 function drawRoom(ctx, id, { x, z, w, d, y, height, kind, frontDoor = 4.5 }) {
-  const site = new Site(id, x, z),
+  const lv = homeDetail(), bev = lv ? 1 : 0, rnd = mulberry32(id.length * 131 + Math.round(x)),
+    site = new Site(id, x, z),
     inner = new THREE.Group(),
     shell = [],
     fascia = new THREE.Group(),
@@ -448,20 +487,20 @@ function drawRoom(ctx, id, { x, z, w, d, y, height, kind, frontDoor = 4.5 }) {
       : [[0, len]];
     for (const [u, l] of pieces) {
       rect(g, u, height / 2, 0, l, height, 0.48, shellMat(kind));
-      for (const h of [0.55, height - 0.16]) rect(g, u, h, 0, l, 0.23, 0.61, wood);
-      for (const s of [-1, 1]) rect(g, u + s * (l / 2 - 0.11), height * 0.5, 0, 0.21, height, 0.59, wood);
+      for (const h of [0.55, height - 0.16]) g.add(cbox(l, 0.23, 0.61, wood, u, h, 0, 0.03 * bev));
+      for (const s of [-1, 1]) g.add(cbox(0.21, height, 0.59, wood, u + s * (l / 2 - 0.11), height * 0.5, 0, 0.03 * bev));
       const lx = horizontal ? u : side === 'W' ? -half : half,
         lz = horizontal ? (side === 'N' ? -depth : depth) : u;
       site.colBox(lx, lz, horizontal ? l / 2 : 0.25, horizontal ? 0.25 : l / 2, 0, y, y + height);
     }
     if (door) {
       rect(g, 0, (height + 3.8) / 2, 0, frontDoor, height - 3.8, 0.51, shellMat(kind));
-      rect(g, 0, 3.8, 0, frontDoor + 0.4, 0.35, 0.66, wood);
+      g.add(cbox(frontDoor + 0.4, 0.35, 0.66, wood, 0, 3.8, 0, 0.035 * bev));
     }
     for (const v of [-1, 1]) {
       const u = v * (len * 0.32);
       if (kind === 'fran' && side !== 'S') archWindow(g, u, 0.9, 0.26, 2.0, height - 2.0);
-      else framedWindow(g, u, height * 0.6, 0.29, 1.4, 1.82);
+      else homeWindow(g, WIN[kind], u, height * 0.6, 0.24, 1.4, 1.82, { lv, rnd, shutters: kind === 'home', louvre: true, box: kind !== 'fran', keystone: kind === 'inn' });
     }
     // Wainscot leaves a dark lower register like the inn in episode two.
     const inside = new THREE.Group();
@@ -469,7 +508,9 @@ function drawRoom(ctx, id, { x, z, w, d, y, height, kind, frontDoor = 4.5 }) {
     const pan = kind === 'fran' ? mat.wood(0x5e5950) : kind === 'inn' ? mat.wood(0x765b41) : mat.wood(0x85613e);
     for (const [u, l] of pieces) {
       rect(inside, -u, 0.73, 0.254, l, 1.46, 0.12, pan);
-      rect(inside, -u, 1.47, 0.32, l, 0.14, 0.15, oak);
+      inside.add(cbox(l, 0.14, 0.15, oak, -u, 1.47, 0.32, 0.025 * bev));
+      // cornice under the ceiling band: a stepped moulding
+      inside.add(cbox(l, 0.1, 0.11, trimWood, -u, height - 0.33, 0.29, 0.02 * bev), cbox(l, 0.06, 0.06, oak, -u, height - 0.41, 0.265, 0.012 * bev));
       const count = Math.floor(l / 1.4);
       for (let j = 0; j < count; j++)
         rect(inside, -u - l / 2 + ((j + 0.5) * l) / count, 0.73, 0.333, 0.085, 1.35, 0.06, trimWood);
@@ -480,7 +521,7 @@ function drawRoom(ctx, id, { x, z, w, d, y, height, kind, frontDoor = 4.5 }) {
     windows.rotation.y = Math.PI;
     for (const v of [-1, 1]) {
       if (kind === 'fran' && side !== 'S') archWindow(windows, v * len * 0.32, 0.9, 0.26, 2.0, height - 2.0);
-      else framedWindow(windows, v * (len * 0.32), height * 0.6, 0.28, 1.4, 1.82);
+      else homeWindow(windows, WIN[kind], v * (len * 0.32), height * 0.6, 0.24, 1.4, 1.82, { lv, rnd, inner: true });
     }
     if (kind === 'fran') for (const u of [-len / 2 + 0.4, 0, len / 2 - 0.4]) if (!(door && Math.abs(u) < frontDoor)) pilaster(windows, u, height);
     if (kind === 'inn') for (let u = -len / 2 + 0.3; u <= len / 2; u += len / 4) if (!(door && Math.abs(u) < frontDoor / 2 + 0.4)) rect(windows, u, height / 2, 0.3, 0.32, height, 0.14, dark);
@@ -494,16 +535,21 @@ function drawRoom(ctx, id, { x, z, w, d, y, height, kind, frontDoor = 4.5 }) {
       g.add(sign);
     }
     g.rotation.y = side === 'S' ? 0 : side === 'N' ? Math.PI : side === 'W' ? -Math.PI / 2 : Math.PI / 2;
-    g.position.set(
-      x + (side === 'W' ? -half : side === 'E' ? half : 0),
-      y,
-      z + (side === 'N' ? -depth : side === 'S' ? depth : 0)
-    );
-    const baked = bakeStatic(g);
+    g.position.set(side === 'W' ? -half : side === 'E' ? half : 0, y, side === 'N' ? -depth : side === 'S' ? depth : 0);
+    const baked = bakeShaded(g, site);
     G.scene.add(baked);
     shell.push([side, baked]);
   }
   for (const side of ['W', 'N', 'E', 'S']) shellFace(side);
+  if (kind === 'home') {
+    // stone planters either side of the open front
+    const pl = new THREE.Group();
+    for (const s of [-1, 1]) {
+      pl.add(bevelBox(1.3, 0.42, 0.5, stone, s * 3.3, 0.21, depth + 0.52, 0.04));
+      flowerBox(pl, { ...WIN.home, box: stone }, s * 3.3, 0.42, depth + 0.52, 1.2, lv, rnd);
+    }
+    site.add(pl, 0, y, 0);
+  }
   // Warm timber and the lath ceiling are visible when the player looks up from inside.
   for (let u = -depth + 1.0; u < depth; u += 2.85) rect(fascia, 0, height - 0.16, u, w, 0.28, 0.24, wood);
   rect(
@@ -528,23 +574,9 @@ function drawRoom(ctx, id, { x, z, w, d, y, height, kind, frontDoor = 4.5 }) {
       rect(fascia, v * 3.6, height + 4.4, depth + 0.06, 1.0, 2.1, 0.06, dark);
     }
   }
-  const rise = kind === 'fran' ? 4.1 : 3.1,
-    slope = Math.atan2(rise, half + 0.55),
-    slant = Math.hypot(half + 0.55, rise);
-  for (const side of [-1, 1]) {
-    const r = rect(
-      fascia,
-      (side * (half + 0.55)) / 2,
-      height + U + rise / 2,
-      0,
-      slant + 0.18,
-      0.22,
-      d + 1.52,
-      kind === 'inn' ? brick : slate
-    );
-    r.rotation.z = -side * slope;
-    rect(fascia, side * (half + 0.55), height + U, 0, 0.19, 0.3, d + 1.52, wood);
-  }
+  const rise = kind === 'fran' ? 4.1 : 3.1;
+  // tiled roof: slates on the cottages, barrel tiles on the inn; deep eaves on rafter tails, ridge roll, barge boards
+  tiledRoof(fascia, ROOF[kind], half + 0.55, depth + 0.76, height + U, rise, { kind: kind === 'inn' ? 'roll' : 'slate', wall: half + 0.24, wallD: depth + 0.24, lv, rnd });
   for (const side of [-1, 1]) {
     const g = new THREE.Shape();
     g.moveTo(-half, 0);
@@ -556,10 +588,9 @@ function drawRoom(ctx, id, { x, z, w, d, y, height, kind, frontDoor = 4.5 }) {
     o.position.set(0, height + U, side * depth);
     fascia.add(o);
   }
-  rect(fascia, half * 0.51, height + U + rise * 0.85, -depth * 0.56, 1.1, 3.5, 1.1, brick);
-  rect(fascia, half * 0.51, height + U + rise * 0.85 + 1.78, -depth * 0.56, 1.34, 0.24, 1.34, stone);
-  fascia.position.set(x, y, z);
-  const roof = bakeStatic(fascia);
+  chimney(fascia, CHIM, half * 0.51, -depth * 0.56, height + U + 0.5, height + U + rise * 0.85 + 1.9, { w: 1.1, d: 1.1, lv, pots: 2 });
+  fascia.position.set(0, y, 0);
+  const roof = bakeShaded(fascia, site);
   G.scene.add(roof);
   for (let i = -4; i <= 4; i++) {
     const u = (w * i) / 9;
@@ -668,42 +699,15 @@ function drawRoom(ctx, id, { x, z, w, d, y, height, kind, frontDoor = 4.5 }) {
 // The woodland house is wrapped in a climbing vine. Its doorway, steps and the
 // eastward path to the practice clearing stay open at human and broom height.
 function woodlandGarden(site, y) {
-  const leaf = mat.paint(0x536c51),
-    sun = mat.paint(0x798861),
-    flower = mat.paint(0x947ca8),
-    twigs = mat.wood(0x716d51);
+  const lv = homeDetail(), rnd = mulberry32(611);
+  const P = { stem: mat.wood(0x716d51), leaf: [mat.paint(0x536c51), mat.paint(0x798861), mat.paint(0x667a55)], bloom: [mat.paint(0x947ca8), mat.paint(0xa993bd)] };
   const border = new THREE.Group();
   for (const side of [-1, 1]) {
-    const root = side * 6.1;
-    for (let j = 0; j < 13; j++) {
-      const x = root + 0.42 * Math.sin(j * 0.7 + side),
-        h = 0.45 + j * 0.48,
-        z = 8.49 + 0.13 * Math.sin(j * 0.6);
-      const nx = root + 0.42 * Math.sin((j + 1) * 0.7 + side);
-      border.add(beam(x, h, z, nx, h + 0.48, z + 0.05, 0.11, 0.1, twigs));
-      const branch = side * (j % 2 ? 1 : -1),
-        end = x + branch * (0.56 + 0.15 * (j % 3));
-      border.add(beam(x, h, z, end, h + 0.43, z, 0.058, 0.063, twigs));
-      for (let k = 0; k < 3; k++) {
-        const b = sphere(0.23, k % 2 ? leaf : sun, end - 0.22 * k * branch, h + 0.32 - 0.09 * k, z + 0.03 * k, 7, 5);
-        b.scale.set(1.25, 0.65, 0.42);
-        border.add(b);
-      }
-      if (j > 2 && j % 3 === 1)
-        for (let k = 0; k < 4; k++) {
-          const f = sphere(
-            0.118 * (1 - k * 0.12),
-            flower,
-            end + 0.11 * Math.sin(k),
-            h + 0.26 - k * 0.135,
-            z + 0.143,
-            6,
-            5
-          );
-          f.scale.set(1.15, 0.92, 0.85);
-          border.add(f);
-        }
-    }
+    // a woody stem climbing the front wall in a loose zig-zag, rooted in a stone-edged bed
+    const root = side * 6.1, pts = [];
+    for (let j = 0; j <= 13; j++) pts.push([root + 0.42 * Math.sin(j * 0.7 + side), 0.05 + j * 0.48, 8.49 + 0.06 * Math.sin(j * 0.6)]);
+    vine(border, P, pts, { lv, rnd, r0: 0.085, r1: 0.025 });
+    for (let k = 0; k < 4; k++) border.add(bevelBox(0.42, 0.18, 0.3, stone, root - 0.75 + k * 0.5, 0.09, 8.75 + (k % 2) * 0.04, 0.03));
   }
   for (const [x, z, h] of [
     [-12, 5, 9.8],
@@ -762,7 +766,11 @@ function swingTree(ctx) {
   site.colCyl(0, 0, 0.75, base, base + 7);
   return site;
 }
-// The storm trial's clearing (episode one): angular slate-blue boulders standing in the wet grass.
+// The storm trial's clearing (episode one): slate-blue boulders standing in the wet grass. They are stones of the
+// countryside's rock family (world/rock-family.js siteRock: bevelled planes, beds and joints), in the old stones' places,
+// bulk and colliders, tinted a cool slate; the old faceted blobs only when the family is off (?sculpt=0).
+const TRIAL_SHAPES = ['field', 'split', 'crag', 'field', 'ledge'];
+const TRIAL_TINTS = [0x8a93a3, 0x939aa8, 0x80899a];
 function trialRocks() {
   const site = new Site('trialRocks', 2100, -84),
     rand = mulberry32(1501),
@@ -776,11 +784,16 @@ function trialRocks() {
     if (G.world.roadDist(2100 + x, -84 + z) < 4.5) continue;
     const s = 1.2 + rand() * 1.6,
       gy = G.world.heightAt(2100 + x, -84 + z);
-    const geo = new THREE.DodecahedronGeometry(1, 0),
-      m = new THREE.Mesh(geo, mats[n % 3]);
-    m.scale.set(s * (1.1 + rand() * 0.6), s * (0.9 + rand() * 0.5), s * (0.8 + rand() * 0.4));
-    m.rotation.set(rand() * 0.5, rand() * 6, rand() * 0.4);
-    site.add(m, x, gy + s * 0.35, z, m.rotation.y);
+    const sx = 1.1 + rand() * 0.6, sy = 0.9 + rand() * 0.5, sz = 0.8 + rand() * 0.4, rx = rand() * 0.5, ry = rand() * 6, rz = rand() * 0.4;
+    // the old stone's visible bulk: about 2·s·sx wide, s·(0.35 + sy) above the grass
+    const g = siteRock(TRIAL_SHAPES[n % TRIAL_SHAPES.length], { w: 1.7 * s * sx, h: s * (0.35 + sy), d: 1.7 * s * sz, tint: TRIAL_TINTS[n % 3], sink: 0.12 });
+    if (g) site.add(g, x, gy, z, ry);
+    else {
+      const m = new THREE.Mesh(new THREE.DodecahedronGeometry(1, 0), mats[n % 3]);
+      m.scale.set(s * sx, s * sy, s * sz);
+      m.rotation.set(rx, ry, rz);
+      site.add(m, x, gy + s * 0.35, z, ry);
+    }
     site.colCyl(x, z, s * 0.9, gy - 1, gy + s * 1.2);
     n++;
   }
