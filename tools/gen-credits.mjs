@@ -132,6 +132,6 @@ if (remaining.length) {
 out.push('', '## 程序库', '',
   '- three.js（MIT）与 Rapier（Apache-2.0）提供渲染和物理功能。[three.js](https://github.com/mrdoob/three.js/blob/dev/LICENSE) · [Rapier](https://github.com/dimforge/rapier/blob/master/LICENSE)',
   '- esbuild（MIT）用于打包，Electron（MIT）提供桌面外壳。[esbuild](https://github.com/evanw/esbuild/blob/main/LICENSE.md) · [Electron](https://github.com/electron/electron/blob/main/LICENSE)',
-  '- 第三方代码（Third-party code）：扫帚尾流在草地与水面留下的印迹、扬起的花瓣与水花的做法改编自 Petalwake（MIT，Copyright (c) 2026 Jacob Miller），许可声明见 `src/world/flora/wake-field.js` 与 `src/world/water/wake-spray.js` 文件头。',
+  '- 第三方代码（Third-party code）：扫帚尾流在草地与水面留下的印迹、扬起的花瓣与水花的做法改编自 Petalwake（MIT，Copyright (c) 2026 Jacob Miller），许可声明见 `src/world/flora/wake-field.js` 与 `src/world/water/wake-spray.js` 文件头。 [Petalwake](https://github.com/jjcm/petalwake)',
   '', '维护素材清单后，运行 `node tools/gen-credits.mjs` 即可重新生成此页。', '');
 fs.writeFileSync(path.join(root, 'CREDITS.md'), out.join('\n'));
