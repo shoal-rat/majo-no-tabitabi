@@ -23,7 +23,7 @@ const L = 2.4, HB = 0.75, B = 0.31, TT = 0.23;
 const halfT = (y) => B + (TT - B) * Math.min(1, Math.max(0, y / HB));
 const BATTER = Math.atan2(B - TT, HB);
 // the wall's stone colours (sRGB): warm limestones and grey sandstones, close to the old wall's palette
-const STONES = [0xc3bba4, 0xb4ae9b, 0xcdc4ab, 0xaeaa9c, 0xbeb397, 0xa8a598].map(hex);
+const STONES = [0xcdc4ac, 0xc0b8a3, 0xd6ccb2, 0xbab5a5, 0xc9bd9f, 0xb5b1a2].map(hex);
 
 /**
  * One rounded through-stone: outline polygon `poly` [[x, y], ...] (ccw seen from +z), front / back faces on the batter
@@ -45,14 +45,14 @@ function cushion(mesh, poly, { recF = 0, recB = 0, tiltF = 0, tiltB = 0, col, lo
       continue;
     }
     if (lod === 1) {
-      const ids = poly.map((p) => { const o = out2(p); return mesh.v([p[0], p[1], zAt(p[0], p[1]) - side * 0.012], norm(add(fn, mul(o, 0.75))), shade(0.88)); });
+      const ids = poly.map((p) => { const o = out2(p); return mesh.v([p[0], p[1], zAt(p[0], p[1]) - side * 0.012], norm(add(fn, mul(o, 0.75))), shade(0.92)); });
       for (let i = 0; i < n; i++) side > 0 ? mesh.tri(C, ids[i], ids[(i + 1) % n]) : mesh.tri(C, ids[(i + 1) % n], ids[i]);
       continue;
     }
     // lod 0: inner ring (face edge, normals half turned) + outer ring rolled into the joint
     const w = Math.min(bev, span * 0.35);
     const inner = poly.map((p) => { const o = out2(p); const q = [p[0] - o[0] * w, p[1] - o[1] * w]; return mesh.v([q[0], q[1], zAt(q[0], q[1])], norm(add(fn, mul(o, 0.42))), shade(0.98)); });
-    const outer = poly.map((p) => { const o = out2(p); return mesh.v([p[0], p[1], zAt(p[0], p[1]) - side * w * 1.1], norm(add(mul(fn, 0.45), o)), shade(0.8)); });
+    const outer = poly.map((p) => { const o = out2(p); return mesh.v([p[0], p[1], zAt(p[0], p[1]) - side * w * 1.1], norm(add(mul(fn, 0.45), o)), shade(0.86)); });
     for (let i = 0; i < n; i++) {
       const j = (i + 1) % n;
       if (side > 0) { mesh.tri(C, inner[i], inner[j]); mesh.tri(inner[i], outer[i], outer[j]); mesh.tri(inner[i], outer[j], inner[j]); }
