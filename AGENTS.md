@@ -16,6 +16,7 @@ lexicon:
 - q = G.quality tier mobile|low|med|high (phones default mobile, ≥1080 lines)
 - anchors = JOURNEY_ANCHORS `src/data/journey-map.js`
 - ep1/ep2 = episode 1/2 · named = flag majo_named · finished = flag majo_finished
+- claim = comment `/claim` on an issue → bot assigns commenter (fallback: label claimed + bot comment); 1 holder/issue; released after 7 days w/o linked open PR|progress comment; `/unclaim` releases. bot = `.github/scripts/claims.cjs`
 rule: new abbreviation → add to §key first, then use.
 
 ## read
@@ -55,8 +56,15 @@ V other change: acc touching the changed system.
 V probe: play --name X --script f.js [--mobile] (helpers: header of `tools/play.mjs`).
 V dev: $npm ci → $npm run serve (127.0.0.1:8751) · release: $npm run release
 
-## pr
-M flow: branch from main → small focused change → V → PR {changed, player-visible effect, how verified, screenshots if visual} → CI green → maintainer merges.
+## contrib
+R contrib: `CONTRIBUTING.md` (human-facing copy of these rules).
+M flow: issue (template) → claim → branch from main → small focused change → V → PR via `.github/pull_request_template.md` → CI + Claim check green → maintainer merges.
+M issue: 1 change/issue; template `.github/ISSUE_TEMPLATE/proposal.yml` (change) | `.github/ISSUE_TEMPLATE/bug.yml` (bug); every required field filled.
+M pr body: `Closes #N` · what/why · player-visible effect · play-time/difficulty effect · how verified (cmds + scenes; screenshots|GIF if visual) · AI-assisted yes|no.
+N pr: PR without own claim on the issue it closes (exempt: maintainer, bots, PRs #≤10).
+N claim: issue held by someone else → ask in the issue instead.
+F play time: change that shortens trips|speeds travel|eases difficulty → maintainer OK in the issue first.
+V contrib bots: $node .github/scripts/claims.test.mjs after touching `.github/scripts/` or claim workflows.
 
 ## feedback
-R reports: issue #7 (pinned, label feedback) · template `.github/ISSUE_TEMPLATE/bug.yml`
+R reports: issue #7 (pinned, label feedback) · template `.github/ISSUE_TEMPLATE/bug.yml` · proposals: `.github/ISSUE_TEMPLATE/proposal.yml` (label proposal)

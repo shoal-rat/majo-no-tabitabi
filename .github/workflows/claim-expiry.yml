@@ -1,0 +1,39 @@
+name: Claim expiry
+
+# Daily: release claims with no linked open pull request and no progress comment for 7 days.
+on:
+  schedule:
+    - cron: '23 3 * * *'
+  workflow_dispatch:
+    inputs:
+      dry-run:
+        description: Only list what would expire
+        type: boolean
+        default: false
+
+permissions: {}
+
+concurrency:
+  group: claim-expiry
+  cancel-in-progress: false
+
+jobs:
+  expire:
+    name: Release stale claims
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          sparse-checkout: .github/scripts
+      - uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        env:
+          DRY_RUN: ${{ inputs.dry-run || false }}
+        with:
+          script: |
+            const claims = require('./.github/scripts/claims.cjs');
+            await claims.expireClaims({ github, context, core, dryRun: process.env.DRY_RUN === 'true' });

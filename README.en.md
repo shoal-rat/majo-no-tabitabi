@@ -163,6 +163,8 @@ node tools/dead-code.mjs                         # source files that never reach
 
 Bug reports are welcome in the pinned **[feedback thread #7](https://github.com/shoal-rat/majo-no-tabitabi/issues/7)**: getting stuck, clipping, lighting or performance problems. For a larger problem, open a separate issue with the bug-report template. Please include the current journal objective, where you were, what you did, your browser and the quality tier, and a screenshot when something looks wrong.
 
+Want to change something? Open an issue, claim it with a `/claim` comment, then open a pull request; [CONTRIBUTING.md](CONTRIBUTING.md) has the details.
+
 For changes, open a pull request from your own branch. Every pull request is built and its character models are checked automatically. If an AI coding agent helps you, have it read [AGENTS.md](AGENTS.md) first: it lists the conventions that must not change and the checks to run.
 
 ## Licence and assets

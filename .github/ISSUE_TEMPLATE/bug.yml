@@ -5,8 +5,8 @@ body:
   - type: markdown
     attributes:
       value: |
-        感谢反馈！小问题也可以直接写在置顶的[问题反馈专帖 #7](https://github.com/shoal-rat/majo-no-tabitabi/issues/7)。
-        Thanks! Small things can also go into the pinned feedback thread #7.
+        感谢反馈！小问题也可以直接写在置顶的[问题反馈专帖 #7](https://github.com/shoal-rat/majo-no-tabitabi/issues/7)。想自己修的话，发帖后评论 `/claim` 认领，再开 PR。
+        Thanks! Small things can also go into the pinned feedback thread #7. To fix it yourself, comment `/claim` after posting, then open a pull request.
   - type: textarea
     id: what
     attributes:

@@ -163,6 +163,8 @@ node tools/dead-code.mjs                         # 列出没被打包进游戏�
 
 遇到卡关、穿模、光影或性能问题，欢迎到置顶的 **[问题反馈专帖 #7](https://github.com/shoal-rat/majo-no-tabitabi/issues/7)** 留言，复杂的问题也可以用「问题反馈」模板另开一帖。请写上当前的手记目标、所在地点、触发步骤、浏览器和画质档位；画面问题最好附一张截图。
 
+想动手改东西？先发议题、评论 `/claim` 认领，再开 PR，流程见 [CONTRIBUTING.md](CONTRIBUTING.md)。
+
 提交修改请从自己的分支发起 Pull Request，每个 PR 都会自动构建游戏并检查角色模型。用 AI 代理参与开发时，请先让它读 [AGENTS.md](AGENTS.md)，里面有不能改动的约定和必须运行的检查。
 
 ## 开源与素材
