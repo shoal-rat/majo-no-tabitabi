@@ -14,7 +14,7 @@ import { box, cone, cyl, sphere, torus } from '../../core/geo.js';
 import { mat, beam, texGlow, texMat } from './kit.js';
 import { mulberry32 } from '../../core/util.js';
 import { modelGable, modelHip, chimney, modelTile } from './city-roofs.js';
-import { wallLantern } from './city-market.js';
+import { streetLamp, wallLantern, fountainModel, stallModel, planterModel } from './city-market.js';
 import { voussoirs, mouldX, mouldRing, corbel, merlon, arrowSlit, lancet, coursedSpire, hangBanner, STRING, IMPOST } from './city-stone.js';
 import { addBay, bayRange, startBays, BAY } from './city-bays.js';
 import { hash01, ByMat, GeoBuilder } from './city-geo.js';
@@ -1334,24 +1334,17 @@ export async function layoutHouses(ctx, site, taken) {
 // ---- street furniture ----
 function lampPost(site, x, z) {
   const g = new THREE.Group();
-  g.add(cyl(0.2, 0.26, 0.45, iron, 0, 0.22, 0, 8), cyl(0.07, 0.1, 3.4, iron, 0, 2.1, 0, 6), cyl(0.13, 0.13, 0.12, brass, 0, 1.2, 0, 8));
-  g.add(cyl(0.17, 0.12, 0.2, brass, 0, 3.82, 0, 8), sphere(0.29, orb, 0, 4.16, 0, 10, 8), cone(0.2, 0.26, iron, 0, 4.55, 0, 8));
-  const ring = torus(0.3, 0.025, brass, 0, 4.16, 0, 4, 14);
-  ring.rotation.x = Math.PI / 2;
-  g.add(ring);
+  // turned post and a lantern cage round the blue orb (builders/city-market.js)
+  streetLamp(g, iron, brass, lowQ());
+  g.add(sphere(0.29, orb, 0, 4.16, 0, 10, 8));
   site.add(g, x, H, z);
   site.colCyl(x, z, 0.18, H, H + 3.8);
 }
 function fountain(site, x, z) {
-  const g = new THREE.Group(),
-    water = mat.paint(0x77b4c4);
-  g.add(cyl(3.6, 3.8, 0.85, stone, 0, 0.42, 0, 24), cyl(3.75, 3.75, 0.16, coping, 0, 0.9, 0, 24), cyl(3.25, 3.25, 0.1, water, 0, 0.74, 0, 24));
-  g.add(cyl(0.55, 0.75, 2.6, coping, 0, 1.3, 0, 10), cyl(1.45, 0.55, 0.55, stone, 0, 2.7, 0, 14), cyl(1.3, 1.3, 0.08, water, 0, 2.95, 0, 14));
-  g.add(cyl(0.22, 0.3, 1.0, coping, 0, 3.4, 0, 8), sphere(0.42, gem, 0, 4.2, 0, 12, 8));
-  for (let j = 0; j < 4; j++) {
-    const a = (j * Math.PI) / 2 + Math.PI / 4;
-    g.add(sphere(0.3, coping, Math.sin(a) * 3.5, 1.15, Math.cos(a) * 3.5, 8, 6));
-  }
+  const g = new THREE.Group();
+  // octagonal basin, baluster and bowl, spouts and falling water (builders/city-market.js)
+  fountainModel(g, stone, coping, brass, lowQ());
+  g.add(sphere(0.42, gem, 0, 4.2, 0, 12, 8));
   site.add(g, x, H, z);
   site.colCyl(x, z, 3.75, H, H + 0.95);
 }
@@ -1369,27 +1362,15 @@ function well(site, x, z) {
   site.colCyl(x, z, 1.12, H, H + 1.1);
 }
 function stall(site, x, z, yaw, i) {
-  const g = new THREE.Group(),
-    awn = cloth[i % 4];
-  b(g, 0, 0.9, 0, 2.8, 0.12, 1.3, wood);
-  b(g, 0, 0.45, 0.6, 2.8, 0.9, 0.08, wood);
-  for (const sx of [-1.3, 1.3]) for (const sz of [-0.6, 0.6]) b(g, sx, 1.2, sz, 0.1, 2.4, 0.1, trim);
-  const a = b(g, 0, 2.5, 0.05, 3.1, 0.07, 1.8, awn);
-  a.rotation.x = 0.22;
-  for (let j = 0; j < 6; j++) {
-    const fruit = [bloom[0], bloom[3], leaf, bloom[4]][(i + j) % 4];
-    g.add(sphere(0.17, fruit, -1.0 + j * 0.4, 1.08, 0.1, 6, 4), sphere(0.15, fruit, -0.85 + j * 0.4, 1.06, -0.25, 6, 4));
-  }
-  g.add(cyl(0.3, 0.3, 0.7, wood, 1.75, 0.35, -0.3, 10), cyl(0.31, 0.31, 0.05, iron, 1.75, 0.5, -0.3, 10));
-  b(g, -1.8, 0.3, 0.2, 0.6, 0.6, 0.6, trim);
+  const g = new THREE.Group();
+  // turned posts, plank counter, striped awning, crates of fruit, barrel and sacks (builders/city-market.js)
+  stallModel(g, { wood, trim, iron, cloth: cloth[i % 4] }, i, lowQ());
   site.add(g, x, H, z, yaw);
   site.colBox(x, z, 1.5, 0.75, yaw, H, H + 1.2);
 }
 function planter(site, x, z, yaw, seed) {
   const g = new THREE.Group();
-  b(g, 0, 0.35, 0, 2.2, 0.7, 0.8, coping);
-  b(g, 0, 0.72, 0, 2.0, 0.08, 0.6, mat.paint(0x5a4836));
-  for (let i = 0; i < 6; i++) g.add(sphere(0.24, i % 2 ? leaf : bloom[(seed + i) % 5], -0.8 + i * 0.32, 0.9, (i % 2) * 0.18 - 0.09, 6, 4));
+  planterModel(g, coping, seed, lowQ());
   site.add(g, x, H, z, yaw);
   site.colBox(x, z, 1.1, 0.4, yaw, H, H + 0.75);
 }
