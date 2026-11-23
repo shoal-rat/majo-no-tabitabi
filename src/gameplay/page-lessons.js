@@ -39,7 +39,7 @@ export function createPageLessons() {
   function begin(list, el, e) {
     end();
     L = { list, i: 0, t: 0, shown: false, el, e };
-    L.skip = G.interact?.add?.({ getPos: (out) => out.copy(G.player.pos).setY(G.player.pos.y + 1), radius: 3, priority: 9, broom: true,
+    L.skip = G.interact?.add?.({ getPos: (out) => out.copy(G.player.pos).setY(G.player.pos.y + 1), radius: 3, priority: -10, broom: true,   /* lowest: any real interactable in reach wins E */
       enabled: () => !!L, prompt: () => t(key('skip')), onInteract: () => finish('skip') }) || null;
   }
   function end() {

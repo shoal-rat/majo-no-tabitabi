@@ -530,28 +530,6 @@ export function resolveCollisions(pos, radius = 0.4, height = 1.6) {
   return hit;
 }
 
-/**
- * Visit every live collider whose footprint may lie within r of (x, z): fn(collider) (return true to stop). Each collider is
- * visited once even when it spans several grid cells. No allocation (climbing probes call it every frame).
- */
-let _visit = 0;
-export function collidersNear(x, z, r, fn) {
-  _visit = (_visit + 1) | 0;
-  const ix0 = Math.floor((x - r) / CELL), ix1 = Math.floor((x + r) / CELL);
-  const iz0 = Math.floor((z - r) / CELL), iz1 = Math.floor((z + r) / CELL);
-  for (let ix = ix0; ix <= ix1; ix++) for (let iz = iz0; iz <= iz1; iz++) {
-    const a = colGrid.get(key(ix, iz));
-    if (!a) continue;
-    for (let i = 0; i < a.length; i++) {
-      const c = a[i];
-      if (c.dead || c._visit === _visit) continue;
-      c._visit = _visit;
-      if (fn(c)) return true;
-    }
-  }
-  return false;
-}
-
 const _rp = new THREE.Vector3();
 /**
  * March a ray against terrain + platforms. Returns the distance to the first point below ground, or maxDist.
@@ -595,7 +573,7 @@ export const world = {
   /** True where the land is fully warded (no ground fire, no craters). */
   isProtected(x, z) { return protectionAt(x, z) >= 0.999; },
   veilAt, veilDist, moonDirAt, daylightAt, regionAt, majorAt, riverDist, roadDist, mountainMask,
-  addPlatform, addCollider, resolveCollisions, collidersNear, platforms, colliders,
+  addPlatform, addCollider, resolveCollisions, platforms, colliders,
   /** Position of an anchor as a Vector3 on the ground (topmost surface). */
   anchor(id, out = new THREE.Vector3()) {
     const a = ANCHORS[id];

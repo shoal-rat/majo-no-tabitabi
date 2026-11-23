@@ -336,3 +336,46 @@ element hit the mechanism), `read(id, { silent })`. Site record fields used by t
 
 **State** `G.state.wilds.pages` (defaultState; `wstate()` fills old saves): `{ pg_<el>: 'seen'|'open'|'won'|'read' }`.
 The wake, the fight and the mechanisms' mid-states (a half-lit candle ring) are physical and not saved.
+
+## Onboarding round (src/gameplay/onboarding.js, 2026-11-24)
+The rest of the onboarding, taught the way the open country teaches: in context, the first time it is needed, by doing.
+One beat at a time on the coach card (`G.ui.coach`, src/ui/coach.js) in the voice of her travel journal (「旅途手记」):
+a short line and a task with `{action}` placeholders (keys on a computer, button names on a phone). A beat shows only when
+its moment comes, never during dialogue, menus, story beats, the spar or page lessons, a duel or a boss, and at least 20 s
+after the last card; it is ticked off by doing it (before it is asked, too: then it never shows), or times out; {interact}
+dismisses it (「知道了」); 「按键提示」 (settings.hints) turns them all off. Done: `flags.tip_<id>` (no new save field).
+
+| system | beat | where / trigger | done when |
+|---|---|---|---|
+| sprint | sprint | walking 4 s on foot (home) | she sprints |
+| broom | broom_call | walking 12 s outdoors with the broom known | she rides |
+| | broom_climb | 2 s on the broom | she rises 2.5 m |
+| | boost | 8 s on the broom, mana > 40 % | she boosts (it costs mana, the card says) |
+| | empty | mana < 12 % on the broom | observation: the slow descent, rest to regain mana |
+| | dive | above 24 m | a dive (falling > 6 m/s at > 14 m/s) |
+| | land | 45 s of riding in all | she dismounts (only once asked) |
+| survival | heal | on foot, hp < 55 %, bread in the bag | `player:healed` |
+| | respawn | after the first respawn | observation: the rest stop, autosave |
+| spells | wheel | three elements known | `spell:select` |
+| chemistry | grassfire | burning ground within 6 m | observation: spread, self-burn, regrowth |
+| | fanfire | wind known, fire within 14 m | combo fan / fanfire |
+| | freeze | ice known, water within 7 m | combo freeze / icesheet |
+| | conduct | thunder known, a wet foe within 22 m | combo conduct / charged |
+| | earthwall | earth known, in a fight | an earth cast |
+| exploration | map | 25 s on the road after leaving home | the map tab |
+| | journal | 2 min on the road | the journal tab |
+| | pages | named, 200 s on the road, no page site seen | a site seen (pointer to tier 2) |
+| | rings | on the broom within 70 m of a course's first ring | a race starts |
+| | shop | roof mended, 120 stardust | observation: the inn counter sells growth |
+| | wardrobe | named, 7 min on the road | the wardrobe tab |
+| phone | touch_look | touch controls, 3 s in | 180 px of look drag |
+
+Taught elsewhere and not repeated here: dodge and guard (the storm step), casting (the three stars), combat (Fran's spar
+lessons), tier 2 (page lessons), foes (first-meeting hints), reactions (element notes), puzzles (their clues), the
+interact pill, the key hints list. Not in the journey's kit: the light wings, the familiar, 金环.
+`G.onboarding.add(beat)` lets another system queue its own first-use beats with the same rules (key = its loc prefix,
+flag = its done flag, calm = not in fights). Probe: `node tools/play.mjs --name onboarding --quality low --timeout 900
+--script tools/journey/onboarding.js --params "tipGap=3&obShots=1"`.
+
+![The boost beat ticked off on a computer](../images/onboarding-desktop.jpg)
+![The touch-look beat indoors at home on a phone](../images/onboarding-phone.jpg)

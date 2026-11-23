@@ -16,6 +16,7 @@ import { createRaces } from './races.js';
 import { createMechanics } from './mechanics.js';
 import { createWilds } from './wilds.js';   // the open country's discovery loop (stray stars, landmark puzzles, ring courses)
 import { createErrands } from './errands.js';   // roadside errands given by travellers at the landmarks
+import { createOnboarding } from './onboarding.js';   // the rest of the onboarding, taught in context (coach card)
 
 const api = {};
 let L = null, PK = null, CO = null, RA = null, ME = null;
@@ -263,6 +264,7 @@ export const gameplaySystem = {
     try { G.wilds.init(); } catch (e) { G.reportError('gameplay:wilds', e); }
     G.errands = createErrands();
     try { G.errands.init(); } catch (e) { G.reportError('gameplay:errands', e); }
+    G.onboarding = createOnboarding();   // the journal's notes in the margin: the rest of the onboarding (onboarding.js)
     PK = createPickups(api);
     PK.init();
     initShops();
@@ -286,6 +288,7 @@ export const gameplaySystem = {
     G.travelNotes.update();
     try { G.wilds?.update(dt); } catch (e) { G.reportError('gameplay:wilds', e); }
     try { G.errands?.update(dt); } catch (e) { G.reportError('gameplay:errands', e); }
+    try { G.onboarding?.update(dt); } catch (e) { G.reportError('gameplay:onboarding', e); }
     for (const [n, m] of [['pickups', PK]]) {
       try { m.update(dt); } catch (e) { G.reportError('gameplay:' + n, e); }
     }

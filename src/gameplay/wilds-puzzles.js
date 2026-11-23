@@ -143,7 +143,7 @@ export function createWildPuzzles({ resolveAt, grant, wstate, tt }) {
       }
       for (let k = 0; k < 9; k++) { const a = r() * 6.283, d0 = 0.5 + r() * 1.2; const s = sphere(0.3 + r() * 0.25, k % 2 ? leaf : dry, Math.sin(a) * d0, 0.4 + r() * 1.1, Math.cos(a) * d0, 5, 4); s.scale.y = 0.6; g.add(s); }
       p.thicket = bakeStatic(g); p.thicket.position.copy(p.pos); G.scene.add(p.thicket);
-      p.col = G.world.addCollider({ x: p.pos.x, z: p.pos.z, r: 1.55, y0: p.pos.y - 1, y1: p.pos.y + 2.2, tag: 'wilds_bramble', climb: false });
+      p.col = G.world.addCollider({ x: p.pos.x, z: p.pos.z, r: 1.55, y0: p.pos.y - 1, y1: p.pos.y + 2.2, tag: 'wilds_bramble' });
       p.reactor = register({ owner: p, kind: 'prop', material: 'wood', pos: p.pos.clone(), center: false, radius: 1.7, height: 2.0, flammable: 1, burnTime: 6,
         on: { burnout: () => solve(p) } });
       chestInteract(p, () => p.pos);
@@ -165,7 +165,7 @@ export function createWildPuzzles({ resolveAt, grant, wstate, tt }) {
         g.add(o);
       }
       p.pile = bakeStatic(g); p.pile.position.copy(p.pos); G.scene.add(p.pile);
-      p.col = G.world.addCollider({ x: p.pos.x, z: p.pos.z, r: 1.6, y0: p.pos.y - 1, y1: p.pos.y + 1.9, tag: 'wilds_rubble', climb: false });
+      p.col = G.world.addCollider({ x: p.pos.x, z: p.pos.z, r: 1.6, y0: p.pos.y - 1, y1: p.pos.y + 1.9, tag: 'wilds_rubble' });
       const smash = () => { solve(p); return true; };
       p.reactor = register({ owner: p, kind: 'prop', material: 'stone', pos: p.pos.clone(), center: false, radius: 1.8, height: 1.8,
         on: { shatter: smash, hit: (rr, el, power, info) => { if ((el === 'earth' && power >= 1.1) || (info && info.heavy && el !== 'water' && el !== 'wind')) smash(); } } });

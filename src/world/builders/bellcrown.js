@@ -7,7 +7,6 @@ import { finishFrontage } from './mage-frontage.js';
 import { mageResidents } from './mage-folk.js';
 import { box, cone, cyl, sphere, torus } from '../../core/geo.js';
 import { Site, mat, M, beam } from './kit.js';
-import { homeHouse } from './home-house.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { glow } from '../../core/mats.js';
 import { cityWalls, coreWorks, cathedral, clockTower, whiteTower, layoutHouses, streetProps, wallRocks, reservedBoxes, obb, isFree, ROOF } from './mage-city.js';
@@ -124,8 +123,6 @@ function upstairsDoor(g, w, d, h) {
   }
 }
 function house(site, x, z, w, d, h, rot, seed, baseY = H) {
-  // the hometown's street (buildEastTown) is modelled part by part: builders/home-house.js
-  if (baseY !== H) return homeHouse(site, x, z, w, d, h, rot, seed, baseY);
   const g = new THREE.Group(),
     roof = tile[seed % tile.length],
     body = plaster[seed % plaster.length],

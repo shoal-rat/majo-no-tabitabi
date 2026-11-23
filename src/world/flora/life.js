@@ -88,12 +88,12 @@ export function createLife(ctx) {
       if (d.kind === 'shroom') {
         const capY = y + m.box.max.y * s;
         const capR = Math.min(m.box.max.x - m.box.min.x, m.box.max.z - m.box.min.z) * 0.5 * s;
-        colliders.set(i, W.addCollider({ x, z, r, y0: y - 1, y1: capY - 1.2, tag: 'flora', climb: false }));
+        colliders.set(i, W.addCollider({ x, z, r, y0: y - 1, y1: capY - 1.2, tag: 'flora' }));
         const platform = W.addPlatform({ x, z, r: capR * 0.55, top: capY - 0.15, thick: 1.0, tag: 'flora-cap' });
         const pad = { pos: new THREE.Vector3(x, capY - 0.15, z), radius: capR * 0.7, power: 15 + Math.min(8, capR * 1.5), id: i };
         Object.defineProperty(pad, 'platform', { value: platform, enumerable: false });
         bouncePads.push(pad); padOf.set(i, pad);
-      } else colliders.set(i, W.addCollider({ x, z, r, y0: y - 1, y1: top, tag: 'flora', climb: false }));   // trunks are not climbing walls
+      } else colliders.set(i, W.addCollider({ x, z, r, y0: y - 1, y1: top, tag: 'flora' }));
       nCol++;
     } else if ((d.kind === 'rock' || d.kind === 'crystal') && (d.solid || d.breakable)) {
       const bw = Math.min(m.box.max.x - m.box.min.x, m.box.max.z - m.box.min.z) * 0.5 * s;

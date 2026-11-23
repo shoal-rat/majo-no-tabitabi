@@ -48,7 +48,7 @@ export function createSparLessons(S) {
     // Fran as a lock-on target (combat.lockExtras), alive while the spar is
     L.proxy = { isLockPoint: true, pos: d.n.pos, height: 1.75, radius: 0.7, lockRange: 45, get dead() { return !L || L.d !== d || !S.spar.active; } };
     G.combat?.lockExtras?.push(L.proxy);
-    L.skip = G.interact?.add?.({ getPos: (out) => out.copy(G.player.pos).setY(G.player.pos.y + 1), radius: 3, priority: 9, broom: true,
+    L.skip = G.interact?.add?.({ getPos: (out) => out.copy(G.player.pos).setY(G.player.pos.y + 1), radius: 3, priority: -10, broom: true,   /* lowest: any real interactable in reach wins E */
       enabled: () => !!L && L.i >= 0 && L.i < BEATS.length, prompt: () => t('story.spar.lesson.skip'), onInteract: () => skipAll() }) || null;
     next();
   }

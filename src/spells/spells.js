@@ -263,8 +263,7 @@ function castPlan(id, form, def, f) {
 function cdLeft(id, form) { return Math.max(0, (PI.cd[id + ':' + form] || 0) - G.time.t); }
 function canAct() {
   const P = G.player;
-  // both hands are on the wall while she climbs (spells wait until she stands, hangs off the broom or lets go)
-  return !!P && !P.dead && G.mode === 'play' && P.control !== false && P.state !== 'climb';
+  return !!P && !P.dead && G.mode === 'play' && P.control !== false;
 }
 /** Player cast with all the rules: knowledge, cooldown, mana, gauge, animation. */
 function tryCast(id, form = 'small', silent = false) {

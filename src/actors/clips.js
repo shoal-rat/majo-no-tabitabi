@@ -43,8 +43,6 @@ export const CLIPS = {
   land_soft:    { clip: 'NinjaJump_Land', loop: false, fade: 0.06, speed: 1.6, to: 0.6 },
   land_hard:    { clip: 'Land_Hard', loop: false, fade: 0.05, impact: 0.05, recover: 0.6, gohei: 'hold' },
   climb:        { clip: 'ClimbUp_1m', loop: false, fade: 0.1 },
-  // on a wall: a held airborne pose; hands and feet are put on the face by IK (player/climb.js poseClimb)
-  climb_hold:   { clip: 'Jump_Loop', loop: true, fade: 0.18, speed: 0.15 },
   // water / broom / sitting
   swim:         { clip: 'Swim_Fwd_Loop', loop: true, fade: 0.3, v: 2.4 },
   swim_idle:    { clip: 'Swim_Idle_Loop', loop: true, fade: 0.35 },
