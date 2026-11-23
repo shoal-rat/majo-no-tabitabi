@@ -26,7 +26,7 @@ for (let r = 0; r < runs; r++) {
   if (!S.spar.active) { out.push({ error: 'spar did not start' }); break; }
   const t0 = G.time.t;
   let castT = 0, lastPat = null;
-  while (S.spar.active && G.time.t - t0 < 240) {
+  while (S.spar.active && G.time.t - t0 < 480) {
     await T.frames(1);
     const st = S.spar.stats, n = S.npcs.get('fran');
     if (!st || !n) continue;

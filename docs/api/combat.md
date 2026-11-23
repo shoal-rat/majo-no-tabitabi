@@ -214,14 +214,50 @@ a hit on her resets the chain. The fight is rated 3 s after it ends (「利落�
 stardust (9 % of the style; ranks at 25 / 60 / 110 / 175 / 250 style — both scaled ×2.5 with the longer fights). Events `'combat:rank' { rank }`, `'combat:rated' { rank, style, kills, bonus }`.
 
 ### Fran's spar (src/story/fran-spar.js)
-Three movements: 0 读杖尖 "reading the wand tip" (single stardust bolts — shield to reflect), 1 星尘乱舞 "stardust frenzy" at hp ≤ 84 or 6 casts (fan of bullets 星尘连射,
-bombardment 星落, homing water bubbles 水泡, frost seal 冰阵), 2 流星掠空 "meteor sweep" at hp ≤ 36 or 12 casts (circles at 6 m; diving passes
+Two modes (`MODES`). **story** — the first bout in episode 1, gentle, with the lessons (below); **recall** — the recollection
+from the trial ground after the journey, the re-challenge. Movements: 0 读杖尖 "reading the wand tip" (single stardust bolts — shield to reflect), 1 星尘乱舞 "stardust frenzy" (story: hp ≤ 70 or 6 casts; recall: 380 / 5) (fan of bullets 星尘连射,
+bombardment 星落, homing water bubbles 水泡, frost seal 冰阵), 2 流星掠空 "meteor sweep" (story 30 / 12; recall 240 / 16) (circles at 6 m; diving passes
 that rake the ground then land = opening; volleys from the air; a wind hit throws her off the broom). From movement 1 she
 counter-casts her spells mid-air and raises a shield against a barrage. The answer element mid-windup (or a reflected bolt)
-scatters the spell (long opening, duel beat). Openings have a damage budget (13 / 14 / 16, +5 on a break / tumble), outside
-them hits graze (×0.1 bullets, ×0.2 elements). Outcomes unchanged ('break' / 'yield' / 'hold' at 20 casts); she has 126 hp in the
-story, 180 in the replay, and her bolts deal ×0.6 (`FRAN_DMG`, through the caster context's `dmgK`) — see "Longer fights".
+scatters the spell (long opening, duel beat). Recall only: 3 星河终章 "river of stars" at hp ≤ 110 or 30 casts — still in the
+air, two or three spells chained back to back (wind-ups ×0.8, no opening between them, `d.chain`), then one short opening; a
+scattered spell or a fall ends the chain. Openings have a damage budget (story 13 / 14 / 16, +5 on a break / tumble; recall
+10 / 11 / 12 / 10, +3), outside them hits graze (×0.1 bullets, ×0.2 elements); recall openings last ×0.75, wind-ups ×0.85,
+she counter-casts 65 % (story 45 %) every 2.2 s (3.2) and shields every 2.6 s (4). Outcomes unchanged ('break' / 'yield' /
+'hold' at 20 casts in the story, 90 in the recall); she has 105 hp in the story, 480 in the recall; her bolts deal ×0.6 /
+×0.8 (`M.dmg` through the caster context's `dmgK`). Measured (`tools/journey/spar-pacing.js`, a flawless duellist): the recall
+takes about 100 s (it took 12.6 s before the longer fights), so a competent player needs 2–3 min.
 Events `'spar:phase' { phase }`, `'spar:broken' { pattern }`, `'spar:tumble'`, `'spar:end' { result, story, phase }`.
+
+#### Lessons (src/story/spar-lessons.js, the coach card src/ui/coach.js)
+The first (story) bout teaches combat the way the open country teaches everything else: by doing, one system at a time.
+Fran says one short line and the coach card (bottom centre; on a phone between the stick and the buttons) shows the task
+with key placeholders, so a computer shows keys and a phone its buttons. Each task has a soft check, a timeout, and is
+ticked off at once when she already did it earlier in the bout. Fran holds the next movement (and her hp above its line)
+until the lessons of the current one are done or timed out, and waits during the lock-on and the wolf lessons.
+
+| # | lesson | movement | the task | check | timeout |
+|---|---|---|---|---|---|
+| 1 | lock 锁定 | 0 | lock onto Fran ({lock}); she waits | `G.combat.lockTarget` is her proxy (`G.combat.lockExtras`) | 10 s |
+| 2 | dodge 闪身 | 0 | dodge one of her bolts ({dodge}); close = a slow beat | `player:dodge` with her bolt within 7 m | 18 s |
+| 3 | guard 结界 | 0 | raise the guard ({guard}); at the last moment it reflects | `spell:clash` block / reflect | 18 s |
+| 4 | counter 回击 | 0 | hit her while she lowers the wand ({attack}) | a hit in an opening | 18 s |
+| 5 | answer 拆阵 | 1 | break a spell she is drawing with its answer ({cast}, {wheel}) | `spar:broken` | 30 s |
+| 6 | weave 交织 | 1 | a stardust wolf: alternate elements until its stance breaks | `enemy:stagger` on it | 40 s |
+| 7 | read 看破 | 1 | dodge / guard right into its pounce | `enemy:read` on it | 25 s |
+| 8 | rally 背水一战 | 1 | finish it: a beast near its end rallies | it falls | 30 s |
+| 9 | air 风 | 2 | knock her off the broom with wind | `spar:tumble` | 40 s |
+| 10 | free 自由比试 | 2 | the rest of the bout | — | 6 s |
+
+The wolf (`e.phantom`, `e.ignoreCalm` so the story's calm does not send it home, stance 55, damage ×0.35) is dispelled when
+its lessons time out. {interact} skips all lessons (an interact hotspot that follows her, 「跳过指引」). Done, skipped or
+the bout over: `flags.spar_lessons` (no new save field); the recollection never teaches. `G.story.spar.lessons` =
+`{ active, state: { beat, shown, t, seen }, … }`, events `'spar:lesson' { id, how: 'done'|'timeout'|'skip' }`. Probe:
+`node tools/play.mjs --name lessons --quality low --timeout 900 --script tools/journey/spar-lessons.js` (a learner who does
+what each card asks; `slShots=1` saves each card): the beginner bout with all lessons takes about 85 s and costs ~2 hp.
+
+![The guard lesson on a computer](../images/spar-lesson-desktop.jpg)
+![The answer lesson on a phone: the card sits between the stick and the buttons, which it names](../images/spar-lesson-phone.jpg)
 
 ### Clearing trial (src/combat/trials.js) — `G.combat.trials`
 After quest `mages`, a chalk ring 9 m from Fran's spot (E: 「踏入试炼圈」, Step into the trial ring): five rounds of stardust phantoms (pages + mud, a pack,
@@ -258,7 +294,10 @@ no cooldown. This round makes fights last 2–3× as long (elites and Fran's spa
   opens the attacker for 1.8 s: 「看破！」, the duel 'dodge' beat, `'enemy:read' { enemy }`, style +3.
 - **Parry**: the same blow met by her guard within its perfect window (0.25 s, as for reflecting bolts), facing the
   attacker, deals nothing and opens the attacker for 2.2 s: 「弹开了！」, the 'parry' beat, `'enemy:read' { enemy, parry }`.
-- **Rally**: once below 40 % hp (elites 50 %) a foe steels itself: 「背水一战」, its next move comes at once (cooldowns
+- **Second phase** (named elites and page guardians): at 66 % hp 「气势一变」 — the ward forms again at full strength (a stone
+  guard's shell grows back), the stance refills, a roar and 0.8 s of grace. With the rally at 33 % a boss fight has three
+  movements. Wards never exceed 360 points (`WARD_CAP` in wards.js), so a shell stays a gate of 4–5 counter hits on a big foe.
+- **Rally**: once below 40 % hp (camp elites 50 %, named foes 33 %) a foe steels itself: 「背水一战」, its next move comes at once (cooldowns
   capped), haste ×1.2 and speed ×1.1 for the rest of the fight, stance refilled, a small fire aura, the plate's hp bar turns
   red and pulses. `def.rally === false` opts out (small mud, lost flames, the thief). `'enemy:rally' { enemy }`.
 - **The killing blow** no longer staggers, rallies or fires an affix's on-hit effect (a dying `blink` elite used to

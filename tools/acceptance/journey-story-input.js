@@ -287,7 +287,16 @@ window.playTwo = async function (part) {
     await tick(8);
     // 120 s of game time (ticks of 50 ms): the spar plus the lake finale; the spar runs about three times as long since
     // the "longer fights" round (126 hp, hold at 20 casts), so the old 48 s budget no longer covers it
+    let lessonsSkipped = false;
     for (let i = 0; i < 2400 && S.current()?.id === 'duel'; i++) {
+      // the first bout teaches (src/story/spar-lessons.js); this scripted duellist skips the lessons with {interact}
+      if (!lessonsSkipped && S.spar.lessons?.state?.shown) {
+        lessonsSkipped = true;
+        off();
+        await tap('KeyE');
+        if (S.spar.lessons.active || !G.state.flags.spar_lessons) throw Error('lesson skip ' + JSON.stringify(S.spar.lessons.state));
+        notes.push({ sparLessons: 'skipped with interact' });
+      }
       const st = S.spar.stats,
         n = S.npcs.get('fran');
       if (!st) {

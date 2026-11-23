@@ -68,8 +68,10 @@ function makeShell(el) {
 }
 
 /** Give e an elemental ward of `max` points. o: { regen = 14 (s until it reforms), silent } */
+const WARD_CAP = 360;   // a shell is a gate (4–5 counter hits), not a grind: it never grows past this, however big the foe
 export function addWard(e, el, max, o = {}) {
   if (!COUNTER[el]) return null;
+  max = Math.min(max, WARD_CAP);
   removeWard(e);
   const mesh = makeShell(el);
   G.scene.add(mesh);

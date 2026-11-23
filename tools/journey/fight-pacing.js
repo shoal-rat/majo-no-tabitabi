@@ -156,7 +156,7 @@ async function fight(sc, prof, seed) {
       traceT = 0.5;
       R.trace.push(now.toFixed(1) + (G.elements?.concealedAt?.(P.pos) ? ' HID' : '') + ' ' + live.map((e) => `${e.type}#${e.id} hp${e.hp} cd${(e.cd ?? 0).toFixed(1)} st${e.stunT.toFixed(1)} fear${(e.fearT || 0).toFixed(1)} ag${e.aggro ? 1 : 0} ${e.atk ? e.atk.name : '-'} d${e.pos.distanceTo(P.pos).toFixed(1)}`).join(' | '));
     }
-    if (now > (sc.trial ? 600 : 150)) { R.timeout = true; R.left = live.map((e) => e.type + ':' + Math.round(e.hp)).join(' '); break; }
+    if (now > (sc.trial ? 600 : sc.elite || sc.page ? 420 : 150)) { R.timeout = true; R.left = live.map((e) => e.type + ':' + Math.round(e.hp)).join(' '); break; }
     // target: the lock (or the nearest), the camera from behind her toward it
     let tg = C.lockTarget && !C.lockTarget.dead ? C.lockTarget : null;
     if (!tg || !live.includes(tg)) { tg = live.reduce((b, e) => (!b || e.pos.distanceTo(P.pos) < b.pos.distanceTo(P.pos) ? e : b), null); C.lockTarget = tg; }

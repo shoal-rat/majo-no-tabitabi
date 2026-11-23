@@ -330,3 +330,10 @@ happening.
 - **Quiet when idle** (`hud.js update`, `restT`): the crest rests (dims, numbers fade) while she is whole and out of a
   fight for 4 s; key hints rest after 12 s on the same set; the objective card folds to its title after 14 s without a
   change; the dial dims after 9 s without a swap, a cast charge or a fight. Any change brings each back at once.
+
+### Coach card (src/ui/coach.js, 2026-11-24)
+`G.ui.coach({ who, line, task, n, of, dur })` shows one lesson: the speaker's line, the task and `n / of`, as a parchment
+pill bottom centre (a phone: between the stick and the buttons). The caller fills key placeholders with
+`src/story/dialogue.js` `fill()`, so a computer shows keys and a phone its button names. `G.ui.coach({ done: true })` ticks
+the task off (a green check, then it fades); `G.ui.coach(null)` hides it. Hidden under menus and dialogue, back when play
+resumes; never takes pointer events. Used by Fran's spar lessons (`src/story/spar-lessons.js`).

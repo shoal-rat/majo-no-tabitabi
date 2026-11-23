@@ -171,17 +171,17 @@ export const RING_PAY = { gold: 100, silver: 60, bronze: 35 };
  */
 export const PAGE_SITES = [
   { id: 'pg_wind', el: 'wind', x: 2310, z: 358, face: 1.9, mech: 'harp', arena: 22,
-    guardian: { base: 'paper', hpMul: 10, affixes: ['warded'], ward: 'wind' } },   // ×10 of 110 (was ×16 of 26 before the longer fights)
+    guardian: { base: 'paper', hpMul: 48, affixes: ['warded'], ward: 'wind' } },
   { id: 'pg_thunder', el: 'thunder', x: 1300, z: 350, face: 3.0, mech: 'rod', arena: 20,
-    guardian: { base: 'caster', element: 'thunder', hpMul: 2.6, affixes: ['warded', 'blink'], ward: 'thunder' } },
+    guardian: { base: 'caster', element: 'thunder', hpMul: 5.5, affixes: ['warded', 'blink'], ward: 'thunder' } },
   { id: 'pg_fire', el: 'fire', x: 175, z: -555, face: 3.4, mech: 'candles', arena: 22,
-    guardian: { base: 'embersnake', hpMul: 2.2, affixes: ['volatile'] } },
+    guardian: { base: 'embersnake', hpMul: 9.6, affixes: ['volatile'] } },
   { id: 'pg_earth', el: 'earth', x: -1225, z: -700, face: 0.6, mech: 'lectern', arena: 20,
-    guardian: { base: 'golem', hpMul: 1.6, affixes: ['warded'], ward: 'earth' } },
+    guardian: { base: 'golem', hpMul: 6.4, affixes: ['warded'], ward: 'earth' } },
   { id: 'pg_water', el: 'water', x: -565, z: 120, face: 5.2, mech: 'bud', arena: 22,
-    guardian: { base: 'blob', hpMul: 5, affixes: ['warded', 'leech'], ward: 'water' } },
+    guardian: { base: 'blob', hpMul: 18, affixes: ['warded', 'leech'], ward: 'water' } },
   { id: 'pg_ice', el: 'ice', x: -1700, z: -820, face: 4.1, mech: 'spring', arena: 22,
-    guardian: { base: 'froststag', hpMul: 2, affixes: ['frenzy'] } },
+    guardian: { base: 'froststag', hpMul: 8, affixes: ['frenzy'] } },
 ];
 /** First sighting (map pin, journal hint) within this many metres of the marker. */
 export const PAGE_SIGHT = 85;

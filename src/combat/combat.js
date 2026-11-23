@@ -50,6 +50,9 @@ const C = {
   counterOf,
   /** makeElite(e, affixes): turn a spawned foe into an elite (encounters.js uses it; the pacing probe too) */
   makeElite,
+  /** extra lock-on targets that are not Enemies (Fran in the spar): { pos, height, radius, lockRange, dead } like the
+   *  bosses' lock points; one that is not dead also counts as a fight (inCombat: music, the touch lock button) */
+  lockExtras: [],
   nestsEnabled: true,
   wildlifeEnabled: true,
   after,
@@ -212,7 +215,8 @@ const C = {
     const cand = [];
     // boss lock points (无明's weak points) join the candidates, with their own range
     const lp = C.boss?.enemy?.data?.lockPoints;
-    const pool = lp && lp.length ? enemies.filter((e) => !e.data?.lockPoints).concat(lp) : enemies;
+    let pool = lp && lp.length ? enemies.filter((e) => !e.data?.lockPoints).concat(lp) : enemies;
+    if (C.lockExtras.length) pool = pool.concat(C.lockExtras);
     for (const e of pool) {
       if (e.dead || e.dormant) continue;
       const d = e.pos.distanceTo(P.pos);
@@ -404,7 +408,7 @@ export const combatSystem = {
       duels.update(dt);
       bosses.update(dt);
       if (C.wildlifeEnabled) wildlife.update(dt);
-      C.inCombat = !!(duels.active || bosses.active) || (G.time.t - combatT < 4 && enemies.some((e) => e.aggro && !e.dormant));
+      C.inCombat = !!(duels.active || bosses.active) || C.lockExtras.some((x) => !x.dead) || (G.time.t - combatT < 4 && enemies.some((e) => e.aggro && !e.dormant));
     } catch (err) { G.reportError('combat:update', err); }
   },
 };

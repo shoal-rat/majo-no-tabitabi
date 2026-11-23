@@ -24,6 +24,21 @@ export default {
     break: '芙兰收起破开的结界，向你点了点头。',
     yield: '芙兰接住最后一束光，扶你站稳。',
     hold: '你顶住了芙兰的轮番施法。她笑着放下魔杖。',
+    // 对练课: the lessons inside the first spar (src/story/spar-lessons.js), shown on the coach card
+    lesson: {
+      who: '芙兰',
+      skip: '跳过指引',
+      lock: { line: '先看着我。真正的对决，目光要一直跟着对手。', task: '按 {lock} 锁定芙兰' },
+      dodge: { line: '杖尖的光一亮，星尘弹就要来了。', task: '光弹飞来时按 {dodge} 闪身——贴着它闪开，时间会慢下来' },
+      guard: { line: '躲不开的，就用结界挡住。', task: '按住 {guard} 撑起结界；等光弹快到时再举起，能把它弹回去' },
+      counter: { line: '我收杖的那一下，就是破绽。', task: '在她收杖时用魔力弹 {attack} 回击' },
+      answer: { line: '看我画的魔法阵。用克制它的元素，就能把咒语打散。', task: '她画阵时用 {cast} 放出克制的元素：风吹散星尘，火化开冰与水泡（{wheel} 换元素）' },
+      weave: { line: '对付野兽，光靠一种元素可不够。来，试试这只星尘变的狼。', task: '交替使用不同的元素打它——金线涨满，它就会失衡' },
+      read: { line: '它扑过来之前会压低身子。', task: '在它扑到的一瞬间按 {dodge}，或刚好撑起 {guard}，就能看破它的破绽' },
+      rally: { line: '快不行的野兽会背水一战，可别大意。', task: '打倒星尘狼' },
+      air: { line: '接下来我要飞了。骑在扫帚上的人，最怕风。', task: '她在空中时，用风魔法把她吹下扫帚' },
+      free: { line: '好了，把学到的都用上吧！', task: '自由比试：打破芙兰的结界，或撑到她收手' },
+    },
   },
   notes: {
     majo_trial_lake: {

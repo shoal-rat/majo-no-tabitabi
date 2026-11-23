@@ -31,7 +31,7 @@ export function front(e, dt) {
   const P = G.player, C = G.combat;
   if (!playerAlive() || G.mode !== 'play') { e.move.set(0, 0, 0); anim(e, false); return 'busy'; }
   if (e.data.leaving) return 'busy';   // ambushers flying off (encounters steers them)
-  if (C?.calm && !e.boss) { e.aggro = false; if (e.atk) e.stopAttack(); wander(e, dt, (e.def.speed ?? 2) * 0.4); anim(e, e.move.lengthSq() > 0.05); return 'idle'; }
+  if (C?.calm && !e.boss && !e.ignoreCalm) { e.aggro = false; if (e.atk) e.stopAttack(); wander(e, dt, (e.def.speed ?? 2) * 0.4); anim(e, e.move.lengthSq() > 0.05); return 'idle'; }
   if (e.stepAttack(dt)) return 'busy';
   // a steam cloud hides her: nobody new finds her in it, and those who had her lose her after a moment
   if (G.elements?.concealedAt?.(P.pos)) {

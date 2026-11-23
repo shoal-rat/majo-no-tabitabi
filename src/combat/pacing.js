@@ -7,8 +7,11 @@
 //                       exposed 1.8 s, a slow beat.
 //   parry               the same blow met by a guard raised within its perfect window (0.25 s, as for reflecting bolts)
 //                       is turned aside whole: 「弹开了！」, the attacker exposed 2.2 s, the parry beat.
-//   rally               once below 40 % hp (elites 50 %) a foe steels itself: 「背水一战」, its next move comes at once and
-//                       it acts 20 % faster for the rest of the fight. def.rally === false opts out (fodder, the thief).
+//   rally               once below 40 % hp (camp elites 50 %, named foes 33 %) a foe steels itself: 「背水一战」, its next
+//                       move comes at once and it acts 20 % faster for the rest of the fight. def.rally === false opts out.
+//   second phase        a named foe (the five named elites, the page guardians) at 66 % hp: 「气势一变」 — its ward forms again
+//                       at full strength (a stone guard's shell grows back), its stance refills, a roar and 0.8 s of
+//                       grace; with the rally at 33 % that makes three movements of one fight. 'enemy:phase' { enemy, phase }.
 //   hit feedback        tiered hit-stop (the charm stream never stutters), armour glints, starbursts on heavy hits,
 //                       a short fling of the body on the killing blow.
 import * as THREE from 'three';
@@ -17,7 +20,7 @@ import { t } from '../core/i18n.js';
 import { clamp } from '../core/util.js';
 
 const _v = new THREE.Vector3(), _w = new THREE.Vector3();
-const RALLY_AT = 0.4, RALLY_AT_ELITE = 0.5;
+const RALLY_AT = 0.4, RALLY_AT_ELITE = 0.5, RALLY_AT_NAMED = 0.33, PHASE2_AT = 0.66;
 let lastDodgeT = -9;
 
 export function installPacing() {
@@ -57,7 +60,8 @@ export function hitFeedback(e, n, info, exposed) {
 /** Below the rally line a foe steels itself once: its next move comes now and it fights 20 % faster. */
 export function checkRally(e) {
   if (e.rallied || e.dead || e.boss || e.def.rally === false || !(e.maxHp > 0)) return;
-  if (e.hp > e.maxHp * (e.elite ? RALLY_AT_ELITE : RALLY_AT)) return;
+  if (e.named && !e.phase2 && e.hp <= e.maxHp * PHASE2_AT) secondPhase(e);
+  if (e.hp > e.maxHp * (e.named ? RALLY_AT_NAMED : e.elite ? RALLY_AT_ELITE : RALLY_AT)) return;
   e.rallied = true;
   e.haste = (e.haste || 1) * 1.2;
   e.speedMul *= 1.1;
@@ -81,6 +85,25 @@ export function checkRally(e) {
 
 /** Only a blow from close by can be read or parried (not a shard it called down from across the field). */
 function close(e) { const P = G.player; return !!P && Math.hypot(e.pos.x - P.pos.x, e.pos.z - P.pos.z) < 8 + e.radius; }
+/** A named foe's second movement: the shell it lost comes back, the stance refills, a roar. */
+function secondPhase(e) {
+  e.phase2 = true;
+  const w = e.ward;
+  if (w) { w.hp = w.max; w.downT = 0; w.fill = 0.01; G.events.emit('enemy:ward', { enemy: e, state: 'reform', el: w.el }); }
+  if (e.def.armor && !(e.armor > 0)) { e.armor = e.def.armor; if (e.data.shards) e.data.shards.visible = true; }
+  e.poise = e.poiseMax;
+  e.iframes = Math.max(e.iframes || 0, 0.8);
+  e.exposedT = 0;
+  e.centerOut(_v);
+  G.fx?.burst('charge_done', _v, { color: 0xfff0c0, scale: 1.4 + e.radius });
+  G.fx?.starburst?.(_v, { color: 0xfff0c0, radius: 2 + e.radius, dur: 0.35 });
+  _v.y = e.pos.y + e.height + 0.7;
+  G.fx?.text?.(_v, t('combat.phase2'), { color: 0xfff0c0, size: 1.15, dur: 1.6 });
+  G.audio?.sfx('roar', { pos: e.pos, vol: 0.7 });
+  G.fx?.duel?.shake?.('medium', e.pos);
+  G.events.emit('enemy:phase', { enemy: e, phase: 2 });
+}
+
 /** A dodge through a blow that would have landed: the attacker is open (called by hurtPlayer when nothing got through). */
 export function perfectDodge(e) {
   if (!e || e.dead || G.time.t - lastDodgeT > 0.45 || G.time.t - (e._readT || -9) < 1.5 || !close(e)) return false;

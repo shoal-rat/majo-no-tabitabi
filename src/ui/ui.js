@@ -20,13 +20,14 @@ import { applyKeyBindings } from './panels.js';
 import { createReactions } from './reactions.js';   // 元素交织: reaction callouts, foe status marks, discoveries
 import { createTouch } from './touch.js';   // touch controls (phones / tablets): above the HUD, below every full-screen layer
 import { createFoes } from './foes.js';   // combat: foe plates (hp, ward, affixes, 破绽) and the combo meter
+import { createCoach } from './coach.js';   // the spar lessons' coach card (src/story/spar-lessons.js)
 import { episodes, countries, countryOfRegion, episodeById, episodeOfQuest, registerEpisodes } from '../data/episodes.js';   // the episode / country registry
 import { stampArt } from './stamps.js';   // a country's passport stamp (procedural SVG)
 
 let hud = null, stage = null, dialogue = null, wheel = null, title = null, menu = null, shop = null, cer = null, touch = null;
 const offs = [];
 let rx = null;
-let foes = null;
+let foes = null, coach = null;
 
 export const uiSystem = {
   name: 'ui',
@@ -39,6 +40,7 @@ export const uiSystem = {
     hud = createHud(root);
     rx = createReactions(root);
     foes = createFoes(hud.root);
+    coach = createCoach(hud.root);
     stage = createStage(root, hud.root);
     const touchDeps = {};
     touch = createTouch(root, touchDeps);
@@ -61,6 +63,8 @@ export const uiSystem = {
       toast: (text, opts) => stage.toast(text, opts),
       banner: (title, subtitle, opts) => stage.banner(title, subtitle, opts),
       prompt: (text) => { hud.prompt(text); touch.prompt(text); },
+      /** coach({ who, line, task, n, of } | { done } | null): one lesson card under the boss bar (src/ui/coach.js) */
+      coach: (o) => coach?.set(o),
       setTracker: (d) => hud.setTracker(d),
       /** setMarkers(list, layer = 'main'): each layer is replaced on its own; all layers are shown together. */
       setMarkers: (list, layer) => hud.setMarkers(list, layer),
@@ -141,6 +145,7 @@ export const uiSystem = {
     hud.update(rdt);
     rx?.update(rdt);
     foes?.update(rdt);
+    coach?.update(rdt);
     stage.update(rdt);
     UI.mouse.moved = false;
   },

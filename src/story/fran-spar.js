@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { G } from '../core/game.js';
 import { t } from '../core/i18n.js';
 import { volley, starRain, seal, counterCast, incomingAt, bolt, EL_COL, ANSWER } from '../combat/patterns.js';
+import { createSparLessons } from './spar-lessons.js';
 
 // Fran uses the same elemental collision registry, projectile simulation and shield checks as the player.
 // The persistent evaluation and the optional recollection share the fight, but record their outcomes separately.
@@ -16,17 +17,19 @@ import { volley, starRain, seal, counterCast, incomingAt, bolt, EL_COL, ANSWER }
 //               after a pass is always an opening.
 // Outcomes are unchanged: 'break' (her hp to 0), 'yield' (the heroine is worn down to the floor), 'hold' (she weathered
 // the whole performance).
-// "Longer fights" round (2026-11): a bout three times as long — 126 hp (the recollection 180), the movements and the hold
-// (20 casts) scaled with it so a good duellist now sees all three movements, a little more to take from each opening but
-// less extra for a scattered spell (+5, was +8), and her bolts at 0.6 so what she deals over the longer bout stays about
-// what it was.
-const PHASE_AT = [Infinity, 84, 36];
-const CAST_AT = [Infinity, 6, 12];
-const HOLD_AT = 20;
-const OPEN_BUDGET = [13, 14, 16];
-const BREAK_BONUS = 5;
-const FRAN_DMG = 0.6;
-const CYCLE = [['bolt'], ['fan', 'rain', 'bubbles', 'frost'], ['dive', 'volley', 'dive', 'rain']];
+//   3 星河终章  (the recollection only, hp <= 110 or 30 casts) still in the air: two or three spells chained back to back
+//               (shorter wind-ups, no opening between them), then one short opening; she answers more of your spells.
+// Two modes (MODES). story: the first bout of episode 1, gentle, and the lessons (spar-lessons.js) teach the combat
+// systems inside it. recall: the recollection from the trial ground once the journey is done — the re-challenge: a
+// fourth movement of combos, tighter openings that give less, more counter-casts and shields, her bolts at 0.8; it
+// lasts a few minutes for a good duellist (spar-pacing probe).
+const MODES = {
+  story: { max: 105, phaseAt: [Infinity, 70, 30], castAt: [Infinity, 6, 12], hold: 20, budget: [13, 14, 16], bonus: 5, dmg: 0.6,
+    counter: 0.45, ccd: 3.2, gcd: 4, rest: 6, open: 1, windup: 1, last: 2 },
+  recall: { max: 480, phaseAt: [Infinity, 380, 240, 110], castAt: [Infinity, 5, 16, 30], hold: 90, budget: [10, 11, 12, 10], bonus: 3, dmg: 0.8,
+    counter: 0.65, ccd: 2.2, gcd: 2.6, rest: 3, open: 0.75, windup: 0.85, last: 3 },
+};
+const CYCLE = [['bolt'], ['fan', 'rain', 'bubbles', 'frost'], ['dive', 'volley', 'dive', 'rain'], [['fan', 'dive'], ['rain', 'volley', 'frost'], ['bubbles', 'dive', 'fan'], ['volley', 'rain']]];
 const ANSWERS = { fan: ['wind'], rain: ['wind', 'earth'], bubbles: ['fire', 'thunder'], frost: ['fire'], dive: ['wind'], volley: ['wind', 'ice'] };
 
 export function createFranSpar(S) {
@@ -59,6 +62,7 @@ export function createFranSpar(S) {
   let duel = null,
     last = null,
     serial = 0;
+  const lessons = createSparLessons(S);
   function safeSave() {
     if (duel?.story) S.save();
   }
@@ -95,9 +99,9 @@ export function createFranSpar(S) {
   function pose(d, dt) {
     const n = d.n, p = G.player;
     const want = place(d, p, tmp);
-    const k = d.phase === 2 && !d.dive ? 3.2 : d.dive ? 40 : 6;
+    const k = d.phase >= 2 && !d.dive ? 3.2 : d.dive ? 40 : 6;
     d.cur.lerp(want, Math.min(1, dt * k));
-    const flying = d.phase === 2 && !d.tumble;
+    const flying = d.phase >= 2 && !d.tumble;
     let yaw;
     if (flying && (d.dive || d.stage === 'rest')) {
       tmp2.subVectors(want, d.cur);
@@ -117,7 +121,7 @@ export function createFranSpar(S) {
         hand: (out) => wandTip(d, out),
         data: { franSpar: d.id },
         power: 0.7,
-        dmgK: FRAN_DMG,
+        dmgK: d.M.dmg,
         onShot: (p) => d.shots.add(p),
       };
     return d.ctx;
@@ -148,10 +152,12 @@ export function createFranSpar(S) {
       taken: 0,
       attempts: 0,
     });
-    const max = story ? 126 : 180;
+    const M = story ? MODES.story : MODES.recall;
+    const max = M.max;
     const hp = Math.max(0, max - (log.hits || 0));
     duel = {
       story,
+      M,
       log,
       hp,
       max,
@@ -181,7 +187,7 @@ export function createFranSpar(S) {
     };
     const d = duel;
     // a resumed save starts in the movement it had reached
-    while (d.phase < 2 && (d.hp <= PHASE_AT[d.phase + 1] || d.log.fired >= CAST_AT[d.phase + 1])) d.phase++;
+    while (d.phase < M.last && (d.hp <= M.phaseAt[d.phase + 1] || d.log.fired >= M.castAt[d.phase + 1])) d.phase++;
     n.team = 'enemy';
     n.height = 1.7;
     P.damageFloor = Math.max(1, Math.min(10, P.hp));
@@ -205,16 +211,18 @@ export function createFranSpar(S) {
       },
     });
     if (!story) G.ui?.banner?.(t('story.spar.memory'), t('story.spar.memorySub'));
+    if (lessons.wanted(story)) lessons.begin(d);
   }
   function hitFran(d, el, power, h) {
     const reflected = G.time.t - d.reflectT < 1.6;
     const open = d.stage === 'opening' || reflected;
+    lessons.onHit(open);
     // the answer to the spell she is gathering scatters it: a long opening
     if (d.stage === 'windup' && d.pattern && (ANSWERS[d.pattern]?.includes(el) || reflected)) {
       breakCast(d, reflected ? 'reflected' : 'broken');
     }
     // a gust while she is up on the broom throws her off it
-    else if (d.phase === 2 && el === 'wind' && !d.tumble && d.stage !== 'opening') {
+    else if (d.phase >= 2 && el === 'wind' && !d.tumble && d.stage !== 'opening') {
       tumble(d);
     }
     const raw = Math.max(1, Math.min(h.damage ?? power * 7, 22));
@@ -228,7 +236,8 @@ export function createFranSpar(S) {
       else { amount = Math.min(amount, d.budget); d.budget -= amount; }
     }
     amount = Math.min(d.hp, Math.max(1, amount));
-    d.hp = Math.max(0, d.hp - amount);
+    const floor = lessons.minHp(d);   // a lesson still open in this movement: she does not fall past it yet
+    d.hp = floor > 0 ? Math.max(Math.min(d.hp, floor), d.hp - amount) : Math.max(0, d.hp - amount);
     d.log.hits += amount;
     d.hitLock = 0.22;
     G.fx?.burst?.(
@@ -249,7 +258,8 @@ export function createFranSpar(S) {
     d.handle = null;
     d.stage = 'opening';
     d.wait = 2.6;
-    d.budget = OPEN_BUDGET[d.phase] + BREAK_BONUS;
+    d.budget = d.M.budget[d.phase] + d.M.bonus;
+    d.chain = null;   // a scattered spell or a fall ends the combo too
     d.log.fired++;   // a scattered spell still counts as one she cast
     say(key);
     G.fx?.burst?.('clash_big', d.n.pos.clone().add(tmp2.set(0, 1.3, 0)), { color: 0xffe7a4, color2: 0xb89de3, scale: 0.7 });
@@ -266,7 +276,8 @@ export function createFranSpar(S) {
     circle.visible = false;
     d.stage = 'opening';
     d.wait = 2.8;
-    d.budget = OPEN_BUDGET[d.phase] + BREAK_BONUS;
+    d.budget = d.M.budget[d.phase] + d.M.bonus;
+    d.chain = null;   // a scattered spell or a fall ends the combo too
     say('tumble');
     G.fx?.burst?.('hit_wind', d.n.pos.clone().add(tmp2.set(0, 1.2, 0)), { scale: 1.3 });
     G.fx?.starburst?.(d.n.pos.clone().add(tmp2.set(0, 1.2, 0)), { color: 0xe6fff2, radius: 2 });
@@ -277,6 +288,7 @@ export function createFranSpar(S) {
     const d = duel;
     if (!d) return;
     duel = null;
+    lessons.close(report);
     circle.visible = false;
     d.handle?.cancel?.();
     if (d.guard) { try { d.guard.stop(); } catch (e) { /* */ } }
@@ -379,15 +391,18 @@ export function createFranSpar(S) {
       fire: (d) => { d.handle = volley(caster(d), G.player, { n: 6, fan: 0.85, gap: 0.06, el: 'sun', color: 0xb89de3, speed: 13, size: 0.32, damage: 9, power: 0.7, turn: 0.3, spell: 'fran_stardust' }); } },
   };
   function sigil(d, color, dur) {
-    if (d.phase === 2) return;
+    if (d.phase >= 2) return;
     const at = d.n.pos.clone();
     at.y = standing(at.x, at.z);
     G.fx?.sigil?.(at, { color, radius: 1.6, dur, intensity: 1.4 });
   }
   function nextPattern(d) {
+    if (d.chain && d.chain.length) return d.chain.shift();
     const list = CYCLE[d.phase];
     const id = list[d.step % list.length];
     d.step++;
+    // the last movement chains two or three spells back to back
+    if (Array.isArray(id)) { d.chain = id.slice(1); return id[0]; }
     return id;
   }
   function tick(dt) {
@@ -408,17 +423,20 @@ export function createFranSpar(S) {
     d.t += dt;
     d.wait -= dt;
     d.hitLock = Math.max(0, (d.hitLock || 0) - dt);
-    // a new movement begins at a rest, never in the middle of an opening
-    if (d.stage === 'rest' && d.phase < 2 && (d.hp <= PHASE_AT[d.phase + 1] || d.log.fired >= CAST_AT[d.phase + 1])) {
+    lessons.tick(dt);
+    // a new movement begins at a rest, never in the middle of an opening or a chain (nor before its lessons are done)
+    const M = d.M;
+    if (d.stage === 'rest' && !(d.chain && d.chain.length) && d.phase < M.last && (d.hp <= M.phaseAt[d.phase + 1] || d.log.fired >= M.castAt[d.phase + 1]) && lessons.allows(d.phase + 1)) {
       d.phase++;
       d.step = 0;
       d.tumble = false;
       if (d.phase === 2) d.orbit = Math.atan2(d.cur.z - base.z, d.cur.x - base.x);
-      G.ui?.toast?.(t(d.phase === 1 ? 'story.spar.phase' : 'combat.spar.air'), { icon: 'wind', dur: 3 });
+      G.ui?.toast?.(t(d.phase === 1 ? 'story.spar.phase' : d.phase === 2 ? 'combat.spar.air' : 'combat.spar.finale'), { icon: 'wind', dur: 3 });
       G.audio?.sfx?.(d.phase === 2 ? 'broom_summon' : 'charge', { pos: d.n.pos, vol: 0.8 });
+      if (d.phase === 3) G.fx?.duel?.beat?.('break', d.n.pos.clone().add(tmp2.set(0, 1.3, 0)), {});
       G.events.emit('spar:phase', { phase: d.phase });
     }
-    if (d.phase === 2 && !d.dive && !d.tumble && d.stage !== 'opening') d.orbit += dt * 0.75;
+    if (d.phase >= 2 && !d.dive && !d.tumble && d.stage !== 'opening') d.orbit += dt * (d.phase === 3 ? 0.95 : 0.75);
     // the dive: rake the ground under her with stardust, then land at the far end (an opening)
     if (d.dive) {
       const v = d.dive;
@@ -445,13 +463,13 @@ export function createFranSpar(S) {
         let barrage = 0;
         for (const p of G.spells?.projectiles || []) if (p.alive && p.team === 'player' && p.pos.distanceToSquared(c) < 144) barrage++;
         if (barrage >= 3 && d.gcd <= 0 && !d.guard) {
-          d.gcd = 4;
+          d.gcd = d.M.gcd;
           d.n.dir = tmp2.set(Math.sin(d.yaw), 0, Math.cos(d.yaw)).clone();
           try { d.guard = G.spells?.cast('guard', 'small', { caster: d.n, team: 'enemy', dir: d.n.dir }) || null; } catch (e) { d.guard = null; }
           d.guardT = 1.2;
           G.npcs.gesture('fran', 'guard');
-        } else if (inc && d.ccd <= 0 && ANSWER[inc.el] && Math.random() < 0.45) {
-          d.ccd = 3.2;
+        } else if (inc && d.ccd <= 0 && ANSWER[inc.el] && Math.random() < d.M.counter) {
+          d.ccd = d.M.ccd;
           const p = counterCast(caster(d), inc, { el: ANSWER[inc.el], power: 1.1, damage: 7 });
           if (p) d.shots.add(p);
           G.npcs.gesture('fran', 'cast_throw');
@@ -461,7 +479,7 @@ export function createFranSpar(S) {
     if (
       d.hp <= 0 ||
       d.exhausted ||
-      (d.log.fired >= HOLD_AT && d.log.attempts + d.log.dodged + d.log.blocked > 0)
+      (d.log.fired >= d.M.hold && d.log.attempts + d.log.dodged + d.log.blocked > 0)
     ) {
       stop(d.hp <= 0 ? 'break' : d.exhausted ? 'yield' : 'hold');
       return;
@@ -475,12 +493,13 @@ export function createFranSpar(S) {
       ticks.rotation.z += dt * 2;
       diamond.rotation.y += dt * 5;
     }
+    if (lessons.holds && d.stage === 'rest') d.wait = Math.max(d.wait, 0.2);   // a lesson has the stage: she waits
     if (d.wait <= 0 && !d.dive) {
       if (d.stage === 'rest') {
         d.pattern = nextPattern(d);
         const P = PAT[d.pattern];
         d.stage = 'windup';
-        d.wait = P.windup(d);
+        d.wait = P.windup(d) * d.M.windup * (d.phase === 3 ? 0.8 : 1);
         d.tumble = false;
         P.tell(d);
         if (d.pattern !== 'bolt') say(d.pattern, '#fff0c8');
@@ -488,15 +507,22 @@ export function createFranSpar(S) {
         circle.visible = false;
         PAT[d.pattern].fire(d);
         d.log.fired++;
-        d.stage = 'opening';
-        d.budget = OPEN_BUDGET[d.phase];
-        d.wait = PAT[d.pattern].open(d);
         G.npcs.gesture('fran', 'cast_throw');
+        if (d.chain && d.chain.length) {
+          // a combo: straight on to the next spell, no opening in between
+          d.stage = 'rest';
+          d.budget = d.M.rest;
+          d.wait = 0.35;
+        } else {
+          d.stage = 'opening';
+          d.budget = d.M.budget[d.phase];
+          d.wait = PAT[d.pattern].open(d) * d.M.open;
+        }
         safeSave();
       } else {
         d.stage = 'rest';
         d.reflectPaid = false;
-        d.budget = 6;   // a stray hit in a rest (a reflected bolt) still lands a little
+        d.budget = d.M.rest;   // a stray hit in a rest (a reflected bolt) still lands a little
         d.landed = null;
         d.tumble = false;
         d.wait = d.phase ? 0.7 : 1.0;
@@ -549,6 +575,8 @@ export function createFranSpar(S) {
     get memory() {
       return !!duel && !duel.story;
     },
+    /** the lessons of the first bout (spar-lessons.js) */
+    get lessons() { return lessons; },
     get stats() {
       return duel ? { ...duel.log, phase: duel.phase, remaining: duel.hp, stage: duel.stage, pattern: duel.pattern } : null;
     },

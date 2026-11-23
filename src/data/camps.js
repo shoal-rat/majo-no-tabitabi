@@ -34,11 +34,11 @@ export const CAMPS = [
 
 /** Named roaming elites: beaten once, remembered (G.state.combat.elites). hp = hp multiplier. */
 export const ELITES = [
-  { id: 'greymane', type: 'wolf', affixes: ['pack', 'frenzy'], x: 260, z: -430, r: 50, escorts: [['wolf', 3]], hp: 3.0 },
-  { id: 'crowfeather', type: 'raider', affixes: ['blink', 'warded'], x: 20, z: -400, r: 60, escorts: [['raider', 1]], hp: 1.6, element: 'thunder', wardEl: 'thunder' },
-  { id: 'redthroat', type: 'embersnake', affixes: ['volatile', 'bulwark'], x: -640, z: -60, r: 40, hp: 1.6 },
-  { id: 'mossback', type: 'golem', affixes: ['bulwark', 'leech'], x: -1240, z: -450, r: 40, hp: 1.9 },
-  { id: 'whitecrown', type: 'froststag', affixes: ['frenzy'], x: -1360, z: -110, r: 50, hp: 2.2 },
+  { id: 'greymane', type: 'wolf', affixes: ['pack', 'frenzy'], x: 260, z: -430, r: 50, escorts: [['wolf', 3]], hp: 12 },
+  { id: 'crowfeather', type: 'raider', affixes: ['blink', 'warded'], x: 20, z: -400, r: 60, escorts: [['raider', 1]], hp: 3.2, element: 'thunder', wardEl: 'thunder' },
+  { id: 'redthroat', type: 'embersnake', affixes: ['volatile', 'bulwark'], x: -640, z: -60, r: 40, hp: 4.2 },
+  { id: 'mossback', type: 'golem', affixes: ['bulwark', 'leech'], x: -1240, z: -450, r: 40, hp: 4.5 },
+  { id: 'whitecrown', type: 'froststag', affixes: ['frenzy'], x: -1360, z: -110, r: 50, hp: 9.6 },
 ];
 
 /** A light sprinkle of weak roamers along the road (x ranges of ROAD_ACROSS, west-bound). every: metres between spots. */
