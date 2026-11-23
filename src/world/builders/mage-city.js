@@ -13,7 +13,11 @@ import { glow } from '../../core/mats.js';
 import { box, cone, cyl, sphere, torus } from '../../core/geo.js';
 import { mat, beam, texGlow, texMat } from './kit.js';
 import { mulberry32 } from '../../core/util.js';
-import { modelGable, modelHip, chimney, modelTile } from './city-roofs.js';
+import { modelGable, modelHip, chimney, modelTile, CHIMNEY_TOPS } from './city-roofs.js';
+import { frontDoor, shopFront, tradeOf, arcade } from './city-trades.js';
+import { halfTimber, quoins, corbelTable, cornerTurret } from './city-styles.js';
+import { CITY_DRESS, resetDress, laundryLine, pottedPlant, broomRack, noticeBoard } from './city-dressing.js';
+import { startAmbient } from '../life/city-ambient.js';
 import { streetLamp, wallLantern, fountainModel, stallModel, planterModel } from './city-market.js';
 import { voussoirs, mouldX, mouldRing, corbel, merlon, arrowSlit, lancet, coursedSpire, hangBanner, archFrame, archivolt, roseTracery, STRING, IMPOST } from './city-stone.js';
 import { addBay, bayRange, startBays, BAY } from './city-bays.js';
@@ -323,6 +327,8 @@ function registerBays(faces, skip, x, z, base, yaw, seed) {
           const hx = ox + xc * xb,
             hz = oz + xs * xb;
           addBay(BELL.x + x + hx * c + hz * s, base + hy, BELL.z + z - hx * s + hz * c, yaw + ry, Wb / 1.6, fl, f.ti, shut, cur, bloom + (k % 3), hash01(seed, k + 0.5));
+          // a few windows glow warm when the light goes (life/city-ambient.js)
+          if (!(fl & BAY.CLOSED) && hash01(seed + k, 3) < 0.1) CITY_DRESS.windows.push([BELL.x + x + hx * c + hz * s, base + hy, BELL.z + z - hx * s + hz * c, yaw + ry, Wb / 1.6]);
         }
     }
 }
@@ -354,7 +360,13 @@ export function townhouse(site, o) {
     }
     if (h + rise > o.cap) rise = Math.max(1.4, o.cap - h);
   }
-  const ti = (seed * 3 + 1) % 4,
+  // house type (art round 2, builders/city-styles.js): seeded, several can mix on one house
+  const hs = (k) => hash01(seed, 90 + k),
+    arcaded = !!o.shop && !o.cap && !lite && o.arcade !== false && hs(1) < 0.34,
+    stepped = kind === 'gable' && hs(2) < 0.42,
+    timber = st > 3 && hs(3) < 0.4,
+    turret = !o.cap && st >= 4 && w >= 5.6 && hs(4) < 0.16;
+  const ti = stepped ? 2 : timber ? 0 : (seed * 3 + 1) % 4,
     roofM = o.roof || ROOFMIX[(seed * 5 + 3) % ROOFMIX.length];
   const c = Math.cos(yaw),
     s = Math.sin(yaw);
@@ -362,10 +374,13 @@ export function townhouse(site, o) {
   const life = o.life;
   _faces = bayRange() ? [] : null;
   const covered = [];
-  // shop floor in dressed stone
-  b(g, 0, 0.25, 0, w + 0.3, 0.5, d + 0.3, foot);
-  b(g, 0, GF / 2, 0, w + 0.1, GF, d + 0.1, sill);
+  // shop floor in dressed stone (an arcaded row sets it 1.9 m back behind arches on piers)
+  const back = arcaded ? 1.9 : 0;
+  b(g, 0, 0.25, -back / 2, w + 0.3, 0.5, d + 0.3 - back, foot);
+  b(g, 0, GF / 2, -back / 2, w + 0.1, GF, d + 0.1 - back, sill);
   b(g, 0, GF + 0.05, 0, w + 0.34, 0.24, d + 0.34, trim);
+  const piers = arcaded ? arcade(g, w + 0.1, d / 2 + 0.05, GF, back, Math.max(2, Math.round(w / 2.6)), sill, lite) : null;
+  if (arcaded) b(g, 0, 0.02, d / 2 - back / 2 + 0.05, w + 0.1, 0.04, back, foot);
   // upper storeys: a lower block, then the jettied upper block (it leans out over the street)
   const k1 = st <= 3 ? st : Math.ceil(st * 0.55),
     jet = lite || st <= 3 ? 0 : 0.42;
@@ -376,38 +391,47 @@ export function townhouse(site, o) {
     b(g, 0, y1, jet / 2, w + jet + 0.2, 0.26, d + jet + 0.2, wood);
     if (!lite) for (let k = 0; k < 4; k++) g.add(beam(-w / 2 + (w * (k + 0.5)) / 4, y1 - 0.75, d / 2 - 0.05, -w / 2 + (w * (k + 0.5)) / 4, y1 - 0.12, d / 2 + jet, 0.14, 0.14, wood));
   }
+  if (timber) {
+    // half-timbered upper storeys (the jettied block, or all of them on an unjettied house)
+    const up = st > k1;
+    halfTimber(g, w + (up ? jet : 0), d + (up ? jet : 0), up ? GF + k1 * FH : GF, up ? st - k1 : k1, FH, up ? jet / 2 : 0, Math.max(1, Math.round((w + (up ? jet : 0)) / 1.6)), Math.max(1, Math.round((d + (up ? jet : 0)) / 1.6)), seed, lite);
+  }
+  if (stepped) quoins(g, w + 0.1, d + 0.1 - back, 0.5, GF + k1 * FH, -back / 2);
   const fz = d / 2 + (st > k1 ? jet : 0);
   // cornice band at the wall top (shallow under a pitched roof: the eave's soffit and fascia take over)
   const cor = kind === 'flat' ? 0.36 : 0.12;
   b(g, 0, h - 0.06, fz / 2 - d / 4 + 0.0, w + jet + cor, 0.24, d + jet + cor, trim);
   // street front: door, shop window or windows, door lantern
-  const zf = d / 2 + 0.05,
+  const zf = d / 2 + 0.05 - back,
     doorX = (seed % 2 ? 1 : -1) * (w / 2 - 1.0);
-  b(g, doorX, 1.3, zf, 1.45, 2.6, 0.08, sill);
-  b(g, doorX, 1.2, zf + 0.04, 1.1, 2.3, 0.08, doorM);
-  b(g, doorX, 0.09, zf + 0.33, 1.6, 0.18, 0.6, foot);
+  // front door up two steps in a moulded surround, with a wall lantern (builders/city-trades.js)
+  const lamp = frontDoor(g, doorX, zf, seed, lite, seed % 3 !== 2 ? -Math.sign(doorX) : 0);
+  if (lamp) g.add(sphere(0.12, warm, lamp[0], lamp[1], lamp[2], 7, 5));
   const wx = -doorX * 0.45,
     ww = Math.max(1.2, w - 3.2);
   if (o.shop) {
     if (life) {
-      const [px, pz] = W(wx, zf + 1.2);
+      const [px, pz] = W(wx, d / 2 + 1.25);
       life.shopFronts.push({ x: BELL.x + px, z: BELL.z + pz, face: yaw });
     }
-    b(g, wx, 1.75, zf, ww + 0.2, 2.1, 0.1, frame);
-    b(g, wx, 1.78, zf + 0.05, ww, 1.85, 0.03, glassLit);
-    b(g, wx, 0.6, zf + 0.1, ww + 0.2, 0.12, 0.3, sill);
-    const awn = cloth[seed % 4],
-      a = b(g, wx, 3.2, zf + 0.62, ww + 0.6, 0.08, 1.3, awn);
-    a.rotation.x = 0.3;
-    g.add(beam(doorX + Math.sign(doorX) * 0.75, 3.5, zf, doorX + Math.sign(doorX) * 0.75, 3.5, zf + 0.95, 0.07, 0.07, iron));
-    const sign = cyl(0.42, 0.42, 0.07, seed % 2 ? brass : wood, doorX + Math.sign(doorX) * 0.75, 3.0, zf + 0.72, 12);
-    sign.rotation.z = Math.PI / 2;
-    sign.rotation.y = Math.PI / 2;
-    g.add(sign);
+    // the shop's trade: window, awning, a hanging sign with its emblem, goods by the door
+    const trade = tradeOf(seed),
+      sh = shopFront(g, trade, wx, ww, doorX, zf, seed, lite || arcaded);
+    if (sh.glint) {
+      const [gx, gz] = W(sh.glint[0], sh.glint[2]);
+      CITY_DRESS.glints.push([BELL.x + gx, base + sh.glint[1], BELL.z + gz]);
+    }
+    if (sh.book) {
+      const [bx2, bz2] = W(sh.book[0] + 1.4, sh.book[1] + (arcaded ? back : 0));
+      CITY_DRESS.books.push([BELL.x + bx2, base, BELL.z + bz2, yaw]);
+    }
   } else win(g, wx, 1.95, zf - 0.05, Math.min(1.3, ww), 1.4, seed, lite ? 4 : 1);
-  if (seed % 3 !== 2) {
-    g.add(beam(doorX - Math.sign(doorX) * 0.95, 2.75, zf, doorX - Math.sign(doorX) * 0.95, 2.75, zf + 0.4, 0.05, 0.05, iron));
-    g.add(sphere(0.14, warm, doorX - Math.sign(doorX) * 0.95, 2.55, zf + 0.4, 7, 5), cone(0.18, 0.2, iron, doorX - Math.sign(doorX) * 0.95, 2.76, zf + 0.4, 6));
+  if (!o.shop && !lite && hs(5) < 0.45) {
+    // a pot or two by the door
+    const P2 = new ByMat();
+    pottedPlant(P2, doorX + Math.sign(doorX) * 0.95, 0, zf + 0.35, 0.2, seed, lite);
+    if (hs(6) < 0.5) pottedPlant(P2, doorX - Math.sign(doorX) * 0.92, 0, zf + 0.3, 0.16, seed + 1, lite);
+    P2.flush(g);
   }
   // balconies: real platforms at several heights (never in the story's low quarter)
   if (!o.cap && st >= 3) {
@@ -445,6 +469,14 @@ export function townhouse(site, o) {
             addBay(BELL.x + px, base + y + 0.08, BELL.z + pz, yaw + ry, len / np, BAY.PANEL, seed % 3, 0, 0, 0, 0);
           }
         }
+      }
+      if (!lite) {
+        // pots along the rail, a broom rack by the door on the balconies witches land on
+        const P2 = new ByMat();
+        const np = 1 + Math.floor(hash01(seed, k) * 3);
+        for (let i = 0; i < np; i++) pottedPlant(P2, bx - bw / 2 + 0.35 + (i * (bw - 0.7)) / Math.max(1, np - 1 || 1), y + 0.08, front + bd - 0.32, 0.16, seed + i + k, lite);
+        if (hash01(k, seed) < 0.4) broomRack(P2, bx + (made % 2 ? 1 : -1) * 0.95, y + 1.95, front + 0.02, seed + k);
+        P2.flush(g);
       }
       const [px, pz] = W(bx, front + bd / 2);
       site.platBox(px, pz, bw / 2, bd / 2, yaw, base + y + 0.08, 0.3);
@@ -490,22 +522,61 @@ export function townhouse(site, o) {
     // modelled roofs (builders/city-roofs.js): courses, cover tiles, ridge, eaves, barge boards
     const rg = new THREE.Group();
     rg.position.z = jet / 2;
-    if (kind === 'cone') modelHip(rg, w + jet, d + jet, top, rise, roofM, 0.55, seed);
-    else modelGable(rg, w + jet, d + jet, top, rise, roofM, bodyMat[ti], kind === 'side', 0.5, seed, -Math.sign(doorX) * (w / 2 - 0.12));
+    if (kind === 'cone') {
+      modelHip(rg, w + jet, d + jet, top, rise, roofM, 0.55, seed);
+      corbelTable(rg, w + jet, d + jet, top - 0.5, 0, lite); // the tower-house's corbel table under its spire
+    } else modelGable(rg, w + jet, d + jet, top, rise, roofM, bodyMat[ti], kind === 'side', 0.5, seed, -Math.sign(doorX) * (w / 2 - 0.12), { stepped });
     g.add(rg);
+    // a cat or two on the roofs (life/city-ambient.js): on the ridge of pitched roofs
+    if (kind !== 'cone' && hs(7) < 0.1) {
+      const along = kind === 'side',
+        [cx2, cz2] = W(along ? (hs(8) - 0.5) * w * 0.6 : 0, jet / 2 + (along ? 0 : (hs(8) - 0.5) * d * 0.6));
+      CITY_DRESS.cats.push([BELL.x + cx2, base + top + rise + 0.42, BELL.z + cz2, yaw + (along ? 0 : Math.PI / 2) + (hs(9) > 0.5 ? Math.PI : 0)]);
+    }
+  }
+  if (kind === 'flat' && !lite && hs(7) < 0.25) {
+    const [cx2, cz2] = W((hs(8) - 0.5) * w * 0.5, jet / 2 + (hs(9) - 0.5) * d * 0.4);
+    CITY_DRESS.cats.push([BELL.x + cx2, base + top + 0.24, BELL.z + cz2, yaw + hs(10) * 6.28]);
+  }
+  if (turret) {
+    // a corner turret corbelled out from the upper storeys, opposite the door side
+    const sx = -Math.sign(doorX),
+      tw = (w + jet) / 2,
+      tz = jet / 2 + (d + jet) / 2,
+      y0 = GF + (st > k1 ? k1 : 1) * FH + 0.5;
+    cornerTurret(g, sx * tw, tz, y0, top + 1.2, 1.05, bodyMat[ti], modelTile(ROOF.slate), brass, seed, lite);
+    covered.push([y0 - 2, top + 2, sx * tw - 1.5, sx * tw + 1.5]);
+    const [qx, qz] = W(sx * tw, tz);
+    site.colCyl(qx, qz, 1.05, base + y0 - 0.5, base + top + 1.4);
   }
   if (kind !== 'flat' && (seed % 2 === 0 || st >= 6)) {
     const along = kind === 'side',
       cx = (seed % 4 < 2 ? -1 : 1) * w * (along ? 0.3 : 0.24),
       cz = along ? -d * 0.22 : -d * 0.2;
     const tip = top + rise * (1 - (along ? Math.abs(cz) / (d / 2) : Math.abs(cx) / (w / 2))) + 1.5;
-    chimney(g, cx, cz, top, tip, seed);
+    const n0 = CHIMNEY_TOPS.length;
+    chimney(g, cx, cz, top, tip, seed, 1 + (seed % 3 === 0 ? 1 : 0) + (st >= 7 && seed % 2 === 0 ? 1 : 0));
+    // smoke from some chimneys (life/city-ambient.js)
+    if (hs(11) < 0.45)
+      for (let i = n0; i < CHIMNEY_TOPS.length; i += 4) {
+        const [sx2, sz2] = W(CHIMNEY_TOPS[i], CHIMNEY_TOPS[i + 2]);
+        CITY_DRESS.smoke.push([BELL.x + sx2, base + CHIMNEY_TOPS[i + 1], BELL.z + sz2, CHIMNEY_TOPS[i + 3]]);
+      }
   }
   site.add(g, x, base, z, yaw);
   if (_faces) registerBays(_faces, covered, x, z, base, yaw, seed);
   _faces = null;
   site.footprint(x, z, yaw, w / 2 + 0.3, d / 2 + 0.3, base + h, seed);
-  site.colBox(x, z, w / 2, d / 2, yaw, base, base + h);
+  if (arcaded) {
+    // under the arcade is open: the shop floor's box is set back, the piers stand on their own
+    const [lx, lz] = W(0, -back / 2);
+    site.colBox(lx, lz, w / 2, d / 2 - back / 2, yaw, base, base + GF);
+    site.colBox(x, z, w / 2, d / 2, yaw, base + GF, base + h);
+    for (const px of piers) {
+      const [qx, qz] = W(px, d / 2 + 0.05 - 0.25);
+      site.colBox(qx, qz, 0.27, 0.27, yaw, base, base + GF);
+    }
+  } else site.colBox(x, z, w / 2, d / 2, yaw, base, base + h);
   if (st > k1) {
     const [px, pz] = W(0, jet / 2);
     site.colBox(px, pz, (w + jet) / 2, (d + jet) / 2, yaw, base + GF + k1 * FH, base + h);
@@ -1232,6 +1303,7 @@ export async function layoutHouses(ctx, site, taken) {
   let n = 0,
     seed = 1;
   await carveAll(ctx); // the walls', gate's, towers' and cathedral's carved stonework (queued by later())
+  resetDress();
   const why = (layoutHouses.why = { wall: 0, free: 0, road: 0, core: 0, ok: 0 });
   const inside = (o) => {
     for (const [i, j] of [[1, 1], [1, -1], [-1, 1], [-1, -1]]) {
@@ -1296,6 +1368,22 @@ export async function layoutHouses(ctx, site, taken) {
             mz = az + dz * a.u;
           if (Math.min(a.top, q.top) < y + 4 || lowZone(mx, mz) || nearAnchor(mx, mz, 14)) continue;
           footbridge(site, mx, mz, Math.atan2(dz, -dx), 8.3, H + y, life);
+          a.bridged = true;
+        }
+      // washing strung across the side streets between facing fronts (builders/city-dressing.js; no rand() draws,
+      // so the layout stays as it was)
+      if (ri > 2)
+        for (const a of rows[1]) {
+          if (a.bridged || hash01(a.u * 3.1, ri + i * 0.37) > (lite ? 0.18 : 0.42)) continue;
+          const q = rows['-1'].find((bq) => Math.abs(bq.u - a.u) < 1.6);
+          if (!q) continue;
+          const y = 7.2 + Math.floor(hash01(a.u, i) * 4) * 3.15,
+            mx = ax + dx * a.u,
+            mz = az + dz * a.u;
+          if (Math.min(a.top, q.top) < y + 2 || nearAnchor(mx, mz, 10)) continue;
+          const lg = new THREE.Group();
+          laundryLine(lg, mx + dz * 4.0, mz - dx * 4.0, mx - dz * 4.0, mz + dx * 4.0, H + y, Math.round(a.u * 13 + i), lite);
+          site.add(lg);
         }
       await ctx.step('mages:terrace');
     }
@@ -1338,6 +1426,7 @@ export async function layoutHouses(ctx, site, taken) {
   }
   await ctx.step('mages:core');
   startBays(ctx);
+  startAmbient(ctx); // chimney smoke, floating lanterns, pigeons, cats, glints, warm windows (life/city-ambient.js)
   return n;
 }
 
@@ -1411,7 +1500,36 @@ export function streetProps(site, taken) {
       }
     }
   }
-  for (const sq of BELL_SQUARES) if (sq.id === 'market' || sq.id === 'west' || sq.id === 'east') fountain(site, sq.x, sq.z);
+  for (const sq of BELL_SQUARES) if (sq.id === 'market' || sq.id === 'west' || sq.id === 'east') {
+    fountain(site, sq.x, sq.z);
+    CITY_DRESS.pigeons.push([BELL.x + sq.x, H, BELL.z + sq.z, 3.9]);
+  }
+  // notice boards at the squares' edges, floating lanterns over the squares and the avenues (life/city-ambient.js)
+  for (const [k, sq] of BELL_SQUARES.entries()) {
+    if (sq.id === 'parvis') continue;
+    const by = sq.id === 'parvis' ? CORE.h : H;
+    for (let t = 0; t < 8; t++) {
+      const a = k * 1.3 + t * 0.79,
+        bx = sq.x + Math.sin(a) * (sq.r - 1.6),
+        bz = sq.z + Math.cos(a) * (sq.r - 1.6);
+      if (!ok(bx, bz, 1.0) || roadAt(bx, bz) < 2.0) continue;
+      noticeBoard(site.root, bx, by, bz, a + Math.PI, k);
+      site.colBox(bx, bz, 0.8, 0.15, a + Math.PI, by, by + 2.4);
+      taken.push(obb(bx, bz, a, 0.9, 0.4));
+      break;
+    }
+    for (let t = 0; t < (lite ? 3 : 7); t++) {
+      const a = t * 2.4 + k, r = sq.r * (0.3 + 0.6 * hash01(k, t));
+      CITY_DRESS.lanterns.push([BELL.x + sq.x + Math.sin(a) * r, by + 7 + 6 * hash01(t, k), BELL.z + sq.z + Math.cos(a) * r]);
+    }
+  }
+  for (const road of BELL_ROADS.slice(0, 3))
+    for (let i = 1; i < road.length; i++) {
+      const [ax, az] = road[i - 1],
+        [bx, bz] = road[i],
+        L = Math.hypot(bx - ax, bz - az);
+      for (let t = 9; t < L; t += lite ? 44 : 22) CITY_DRESS.lanterns.push([BELL.x + ax + ((bx - ax) * t) / L, H + 9 + 6 * hash01(i, t), BELL.z + az + ((bz - az) * t) / L]);
+    }
   const pv = BELL_SQUARES.find((s) => s.id === 'parvis');
   if (pv) {
     const mg = new THREE.Group();

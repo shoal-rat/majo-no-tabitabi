@@ -7,14 +7,51 @@
 import * as THREE from 'three';
 import { G } from '../../core/game.js';
 import { flat } from '../../core/mats.js';
-import { mat } from './kit.js';
+import { mat, sculptVcMat } from './kit.js';
 import { cyl, sphere } from '../../core/geo.js';
 import { ByMat, hash01 } from './city-geo.js';
 
 /** 2 = high, 1 = med, 0 = low tier and phones (the mobile tier is 'low' to the systems). */
 export const roofTier = () => (G.quality?.name === 'high' ? 2 : G.quality?.name === 'med' ? 1 : 0);
 
-const _tile = new Map();
+const _tile = new Map(),
+  _tileSet = new Set();
+/**
+ * Boot time: the roofs' tiles carry their shading in vertex colours (the tint of the house, the rain-darkened eave
+ * course, a tone per tile — what the site bake's vertex shading would give them) on a vertex-coloured copy of the
+ * tile material (kit.js sculptVcMat), so the bake does not shade them vertex by vertex against every house of the
+ * city, and the draw-call pass still merges them into the tile family. Other materials are added as usual.
+ */
+function flushRoof(B, parent, h, seed) {
+  const v = 0.93 + 0.1 * hash01(seed, 101),
+    w = (hash01(seed, 103) - 0.5) * 0.06,
+    tint = [v * (1 + w), v, v * (1 - w)],
+    c = new THREE.Color();
+  for (const [m, b] of B.map) {
+    if (!_tileSet.has(m)) {
+      b.mesh(m, parent);
+      continue;
+    }
+    if (!b.p.length) continue;
+    c.copy(m.color);
+    const n = b.p.length / 3,
+      col = new Float32Array(n * 3);
+    for (let i = 0; i < n; i++) {
+      const x = b.p[i * 3], y = b.p[i * 3 + 1], z = b.p[i * 3 + 2], d = y - h;
+      let k = 0.94 + 0.1 * hash01(Math.floor(x / 0.42), Math.floor(z / 0.42));
+      if (d < 1.0) k *= 0.84 + 0.16 * Math.max(0, d);
+      col[i * 3] = c.r * tint[0] * k;
+      col[i * 3 + 1] = c.g * tint[1] * k;
+      col[i * 3 + 2] = c.b * tint[2] * k;
+    }
+    const g = b.geometry();
+    g.setAttribute('color', new THREE.BufferAttribute(col, 3));
+    const o = new THREE.Mesh(g, sculptVcMat(m));
+    o.castShadow = o.receiveShadow = true;
+    parent.add(o);
+  }
+  B.map.clear();
+}
 /**
  * The modelled-roof copy of a tile material: same colour (times k), normals from the geometry (round cover tiles shade
  * softly), the painted tile layer kept only as faint clay grain — the courses are real geometry now.
@@ -22,7 +59,10 @@ const _tile = new Map();
 export function modelTile(m, k = 1) {
   const hex = new THREE.Color().copy(m.color).multiplyScalar(k).getHex();
   let t = _tile.get(hex);
-  if (!t) _tile.set(hex, (t = flat(hex, { surface: 'tile', look: { spec: 0.065, specPower: 50, detail: 0.22, bump: 0.3 }, flatShading: false })));
+  if (!t) {
+    _tile.set(hex, (t = flat(hex, { surface: 'tile', look: { spec: 0.065, specPower: 50, detail: 0.22, bump: 0.3 }, flatShading: false })));
+    _tileSet.add(t);
+  }
   return t;
 }
 const fasciaM = mat.wood(0xa67954),
@@ -34,8 +74,11 @@ const fasciaM = mat.wood(0xa67954),
   capM = mat.stone(0xe3d8c2),
   potM = mat.stone(0xb7704c),
   glassM = mat.paint(0x3d5667),
-  frameM = mat.wood(0x5a4232);
+  frameM = mat.wood(0x5a4232),
+  ironM = mat.paint(0x35393f);
 const SLATY = new Set([0x5a6a7b, 0x7f455a]);
+/** Chimney crowns in the chimney's local frame (x, y, z, flues), read back by the caller (mage-city.js -> smoke). */
+export const CHIMNEY_TOPS = [];
 const isSlate = (m) => SLATY.has(m.color.getHex());
 
 /**
@@ -44,7 +87,7 @@ const isSlate = (m) => SLATY.has(m.color.getHex());
  * bodyM. ov = eave overhang (m).
  * Returns { top }: the height of the ridge tiles' crown above the house origin.
  */
-export function modelGable(g, w, d, h, rise, roofM, bodyM, alongX, ov = 0.5, seed = 1, pipeX = null) {
+export function modelGable(g, w, d, h, rise, roofM, bodyM, alongX, ov = 0.5, seed = 1, pipeX = null, opt = {}) {
   const tier = roofTier(),
     r = new THREE.Group(),
     B = new ByMat();
@@ -58,8 +101,9 @@ export function modelGable(g, w, d, h, rise, roofM, bodyM, alongX, ov = 0.5, see
     ta = Math.tan(a),
     T = 0.2,
     gov = 0.42,
+    stepped = !alongX && !!opt.stepped, // a crow-stepped street gable: the roof stops behind the steps
     zA = -D / 2 - gov,
-    zB = D / 2 + gov;
+    zB = stepped ? D / 2 - 0.12 : D / 2 + gov;
   const yU = (x) => h + (half - Math.abs(x)) * ta; // underside (rafters' top on the wall plate at x = half)
   const yE = yU(xe) + T; // top plane at the eave edge
   const Ls = xe / ca; // slant from the eave edge to the ridge line
@@ -68,7 +112,8 @@ export function modelGable(g, w, d, h, rise, roofM, bodyM, alongX, ov = 0.5, see
   const slate = isSlate(roofM),
     ridgeM = modelTile(roofM, 0.84);
   // pans a shade darker than the cover tiles over them (same family: one draw, the colour rides in the vertices)
-  const T1 = B.get(modelTile(roofM, slate ? 1 : 0.9)),
+  const tileM0 = modelTile(roofM),
+    T1 = B.get(modelTile(roofM, slate ? 1 : 0.9)),
     TR = B.get(modelTile(roofM, 1.07));
   const cs = (tier === 2 ? 0.33 : tier === 1 ? 0.42 : 0.62) * (0.94 + 0.12 * hash01(seed, 3)),
     nc = Math.max(3, Math.round(Ls / cs)),
@@ -192,7 +237,7 @@ export function modelGable(g, w, d, h, rise, roofM, bodyM, alongX, ov = 0.5, see
   const yTop = (x) => yE + 0.09 / ca + (xe - Math.abs(x)) * ta,
     hb = 0.3 / ca,
     xb = xe + 0.05;
-  for (const e of [-1, 1])
+  for (const e of stepped ? [-1] : [-1, 1])
     for (const sg of [-1, 1]) {
       const poly = [[sg * xb, yTop(xb)], [0, yTop(0)], [0, yTop(0) - hb], [sg * xb, yTop(xb) - hb]];
       const za = e > 0 ? zB + 0.004 : zA - 0.066,
@@ -231,10 +276,68 @@ export function modelGable(g, w, d, h, rise, roofM, bodyM, alongX, ov = 0.5, see
       }
     }
   }
-  B.flush(r);
+  // crow steps on the street gable: stone steps climbing to an apex pier, each with a coping cap
+  if (stepped) {
+    const S = B.get(capM),
+      n = Math.max(3, Math.round(half / 0.72)),
+      sw = half / n,
+      z0 = D / 2 - 0.42,
+      z1 = D / 2 + 0.07;
+    for (const sg of [-1, 1])
+      for (let i = 0; i < n; i++) {
+        const xa = half - i * sw,
+          xb2 = xa - sw,
+          top = h + ((i + 1) / n) * rise + T + 0.38;
+        const [lo, hi] = sg > 0 ? [xb2, xa] : [-xa, -xb2];
+        S.box(lo, h - 0.05, z0, hi, top, z1, 'ny');
+        S.slab(lo - 0.05, top, z0 - 0.05, hi + 0.05, top + 0.12, z1 + 0.05, 0.03, false);
+      }
+    S.box(-0.32, h + rise, z0, 0.32, h + rise + T + 0.95, z1, 'ny');
+    S.slab(-0.38, h + rise + T + 0.95, z0 - 0.06, 0.38, h + rise + T + 1.08, z1 + 0.06, 0.03, false);
+    B.get(brassM).lathe([[0.001, 0], [0.12, 0.08], [0.1, 0.22], [0.001, 0.36]], 8, 0, h + rise + T + 1.08, (z0 + z1) / 2);
+  }
+  // dormers on the street slope (eaves to the street): a gabled box with a window, its cheeks cut by the slope
+  if (alongX && tier > 0 && rise > 2.4) {
+    const nd = Math.max(1, Math.min(2, Math.floor(D / 2.8))),
+      dw = 1.05,
+      xf = xe - 1.0,
+      yb = yE + (xe - xf) * ta,
+      yw = yb + 1.25,
+      yr = yw + dw * 0.45,
+      xin = xe - (yw - yE) / ta,
+      xr = xe - (yr - yE) / ta;
+    for (let k = 0; k < nd; k++) {
+      const zc = nd === 1 ? 0 : (k - 0.5) * D * 0.42,
+        sg = -1,
+        X = (v) => sg * v;
+      const Bd = B.get(bodyM),
+        R = B.get(tileM0),
+        Fm = B.get(frameM),
+        Gl = B.get(glassM);
+      for (const e of [-1, 1]) Bd.tri([X(xf), yb - 0.1, zc + (e * dw) / 2], [X(xf), yw, zc + (e * dw) / 2], [X(xin), yw, zc + (e * dw) / 2], [0, 0, e]);
+      Bd.quad([X(xf), yb - 0.1, zc - dw / 2], [X(xf), yb - 0.1, zc + dw / 2], [X(xf), yw, zc + dw / 2], [X(xf), yw, zc - dw / 2], [sg, 0, 0]);
+      Bd.tri([X(xf), yw, zc - dw / 2], [X(xf), yw, zc + dw / 2], [X(xf), yr, zc], [sg, 0, 0]);
+      for (const e of [-1, 1]) R.quad([X(xf + 0.16), yw - 0.06, zc + e * (dw / 2 + 0.14)], [X(xf + 0.16), yr + 0.04, zc], [X(xr), yr + 0.04, zc], [X(xin - 0.1), yw - 0.06, zc + e * (dw / 2 + 0.14)], [sg * 0.2, 1, e]);
+      // the window: frame, glass, a cross bar, a little sill
+      Fm.box(X(xf) - 0.06, yb + 0.12, zc - 0.36, X(xf) + 0.06, yw - 0.1, zc + 0.36);
+      Gl.quad([X(xf + 0.065), yb + 0.2, zc - 0.29], [X(xf + 0.065), yb + 0.2, zc + 0.29], [X(xf + 0.065), yw - 0.18, zc + 0.29], [X(xf + 0.065), yw - 0.18, zc - 0.29], [sg, 0, 0]);
+      Fm.box(X(xf + 0.08) - 0.015, yb + 0.2, zc - 0.02, X(xf + 0.08) + 0.015, yw - 0.18, zc + 0.02);
+      Fm.box(X(xf + 0.08) - 0.015, yb + 0.72, zc - 0.29, X(xf + 0.08) + 0.015, yb + 0.76, zc + 0.29);
+      B.get(capM).box(X(xf + 0.2) - 0.1, yb + 0.04, zc - 0.42, X(xf + 0.2) + 0.1, yb + 0.14, zc + 0.42);
+    }
+  }
+  // iron cresting along some ridges, spear finials at its ends
+  if (tier > 0 && hash01(seed, 17) > 0.72) {
+    const Cr = B.get(ironM),
+      yC = yR + rr + 0.02;
+    Cr.tube([[0, yC + 0.22, zA + 0.2], [0, yC + 0.22, zB - 0.2]], 0.018, 4);
+    for (let z = zA + 0.3; z < zB - 0.25; z += 0.42) Cr.lathe([[0.012, yC - 0.05], [0.012, yC + 0.22], [0.035, yC + 0.27], [0.001, yC + 0.36]], 4, 0, 0, z);
+    for (const z of [zA + 0.2, zB - 0.2]) B.get(brassM).lathe([[0.03, yC - 0.05], [0.03, yC + 0.4], [0.07, yC + 0.47], [0.001, yC + 0.7]], 6, 0, 0, z);
+  }
+  flushRoof(B, r, h, seed);
   // a turned finial on some gables
   if (tier > 0 && hash01(seed, 13) > 0.55)
-    for (const e of [-1, 1]) {
+    for (const e of stepped ? [-1] : [-1, 1]) {
       const z = e * (zB + 0.035);
       r.add(cyl(0.05, 0.07, 0.75, fasciaM, 0, yTop(0) + 0.25, z, 6), sphere(0.11, brassM, 0, yTop(0) + 0.7, z, 8, 6));
     }
@@ -300,7 +403,7 @@ export function modelHip(g, w, d, h, rise, roofM, ov = 0.55, seed = 1) {
   // hip rolls
   const HR = B.get(modelTile(roofM, 0.84));
   for (const [cx, cz] of C) HR.tube([[cx * 1.01, yE + 0.06, cz * 1.01], [0, yA + 0.05, 0]], 0.1, tier ? 6 : 4, true);
-  B.flush(r);
+  flushRoof(B, r, h, seed);
   r.add(cyl(0.06, 0.1, 1.1, brassM, 0, yA + 0.5, 0, 6), sphere(tier ? 0.2 : 0.16, brassM, 0, yA + 1.15, 0, 9, 7));
   if (tier > 0) r.add(cyl(0.012, 0.012, 0.9, brassM, 0, yA + 1.7, 0, 4));
   g.add(r);
@@ -311,24 +414,27 @@ export function modelHip(g, w, d, h, rise, roofM, ov = 0.55, seed = 1) {
  * Chimney stack standing at (cx, cz) from the wall top `top` to its crown `tip`: brick shaft, a stone band where it
  * leaves the roof, a corbelled crown, a stone cap and one to three clay pots.
  */
-export function chimney(g, cx, cz, top, tip, seed = 1) {
+export function chimney(g, cx, cz, top, tip, seed = 1, flues = 1) {
   const tier = roofTier(),
     B = new ByMat(),
-    s = 0.36;
+    s = 0.36,
+    sx = s + (flues - 1) * 0.34; // a stack of several flues side by side
   const bk = B.get(brickM);
-  bk.box(cx - s, top, cz - s, cx + s, tip - 0.12, cz + s, 'ny');
+  bk.box(cx - sx, top, cz - s, cx + sx, tip - 0.12, cz + s, 'ny');
   // corbel: two courses stepping out
-  bk.box(cx - s - 0.05, tip - 0.12, cz - s - 0.05, cx + s + 0.05, tip + 0.02, cz + s + 0.05);
-  if (tier > 0) bk.box(cx - s - 0.1, tip + 0.02, cz - s - 0.1, cx + s + 0.1, tip + 0.12, cz + s + 0.1, 'ny');
+  bk.box(cx - sx - 0.05, tip - 0.12, cz - s - 0.05, cx + sx + 0.05, tip + 0.02, cz + s + 0.05);
+  if (tier > 0) bk.box(cx - sx - 0.1, tip + 0.02, cz - s - 0.1, cx + sx + 0.1, tip + 0.12, cz + s + 0.1, 'ny');
   const cp = B.get(capM),
-    cs = s + (tier > 0 ? 0.16 : 0.1);
-  cp.slab(cx - cs, tip + 0.12, cz - cs, cx + cs, tip + 0.24, cz + cs, 0.035, false);
+    cs = s + (tier > 0 ? 0.16 : 0.1),
+    csx = sx + (tier > 0 ? 0.16 : 0.1);
+  cp.slab(cx - csx, tip + 0.12, cz - cs, cx + csx, tip + 0.24, cz + cs, 0.035, false);
+  CHIMNEY_TOPS.push(cx, tip + 0.6, cz, flues);
   const band = tier > 0 ? B.get(capM) : null;
-  if (band) band.box(cx - s - 0.03, tip - 0.62, cz - s - 0.03, cx + s + 0.03, tip - 0.52, cz + s + 0.03);
-  const pots = 1 + Math.floor(hash01(seed, 21) * (tier === 2 ? 3 : 2)),
+  if (band) band.box(cx - sx - 0.03, tip - 0.62, cz - s - 0.03, cx + sx + 0.03, tip - 0.52, cz + s + 0.03);
+  const pots = Math.max(flues, 1 + Math.floor(hash01(seed, 21) * (tier === 2 ? 3 : 2))),
     P = B.get(potM);
   for (let i = 0; i < pots; i++) {
-    const px = cx + (pots === 1 ? 0 : (i / (pots - 1) - 0.5) * s * 1.1),
+    const px = cx + (pots === 1 ? 0 : (i / (pots - 1) - 0.5) * (sx * 2 - s * 0.9)),
       hgt = 0.34 + 0.16 * hash01(seed + i, 23);
     P.lathe([[0.13, 0], [0.1, hgt * 0.85], [0.135, hgt], [0.105, hgt + 0.02]], 7, px, tip + 0.24, cz);
     B.get(rafterM).lathe([[0.1, hgt - 0.03], [0, hgt - 0.03]], 5, px, tip + 0.24, cz);
