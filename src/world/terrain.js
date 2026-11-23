@@ -57,6 +57,8 @@ export const terrainSystem = {
         scorch.paint(x,z,r,kind,strength);
         if(kind==='burn') this.paddies.disturb(x,z,r,false);
       },
+      /** Drain marks of `kind` inside r of (x, z) down to `level` (restoration). */
+      unscorch(x, z, r, kind = 'burn', level = 0) { scorch.erase?.(x, z, r, kind, level); },
       /** Mark strength 0..1 currently at (x,z). */
       scorchAt(x, z, kind = 'burn') { return scorch.at(x, z, kind); },
       /** Build every chunk the current camera needs right now (after a teleport or a cut). */

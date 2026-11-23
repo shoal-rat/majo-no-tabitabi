@@ -503,7 +503,7 @@ function doBreak(p, by) {
     }
   }
   if (p.rec) p.rec.gone = true;
-  G.events.emit('prop:broken', { type: p.type, pos, by });
+  G.events.emit('prop:broken', { type: p.type, pos, by, quat: p.body ? p.body.quat.clone() : null });
   removeProp(p);
 }
 

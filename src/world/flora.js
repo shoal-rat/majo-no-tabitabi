@@ -319,6 +319,8 @@ export const floraSystem = {
       fell: (tree, dir) => life.fell(tree, dir),
       /** ★ Remove every plant / tree / rock inside the circle (craters). opts.regrow seconds (plants only). */
       removeInRadius: (x, z, r, opts) => life.removeInRadius(x, z, r, opts),
+      /** Plants removed within r of (x, z) come back within `secs` (restoration, craft 溯光). */
+      regrowIn: (x, z, r, secs) => life.regrowIn(x, z, r, secs),
       /** ★ Springy giant mushroom caps: [{ pos: Vector3 (cap top centre), radius, power }] */
       bouncePads: life.bouncePads,
       /** Shatter a breakable rock / crystal (instance id). */

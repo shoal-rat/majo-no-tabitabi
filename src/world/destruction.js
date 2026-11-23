@@ -592,6 +592,42 @@ export const destructionSystem = {
       get ponds() { return ponds; },
       /** Remembered burnt cells: [{ x, z, r, s, t }] (strength s at playTime t). */
       get burns() { return [...burns.values()]; },
+      /** Restoration (craft 溯光): burnt cells within r of (x, z) heal now — the scorch drains to `level` (call it with a
+       *  falling level for the animation; 0 drops the records) and the burnt plants and grass come straight back. */
+      unburn(x, z, r, level = 0) {
+        G.terrain?.unscorch?.(x, z, r, 'burn', level);
+        if (level > 0.001) return 0;
+        let n = 0;
+        for (const [k, b] of burns) if (Math.hypot(b.x - x, b.z - z) < r + b.r * 0.5) { burns.delete(k); n++; }
+        G.flora?.grass?.restore?.(x, z, r + 1);
+        G.flora?.regrowIn?.(x, z, r + 1, 1.2);
+        return n;
+      },
+      /** Restoration: the crater / heap stamps whose centre lies within r of (x, z), scaled to `k` of their depth (1 =
+       *  as dug, 0 = gone: the land as it was, and the stamps leave the save). Returns how many stamps it touched. */
+      uncarve(x, z, r, k = 0) {
+        const w = W(), list = w.spellScarList?.();
+        if (!list || !w.restoreSpellScars) return 0;
+        const base = this._uncarve || (this._uncarve = { x: 1e9, z: 1e9, r: 0, src: null });
+        // remember the stamps as dug the first time this spot is touched, so each step scales from the original depth
+        if (Math.hypot(base.x - x, base.z - z) > 0.5 || base.r !== r || !base.src) {
+          base.x = x; base.z = z; base.r = r;
+          base.src = list.map((s) => s.slice());
+        }
+        const near = (s) => Math.hypot(s[0] - x, s[1] - z) < r;
+        let n = 0;
+        const out = [];
+        for (const s of base.src) {
+          if (!near(s)) { out.push(s); continue; }
+          n++;
+          if (k > 0.02) { const c = s.slice(); c[3] = Math.round(s[3] * k * 100) / 100; if (Math.abs(c[3]) >= 0.05) out.push(c); }
+        }
+        if (!n) return 0;
+        w.restoreSpellScars(out);
+        if (k <= 0.02) base.src = null;
+        G.flora?.grass?.refreshScars?.();
+        return n;
+      },
       /** playTime a crater at (x, z) was dug, or undefined. */
       scarTime: (x, z) => scarT.get(scarKey(x, z)),
       TIMES: { BURN_FADE, GREEN_START, GREEN_SPAN, GREEN_LEFT },

@@ -9,8 +9,9 @@ import * as THREE from 'three';
 import { G as GG } from '../core/game.js';
 import { t } from '../core/i18n.js';
 import { clamp } from '../core/util.js';
-import { THREAD, KNOT, CAPS, PARTS, SAIL } from '../data/craft.js';
+import { THREAD, KNOT, CAPS, PARTS, SAIL, REWIND } from '../data/craft.js';
 import { createKnots } from './knots.js';
+import { createRewind } from './rewind.js';
 
 const _v = new THREE.Vector3(), _w = new THREE.Vector3(), _h = new THREE.Vector3(), _c = new THREE.Vector3();
 const _q = new THREE.Quaternion(), _q2 = new THREE.Quaternion(), _qi = new THREE.Quaternion();
@@ -305,7 +306,7 @@ export const craftSystem = {
       const P = G.player;
       return G.mode === 'play' && !!P && !P.dead && P.control !== false && !P.onBroom && P.state !== 'climb' && P.state !== 'swim' && !G.dialogue?.active;
     }
-    function drop() { if (S.hold) release(false); setAimed(null); S.mode = 'off'; S.turning = false; if (G.player) G.player.craftAim = false; }
+    function drop() { if (S.hold) release(false); setAimed(null); S.mode = 'off'; S.turning = false; if (S.rw?.R.mode !== 'off') S.rw?.toggle(false); if (G.player) G.player.craftAim = false; }
     function step(dt) {
       S.time += dt;
       if (S.keepT > 0) S.keepT -= dt;
@@ -316,13 +317,20 @@ export const craftSystem = {
         const live = G.props?.live;
         if (live) for (const p of live) if (p.alive && p.type === 'sail' && p.body) S.sails.add(p.body);
       }
-      if (S.mode !== 'off' && !canUse()) drop();
+      const rw = S.rw || (S.rw = createRewind(G, { knows, toast }));
+      if ((S.mode !== 'off' || rw.R.mode !== 'off') && !canUse()) drop();
+      // 溯光: {rewind} toggles its aim (it puts the thread away)
+      if (inp?.pressed('rewind') && G.mode === 'play') {
+        if (rw.R.mode === 'off') { if (canUse() || !knows('rewind')) { if (S.mode !== 'off' && knows('rewind')) drop(); rw.toggle(true); } }
+        else rw.toggle(false);
+      }
+      rw.update(dt, inp);
       if (inp?.pressed('thread') && G.mode === 'play') {
         if (!knows('thread')) toast('unknown');
-        else if (S.mode === 'off') { if (canUse()) { S.mode = 'aim'; G.events.emit('craft:mode', { mode: 'aim' }); } }
+        else if (S.mode === 'off') { if (rw.R.mode !== 'off') rw.toggle(false); if (canUse()) { S.mode = 'aim'; G.events.emit('craft:mode', { mode: 'aim' }); } }
         else { drop(); G.events.emit('craft:mode', { mode: 'off' }); }
       }
-      if (P) P.craftAim = S.mode !== 'off';
+      if (P) P.craftAim = S.mode !== 'off' || rw.R.mode !== 'off';
       if (S.mode === 'aim') {
         setAimed(pick());
         if (inp.pressed('attack')) { if (S.aimed) grab(S.aimed); else { toast('nothing', null, 1.6); G.fx?.burst?.('pickup', P.aim.point, { color: 0xffe2a0, scale: 0.3 }); } }
@@ -354,7 +362,7 @@ export const craftSystem = {
     this._step = step;
 
     G.craft = {
-      PARTS, THREAD, KNOT, CAPS,
+      PARTS, THREAD, KNOT, CAPS, REWIND,
       knows,
       /** Teach an art ('thread' | 'rewind'); opts.silent: no toast. Returns true when it was new. */
       learn(art, o = {}) {
@@ -367,8 +375,10 @@ export const craftSystem = {
         return true;
       },
       get mode() { return S.mode; },
-      /** True while the thread is out (craft owns attack / cast / guard / wheel). */
-      get busy() { return S.mode !== 'off'; },
+      /** True while the thread or the back-light is out (craft owns attack / cast / guard / wheel). */
+      get busy() { return S.mode !== 'off' || !!S.rw?.busy; },
+      /** The back-light: { busy, running, target, toggle(on), restoreAt(pos), stats() }. */
+      get rewind() { return S.rw || null; },
       get holding() { return S.hold?.body || null; },
       get turning() { return S.turning; },
       get aimed() { return S.aimed; },

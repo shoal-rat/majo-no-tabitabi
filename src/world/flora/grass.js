@@ -673,6 +673,10 @@ export function createGrass(G) {
       if (craters.length >= MAXT) craters.shift();
       craters.push({ x, z, r, t: 0, life });
     },
+    /** Let grass cleared inside r of (x, z) come back now (restoration): it grows in from the edge over `secs`. */
+    restore(x, z, r, secs = 1.5) {
+      for (const c of craters) if (Math.hypot(c.x - x, c.z - z) < c.r + r) c.life = Math.min(c.life, c.t + secs);
+    },
     /** Persistent bare ground (craters, mounds) the destruction system feeds in: fn(camX, camZ, out) fills out with
      *  { x, z, r, k } nearest first and returns the count. Set by world/destruction.js; null = none. */
     scarFeed: null,

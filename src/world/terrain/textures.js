@@ -251,6 +251,26 @@ export class ScorchLayer {
     this.tex.needsUpdate = true;
     this.marks++;
   }
+  /** Pull marks of `kind` inside r of (x, z) down to at most `level` (0..1) — restoration (craft 溯光) drains scorch. */
+  erase(x, z, r, kind = 'burn', level = 0) {
+    const ch = CH[kind];
+    if (ch === undefined || !(r > 0)) return;
+    const N = DATA_N, d = this.data, cap = Math.round(255 * Math.max(0, level));
+    const rr = r * 1.25 + DATA_CELL;
+    const i0 = Math.max(0, Math.floor((x - rr + DATA_HALF) / DATA_CELL)), i1 = Math.min(N - 1, Math.ceil((x + rr + DATA_HALF) / DATA_CELL));
+    const j0 = Math.max(0, Math.floor((z - rr + DATA_HALF) / DATA_CELL)), j1 = Math.min(N - 1, Math.ceil((z + rr + DATA_HALF) / DATA_CELL));
+    if (i0 > i1 || j0 > j1) return;
+    let any = false;
+    for (let j = j0; j <= j1; j++) for (let i = i0; i <= i1; i++) {
+      const tx = wx(i) - x, tz = wx(j) - z;
+      if (tx * tx + tz * tz > rr * rr) continue;
+      const o = (j * N + i) * 4 + ch;
+      if (d[o] > cap) { d[o] = cap; any = true; }
+    }
+    if (!any) return;
+    for (let j = j0; j <= j1; j++) this.tex.addUpdateRange((j * N + i0) * 4, (i1 - i0 + 1) * 4);
+    this.tex.needsUpdate = true;
+  }
   /** Fade marks back (call every frame with game dt; does real work about once per second). */
   tick(dt) {
     if (!this.active.size) return;

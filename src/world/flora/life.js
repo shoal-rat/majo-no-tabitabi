@@ -278,7 +278,7 @@ export function createLife(ctx) {
     return true;
   }
   function onTreeHit(i, el, power, info) {
-    if (S.state[i] === 3) return;
+    if (S.state[i] === 3 || S.state[i] === 5) return;
     const strong = (el === 'thunder' && (info?.split || power >= 0.6)) || (el === 'earth' && power >= 0.9) || info?.heavy ||
       (el === 'fire' && power >= 2.2) || (el === 'wind' && power >= 1.6);
     if (!strong) { if (S.state[i] !== 1 && S.state[i] !== 4) chop(i, el, power, info); return; }
@@ -301,6 +301,7 @@ export function createLife(ctx) {
     if (col) col.dead = true;
     const H = modelOf(i).height * S.s[i];
     anims.push({ type: 'fell', i, t: 0, dur: 1.1 + H * 0.06, dir: d, H, landed: false });
+    fellDir.set(i, d.clone());
     G.fx?.burst?.('wood_break', _v.set(S.x[i], S.y[i] + 1.2, S.z[i]));
     G.audio?.sfx?.('wood_break', { pos: _v });
     if (opts?.splinter) splinters(i, d, H);
@@ -390,7 +391,7 @@ export function createLife(ctx) {
         const px = S.x[i] + a.dir.x * a.H * f, pz = S.z[i] + a.dir.z * a.H * f;
         try {
           const p = G.props.spawn('log', new THREE.Vector3(px, W.heightAt(px, pz) + 0.7, pz), { rot: yaw, yaw, burning: !!reactors.get(i)?.burning });
-          if (p) ok++;
+          if (p) { ok++; let L = logsOf.get(i); if (!L) logsOf.set(i, (L = [])); L.push(p); }
         } catch (e) { G.reportError('flora:log', e); }
       }
       if (ok) { a.type = 'vanish'; a.t = 0; a.dur = 0.5; return; }
@@ -726,8 +727,62 @@ export function createLife(ctx) {
     wreckVersion++;
     ctx.markDirty();
   }
+  // ---- restoration (craft 「溯光」): an instance's wreck runs backwards and its record leaves the save -------------------
+  const fellDir = new Map();   // i -> direction it fell (this session; after a reload a fall direction is made up)
+  const logsOf = new Map();    // i -> log props the trunk became (this session)
+  function backToOrig(i) {
+    const o = orig.get(i);
+    if (o) { for (let j = 0; j < 3; j++) { S.c0[i * 3 + j] = o.c0[j]; S.c1[i * 3 + j] = o.c1[j]; } for (let j = 0; j < 4; j++) S.fx[i * 4 + j] = o.fx[j]; }
+  }
+  /** Run instance i's wreck backwards over dur seconds: a felled tree rises, a burst rock re-forms, char washes out.
+   *  Returns { kind: 'rise' | 'reform' | 'unchar' | 'uncrack', x, y, z, h } or null. */
+  function restoreWreck(i, dur = 1.6) {
+    const bits = wreck.get(i);
+    if (!bits || scarPlants.has(i)) return null;
+    for (let k = anims.length - 1; k >= 0; k--) if (anims[k].i === i) anims.splice(k, 1);
+    burn.delete(i); cracks.delete(i);
+    const tree = isTree(i), H = modelOf(i).height * S.s[i];
+    let kind;
+    if (bits & WRECK.FELLED && tree) {
+      kind = 'rise';
+      const d = fellDir.get(i) || new THREE.Vector3(Math.cos(i), 0, Math.sin(i));
+      const si = stumpIds.indexOf(i); if (si >= 0) { stumpIds.splice(si, 1); rebuildStumps(); }
+      backToOrig(i);
+      S.state[i] = 5;                                   // rising (no recovery clock, no hits)
+      anims.push({ type: 'rise', i, t: 0, dur, dir: d.clone(), H });
+    } else if (bits & WRECK.GONE) {
+      kind = 'reform';
+      const ri = rubbleIds.indexOf(i); if (ri >= 0) { rubbleIds.splice(ri, 1); rebuildRubble(); }
+      backToOrig(i);
+      S.state[i] = 5;
+      anims.push({ type: 'reform', i, t: 0, dur });
+    } else {
+      kind = bits & WRECK.CHARRED ? 'unchar' : 'uncrack';
+      backToOrig(i);
+      if (S.state[i] === 2 || S.state[i] === 4) S.state[i] = 0;
+      const r = reactors.get(i); if (r) r.charred = false;
+      if (S.state[i] !== 3 && S.state[i] !== 1) writeInstance(i);
+    }
+    forget(i); fellDir.delete(i);
+    ctx.markDirty();
+    return { kind, x: S.x[i], y: S.y[i], z: S.z[i], h: H, tree };
+  }
+  function finishRestore(i) {
+    S.state[i] = 0;
+    const col = colliders.get(i);
+    if (col) { col.dead = false; if (col.r0 !== undefined) col.r = col.r0; col.y1 = S.y[i] + modelOf(i).height * S.s[i]; }
+    writeInstance(i);
+    ctx.markDirty();
+  }
   const wreckApi = {
     records: wreckRecords, apply: applyWreck, reset: resetWreck, BITS: WRECK,
+    /** Wrecked instances within r of (x, z): [id] (restoration targets; a crater's own plants are left to the crater). */
+    near(x, z, r) { const out = []; each(x, z, r, (i) => { if (wreck.has(i) && !scarPlants.has(i) && S.state[i] !== 5) out.push(i); }); return out; },
+    /** { x, y, z, bits, h, tree } of a wrecked instance. */
+    info: (i) => ({ x: S.x[i], y: S.y[i], z: S.z[i], bits: wreck.get(i) || 0, h: modelOf(i).height * S.s[i], tree: isTree(i), r: (defOf(i).trunkR || 0.4) * S.s[i] }),
+    restore: (i, dur) => restoreWreck(i, dur),
+    /** Log props a felled tree became this session (the rewind pulls them back into the trunk). */
+    logsOf: (i) => logsOf.get(i) || [],
     get version() { return wreckVersion; },
     /** Bits of an instance (tests). */
     of: (i) => wreck.get(i) || 0,
@@ -914,6 +969,17 @@ export function createLife(ctx) {
         const u = Math.min(1, a.t / a.dur);
         if (u < 1) writeInstance(i, fellMatrix(i, 1.42, a.dir, u * 0.5, Math.max(0.02, 1 - u)));
         else { hideInstance(i); unregister(i); anims.splice(k, 1); }
+      } else if (a.type === 'rise') {
+        // the fall run backwards: from lying to standing, quick at first and settling upright
+        const u = Math.min(1, a.t / a.dur), e = 1 - (1 - u) * (1 - u) * (1 - u);
+        writeInstance(i, fellMatrix(i, 1.42 * (1 - e), a.dir, 0.25 * (1 - e), 1));
+        if (u >= 1) { finishRestore(i); anims.splice(k, 1); continue; }
+      } else if (a.type === 'reform') {
+        // the rock gathers itself back: grows from its pieces with a turn running backwards
+        const u = Math.min(1, a.t / a.dur), e = u * u * (3 - 2 * u);
+        _e.set(S.tx[i], S.rot[i] + (1 - e) * 1.4, S.tz[i]); _q.setFromEuler(_e);
+        writeInstance(i, _m.compose(_v.set(S.x[i], S.y[i] - (1 - e) * 0.3, S.z[i]), _q, _s.setScalar(S.s[i] * (0.15 + 0.85 * e))));
+        if (u >= 1) { finishRestore(i); anims.splice(k, 1); continue; }
       } else if (a.type === 'squash') {
         const u = a.t / a.dur;
         if (S.state[i] === 3 || S.state[i] === 1) { anims.splice(k, 1); continue; }
@@ -974,6 +1040,7 @@ export function createLife(ctx) {
 
   return {
     update, fell, shatter, removeInRadius, treesNear, bouncePads, squashPad, wreck: wreckApi,
+    regrowIn(x, z, r, secs = 1.2) { for (const g of regrow) if (Math.hypot(S.x[g.i] - x, S.z[g.i] - z) < r) g.t = Math.min(g.t, secs * (0.3 + 0.7 * Math.random())); },
     stats() {
       let trees = 0, rocks = 0, plants = 0;
       for (let i = 0; i < S.n; i++) { const k = kindOf(i); if (k === 'tree') trees++; else if (k === 'plant') plants++; else rocks++; }

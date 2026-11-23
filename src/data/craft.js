@@ -44,5 +44,17 @@ export const PARTS = {
   pot: { tie: false }, vase: { tie: false }, jar: { tie: false }, jar_small: { tie: false }, pumpkin: { tie: false },
 };
 
+/** The back-light 「溯光」: one damaged thing's history run backwards. */
+export const REWIND = {
+  RANGE: 34,            // m from her to the aimed point
+  PICK: 2.5,            // how near the aim must come to a damaged thing (beyond its own size)
+  MANA: 16, PER_M: 2,   // mana: MANA + PER_M × (size + height), capped at 10 m
+  DUR: 1.8,             // seconds a rewind runs
+  CD: 1.2,
+  SCAN: 0.1,            // aim scan interval (s)
+  SHARDS: 24,           // pieces flying back (one instanced draw)
+  KEEP: { mobile: 8, low: 10, med: 16, high: 24 },   // broken props remembered this session
+};
+
 /** Wind on a sail: impulse per second = wind (m/s) × area × SAIL.K, capped; her own gust gives one shove. */
 export const SAIL = { K: 4, MAX: 160, GUST: 2.5, GUST_RANGE: 16 };

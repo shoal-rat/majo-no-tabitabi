@@ -224,6 +224,7 @@ export function createTouch(root, deps = {}) {
   // craft (src/craft/): the star thread in the 式神 slot; while a part is on the thread, turn / tilt / pull in / push out
   const holdingPart = () => !!G.craft?.holding;
   def('thread', { d: 44, x: 366, y: 40, g: 'thread', act: 'thread', kind: 'tap', ctx: FOOT, cond: () => !!G.craft?.knows?.('thread') && !ability('shikigami') });
+  def('rewind', { d: 44, x: 362, y: 104, g: 'rewind', act: 'rewind', kind: 'tap', ctx: FOOT, cond: () => !!G.craft?.knows?.('rewind') && !ability('kinkan') && !holdingPart() });
   def('craftTurn', { d: 42, x: 362, y: 104, g: 'turn', act: 'craftTurn', kind: 'tap', ctx: FOOT, cond: holdingPart });
   def('craftTilt', { d: 42, x: 424, y: 92, g: 'tilt', act: 'craftTilt', kind: 'tap', ctx: FOOT, cond: holdingPart });
   def('craftNear', { d: 42, x: 428, y: 152, g: 'near', act: 'craftNear', kind: 'hold', ctx: FOOT, cond: holdingPart });

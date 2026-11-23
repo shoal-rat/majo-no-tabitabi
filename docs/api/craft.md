@@ -63,3 +63,30 @@ no longer toast 「未习得」.
 `stats()`. Events: `'craft:mode' { mode }`, `'craft:grab' { body, parts }`, `'craft:release' { tied }`,
 `'craft:tie' { body, n, parts }`, `'craft:snip' { body, n }`, `'craft:sail' { body, push }`. `G.physics.bodyOf(collider)`
 is new (the PhysBody that owns a Rapier collider).
+
+## Restoration round (move-craft PR 3, 2026-11-24)
+
+**「溯光」 back-light** (`src/craft/rewind.js`, numbers `REWIND` in `src/data/craft.js`; {rewind} = KeyG, touch: the
+「溯光」 button in the 金环 slot). {rewind} lights it (it puts the thread away); the nearest restorable thing within
+`REWIND.PICK` of the aim point (aim ≤ 34 m) shows a pale silver-blue ring of tick marks that turns the wrong way; {attack}
+runs that thing's history backwards over 1.8 s (mana 16 + 2 per metre of size, cooldown 1.2 s). One target at a time.
+
+| target | where its history comes from | the rewind |
+| --- | --- | --- |
+| felled tree | flora wreck `FELLED` (+ its fall direction and the logs it became this session) | the logs fly back into the trunk while the tree swings up from lying to standing; the stump goes |
+| charred / cracked tree or rock | wreck `CHARRED` / `CRACKED` | its own colours come back |
+| shattered rock | wreck `GONE` + rubble | shards gather from around it while the rock grows back with a turn running backwards; the rubble goes |
+| burnt ground | destruction burn cells | the scorch drains in six steps, the grass and burnt plants come straight back (`G.flora.grass.restore`, `G.flora.regrowIn`) |
+| crater / heap | the scar stamps (`G.world.spellScarList`) | earth-coloured shards stream in while the land rises back in three steps (`G.destruction.uncarve`) |
+| broken prop | `'prop:broken'` this session (type, pose; `REWIND.KEEP` by tier) | its pieces gather and it is whole again where it broke |
+
+Everything restored leaves the save: the wreck record is dropped (`G.flora.wreck.restore`), burn cells are deleted
+(`G.destruction.unburn`), stamps are removed (`world.restoreSpellScars` with the stamp gone). Natural recovery
+(destruction "Recovery") is untouched and keeps working on whatever she leaves. Story places were never damaged in
+the first place (`carveGuard`). Broken props and the logs of a felled tree are remembered for this session only.
+
+New APIs: `G.flora.wreck.near(x, z, r)`, `.info(i)`, `.restore(i, dur)`, `.logsOf(i)`; `G.flora.regrowIn(x, z, r, secs)`;
+`G.flora.grass.restore(x, z, r, secs)`; `G.terrain.unscorch(x, z, r, kind, level)` (scorch texture `erase`);
+`G.destruction.unburn(x, z, r, level)`, `.uncarve(x, z, r, k)`; `'prop:broken'` now carries `quat`. `G.craft.rewind`
+= `{ busy, running, target, toggle(on), restoreAt(pos), stats() }`; events `'craft:rewind' { kind, sub, pos }`,
+`'craft:restored' { kind, sub }`. Flora instance state 5 = rising / re-forming (no hits, no recovery clock).
