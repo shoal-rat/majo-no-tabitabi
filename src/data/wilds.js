@@ -171,7 +171,7 @@ export const RING_PAY = { gold: 100, silver: 60, bronze: 35 };
  */
 export const PAGE_SITES = [
   { id: 'pg_wind', el: 'wind', x: 2310, z: 358, face: 1.9, mech: 'harp', arena: 22,
-    guardian: { base: 'paper', hpMul: 16, affixes: ['warded'], ward: 'wind' } },
+    guardian: { base: 'paper', hpMul: 10, affixes: ['warded'], ward: 'wind' } },   // ×10 of 110 (was ×16 of 26 before the longer fights)
   { id: 'pg_thunder', el: 'thunder', x: 1300, z: 350, face: 3.0, mech: 'rod', arena: 20,
     guardian: { base: 'caster', element: 'thunder', hpMul: 2.6, affixes: ['warded', 'blink'], ward: 'thunder' } },
   { id: 'pg_fire', el: 'fire', x: 175, z: -555, face: 3.4, mech: 'candles', arena: 22,

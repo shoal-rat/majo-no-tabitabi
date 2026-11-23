@@ -161,7 +161,7 @@ NO_FOES (home, Fran's forest + clearing, the walled city), on warded ground, or 
 |---|---|---|
 | paper | 流浪书页 (Wandering Pages) | stray grimoire pages (procedural booklet), darts + paper-cut volleys; fire ×3, wind ×2 |
 | blob / blob_small | 泥沼团 (Bog Blob) | bog mud: splits on hits; fire bakes a crust (8 s, slow), then earth / thunder / heavy ×2.6; water heals it |
-| wolf | 荒原狼 (Moor Wolf) | packs: the lowest-id wolf baits in front, the rest flank behind her facing and lunge faster from behind; fire (hit or a blaze at their paws) scares them; wind shoves; an elite leader howls (haste) and calls two more at 50 % |
+| wolf | 荒原狼 (Moor Wolf) | packs: the lowest-id wolf baits in front (and lunges when she looks away or has stared it down for 1.2 s), the rest flank her facing and lunge faster from the side or behind; fire (hit or a blaze at their paws) scares them for 1.2–1.6 s, then they will not scare again for 6 s; wind shoves; an elite leader howls (haste) and calls two more at 50 % |
 | moth | 啄星蝠 (Star-Pecking Bat) | harries broom riders at her height (13 m/s, a cruising broom outruns them), dives and nibbles mana (never below 30); wind / thunder tumbles it out of the air; conductive |
 | wisp | 迷路的灯火 (Lost Lamplight) | warm lantern flame; drifts in and bursts; water ×4, wind ×2 |
 | golem | 隘口石卫 (Pass Stone Guard) | stone shell (thunder / earth / heavy), slams, rock barrages |
@@ -175,8 +175,11 @@ NO_FOES (home, Fran's forest + clearing, the walled city), on warded ground, or 
 - **Ward** `e.ward = { el, hp, max, regen, downT }` — counter (COUNTER[el][0]) ×3, secondary ×1.6, a matching reaction ×2, else
   ×0.25 to the shell; HP takes 15 % chip while it holds. Break: stun 2.4 s, `exposedT` 4 s, starburst + duel beat; reforms after
   `regen` s. Events `'enemy:ward' { enemy, state: 'break'|'reform', el }`. `addWard(e, el, max, { regen })`, `counterOf(el)`.
-- **Poise** `e.poise / poiseMax` (def.poise, default 40 % hp, 70 % heavy) — heavy ×1.8, countered ×1.5, shatter ×2; at 0 →
-  stagger (stun def.staggerT, exposed), `'enemy:stagger' { enemy }`.
+- **Poise** `e.poise / poiseMax` (def.poise, default 40 % hp, 70 % heavy) — heavy ×1.8, countered ×1.5, shatter ×2, a
+  reaction ×1.6, weaving (an element other than the last one that struck it, within 4 s) ×1.5, her charm stream ×0.6; at 0 →
+  stagger (stun 1.25 × def.staggerT, knocked back a step, exposed), `'enemy:stagger' { enemy, interrupted }`. The stance then
+  refills 25 % larger (cap 2× the first) and cannot be worn down for 1 s after the foe recovers. A stagger during a wind-up is
+  an interrupt: 「打断！」, a longer opening, `'enemy:interrupt' { enemy }`. The plate shows the worn stance as a gold line.
 - **Exposed** `e.exposedT > 0` → every hit ×1.5 (the gold number); the plate shows 「破绽」.
 - **Affixes** (elites) `frenzy warded bulwark blink leech volatile pack` — `makeElite(e, list)`; camps roll an elite 18 %.
 - Movement honours `reactor.speedMul` (muddy / chilled / frozen) — `e.handlesSlow = true` (enemy.js step). Inside a steam
@@ -205,23 +208,26 @@ Save `G.state.combat = { cleared: {campId: playTime}, elites: {id: playTime}, se
 
 ### Combo & rating (src/combat/combo.js) — `G.combat.combo`
 `{ count, style, rank 0..5, best, t, fightStyle, kills, rankName(r) }`. Hits within 3 s chain; style from new elements (+2),
-reactions (+3), counters, exposed hits, ward breaks (+5), staggers (+3), riders knocked off (+4), perfect reflects (+4), clashes;
+reactions (+3), counters, exposed hits, ward breaks (+5), staggers (+3), interrupts (+4), dodges / parries read through (+3),
+riders knocked off (+4), perfect reflects (+4), clashes;
 a hit on her resets the chain. The fight is rated 3 s after it ends (「利落」 Neat, 「漂亮」 Fine, 「华丽」 Splendid, 「惊艳」 Dazzling, 「星尘般」 Like Stardust); 「漂亮」 and up pays
-stardust (22 % of the style). Events `'combat:rank' { rank }`, `'combat:rated' { rank, style, kills, bonus }`.
+stardust (9 % of the style; ranks at 25 / 60 / 110 / 175 / 250 style — both scaled ×2.5 with the longer fights). Events `'combat:rank' { rank }`, `'combat:rated' { rank, style, kills, bonus }`.
 
 ### Fran's spar (src/story/fran-spar.js)
-Three movements: 0 读杖尖 "reading the wand tip" (single stardust bolts — shield to reflect), 1 星尘乱舞 "stardust frenzy" at hp ≤ 28 or 3 casts (fan of bullets 星尘连射,
-bombardment 星落, homing water bubbles 水泡, frost seal 冰阵), 2 流星掠空 "meteor sweep" at hp ≤ 12 or 6 casts (circles at 6 m; diving passes
+Three movements: 0 读杖尖 "reading the wand tip" (single stardust bolts — shield to reflect), 1 星尘乱舞 "stardust frenzy" at hp ≤ 84 or 6 casts (fan of bullets 星尘连射,
+bombardment 星落, homing water bubbles 水泡, frost seal 冰阵), 2 流星掠空 "meteor sweep" at hp ≤ 36 or 12 casts (circles at 6 m; diving passes
 that rake the ground then land = opening; volleys from the air; a wind hit throws her off the broom). From movement 1 she
 counter-casts her spells mid-air and raises a shield against a barrage. The answer element mid-windup (or a reflected bolt)
-scatters the spell (long opening, duel beat). Openings have a damage budget (12 / 13 / 15, +8 on a break / tumble), outside
-them hits graze (×0.1 bullets, ×0.2 elements). Outcomes unchanged ('break' / 'yield' / 'hold' at 10 casts); the replay has 60 hp.
+scatters the spell (long opening, duel beat). Openings have a damage budget (13 / 14 / 16, +5 on a break / tumble), outside
+them hits graze (×0.1 bullets, ×0.2 elements). Outcomes unchanged ('break' / 'yield' / 'hold' at 20 casts); she has 126 hp in the
+story, 180 in the replay, and her bolts deal ×0.6 (`FRAN_DMG`, through the caster context's `dmgK`) — see "Longer fights".
 Events `'spar:phase' { phase }`, `'spar:broken' { pattern }`, `'spar:tumble'`, `'spar:end' { result, story, phase }`.
 
 ### Clearing trial (src/combat/trials.js) — `G.combat.trials`
 After quest `mages`, a chalk ring 9 m from Fran's spot (E: 「踏入试炼圈」, Step into the trial ring): five rounds of stardust phantoms (pages + mud, a pack,
 two mages, a warded stag under bats, rider + ember serpent + stone guard). Timed, best time + clears in the save; first clear 80
-stardust + dango, a record 40, else 20. HP floor 1 (fails instead of dying), leaving the ring (34 m) aborts. Events
+stardust + dango, a record 40, else 20. HP floor 1 (fails instead of dying), leaving the ring (34 m) aborts. Between waves she
+recovers 20 % hp and 30 % mana (since the longer fights; the phantoms hit at full strength and drop nothing). Events
 `'trial:start'`, `'trial:end' { result: 'clear'|'fail'|'left', time, best }`.
 
 ### UI (src/ui/foes.js, created by ui.js)
@@ -232,3 +238,73 @@ element colour with 「要用X才破得开」 (Needs X to break), affix chips, �
 ### Broom combat
 Player projectiles cast from a flying broom inherit 80 % of the broom's velocity (src/spells/spells.js cast(); lobbed shots only
 when homing), so bullets leave her hand at speed. Lock-on (T / middle mouse) works on the broom; auto-aim homes charms.
+
+## Longer fights (2026-11-23)
+Owner feedback: the foes were too fragile ("怪物太脆了"). Measured with `tools/journey/fight-pacing.js` before the change,
+most foes died in 1–6 s having started 0–1 attacks, and the named elites fell in 7–36 s while barely touching her. Three
+things kept fights short besides low hp: every charm (3 per second) flinch-stunned the foe for ~0.2 s, which froze its
+brain about 60 % of the time and paused its cooldowns; any hit of 12+ cancelled a wind-up; and fire re-scared beasts with
+no cooldown. This round makes fights last 2–3× as long (elites and Fran's spar longer) and fills the time with exchanges.
+
+`src/combat/pacing.js` (called from `combat.damage` / `kill`, `attacks.hurtPlayer` and the dying loop):
+- **Committed wind-ups**: once a foe has begun a telegraphed attack (`e.atk`, wind-up ≥ 0.3 s, not yet fired) flinches
+  no longer cancel it and push it only 30 %; a spark shows where a blow glanced off. Stagger, ward break, shock, freeze,
+  knock-offs and parries still stop it.
+- **Flinches**: only hits of 18+ flinch, at most once per 1.2 s per foe (was every hit of 12+). Airborne bodies take 40 %
+  push and only 26+ grounded hits lift them (a staggered wolf used to slide 12 m on low air friction).
+- **Interrupts**: a stagger that lands during a wind-up shows 「打断！」, opens the foe 1.4 s longer and pays combo style +4
+  (`'enemy:interrupt'`).
+- **Perfect dodge**: a melee / shockwave blow from within 8 m that finds her in dodge i-frames (≤ 0.45 s after the dodge)
+  opens the attacker for 1.8 s: 「看破！」, the duel 'dodge' beat, `'enemy:read' { enemy }`, style +3.
+- **Parry**: the same blow met by her guard within its perfect window (0.25 s, as for reflecting bolts), facing the
+  attacker, deals nothing and opens the attacker for 2.2 s: 「弹开了！」, the 'parry' beat, `'enemy:read' { enemy, parry }`.
+- **Rally**: once below 40 % hp (elites 50 %) a foe steels itself: 「拼死一搏」, its next move comes at once (cooldowns
+  capped), haste ×1.2 and speed ×1.1 for the rest of the fight, stance refilled, a small fire aura, the plate's hp bar turns
+  red and pulses. `def.rally === false` opts out (small mud, lost flames, the thief). `'enemy:rally' { enemy }`.
+- **The killing blow** no longer staggers, rallies or fires an affix's on-hit effect (a dying `blink` elite used to
+  teleport beside her, dropping a page-trial page at her feet).
+- **Hit feedback**: hit-stop by weight (shatter 0.09, 30+ 0.06, 18+ 0.03, an exposed hit 0.035; the charm stream never
+  stops time unless it lands on an opening), starbursts on heavy and exposed hits, pitch-varied hit sounds (exposed hits use
+  the heavy one), a 0.05 s stop on a kill, and small creatures are flung a few metres by the killing blow before they dissolve.
+
+Poise (`wards.js`, see "Shared mechanics") now rewards weaving and reactions and refuses stunlock; the foe plate shows the
+worn stance as a gold line under the hp bar (full and pulsing while the foe staggers).
+
+Brains: fire scares beasts for 1.2–1.6 s and then not again for 6 s; the pack's bait lunges after being stared down for
+1.2 s, flankers strike from the side as well as from behind; the stone guard's barrage starts at 5.2 m (was 7, leaving a
+range where it stood idle) and comes a little more often.
+
+Numbers (hp / poise; the old values in brackets): pages 110 / 40 (26 / 10, and they burn 2.5 s at 30 dps instead of 2 s at
+45, so a fire hit burns them down instead of erasing them), bog mud 240 / 95 (64 / 26), small mud 75 / 28 (30 / 12), wolf
+240 / 100 (72 / 30), bat 220 / 70 (34 / 12), lost flame 60 / 10 (30 / 6), stone guard 950 / 360 with a 320 shell
+(220 / 140, shell 110), frost stag 520 / 210 (170 / 80), ember serpent 470 / 185 (150 / 70), bandit mage 440 / 175
+(120 / 46), broom raider 640 / 130 (160 / 40). Wards are half the foe's hp (were 70 % / 65 %) and the `warded` affix 40 %
+(was 55 %), so the counter still breaks one in about three hits. Named elites' hp multipliers: greymane 3.0 (2.4),
+crowfeather 1.6 (2.2: a flying, blinking, warded raider with a raider escort already ran long), redthroat 1.6 (1.6),
+mossback 1.9 (1.5), whitecrown 2.2 (1.8). The page trials' guardians (`PAGE_SITES` in `src/data/wilds.js`) keep their
+multipliers except the wind guardian (pages ×10, was ×16 of the old 26 hp): on the new base hp they last 3–4 times as
+long, like the named elites, fought with the small forms only. The thief is unchanged (a chase, not a fight).
+
+Combo rating ranks and payout scale with the longer fights (`combo.js` `RANKS`, `PAYOUT`): the same fight earns the same
+rank and about the same stardust as before. Kill drops are per foe and unchanged.
+
+Fran's spar: 126 hp in the story (was 42), 180 in the recollection (60), movements at 84 / 36 hp or 6 / 12 casts, the
+hold at 20 casts (10), opening budgets 13 / 14 / 16 (+5 after a scattered spell; was 12 / 13 / 15, +8), her bolts ×0.6
+so the damage she deals over the bout stays about the same. A good duellist now sees all three movements.
+
+Probes: `node tools/play.mjs --name pacing --quality low --timeout 3600 --script tools/journey/fight-pacing.js` (params
+`fp=early|mid|all`, `fpOnly=wolf×2,greymane,trial`, `fpSeed`, `fpTrace=1`) and
+`node tools/play.mjs --name spar --quality low --timeout 900 --script tools/journey/spar-pacing.js`. The bot locks the
+nearest foe, streams charms, weaves an element every ~1.2 s (a ward's counter or the foe's weakness first), keeps 6–9 m and
+dodges ~60 % of the telegraphed attacks and close bolts; at 1 hp it is refilled and the down counted. Each fight gets its
+own flat spot (craters are saved). Growth "early" = no levels and Fran's six small forms; "mid" = hp / mana / charm /
+broom at 2 and the six charged forms. Times are game seconds; single rows are noisy, read the medians.
+
+Result (time-to-kill after / before with the same bot, median per group, growth level 0 / mid-game, measured on v1.7.0
+with the spell tiers): single foes 2.3× / 2.4×, camps 2.9× / 2.6×, named elites 4.5× / 2.8×, page guardians 3.9× / 3.1×,
+the stardust trial 3.5× (35 → 125 s, cleared), Fran's recollection bout 2.9× for a flawless duellist (12.6 → 36 s, and
+it now reaches her third movement). Stray pages and lost lamplights stay quick on purpose: one fire or water spell is
+their answer. Most foes now start several attacks each (up to ~15 for crowfeather) where they started 0–1, and she takes real hits; the bot was downed once,
+by 赤喉 redthroat at growth level 0 (burning ground and its ring of flame, with no hearts picked up), and nowhere else.
+
+![A fight on the east moor after this round: a pack under a rallying leader and a bandit mage](../images/combat-longer-fights.gif)

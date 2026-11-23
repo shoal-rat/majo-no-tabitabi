@@ -285,7 +285,9 @@ window.playTwo = async function (part) {
       originalFloor = G.world.heightAt(lake.x, lake.z);
     let leaveAim = false;
     await tick(8);
-    for (let i = 0; i < 960 && S.current()?.id === 'duel'; i++) {
+    // 120 s of game time (ticks of 50 ms): the spar plus the lake finale; the spar runs about three times as long since
+    // the "longer fights" round (126 hp, hold at 20 casts), so the old 48 s budget no longer covers it
+    for (let i = 0; i < 2400 && S.current()?.id === 'duel'; i++) {
       const st = S.spar.stats,
         n = S.npcs.get('fran');
       if (!st) {

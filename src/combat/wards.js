@@ -4,13 +4,18 @@
 //   ward    e.ward = { el, hp, max, regen, downT, mesh, mat }   — up: HP takes 15 % chip, the counter element hits the shell
 //           ×3 (secondary ×1.6, a matching reaction ×2), anything else ×0.25. Broken: stagger 2.4 s, exposed ×1.5 for 4 s,
 //           reforms after `regen` s. Events 'enemy:ward' { enemy, state: 'break'|'reform', el }.
-//   poise   e.poise / e.poiseMax — hits wear it down (heavy ×1.8, counter ×1.5, shatter ×2); at 0 the foe staggers
-//           (stun, 'enemy:stagger' { enemy }), then it refills. Regenerates after 2.5 s without hits.
+//   poise   e.poise / e.poiseMax — hits wear it down (heavy ×1.8, counter ×1.5, shatter ×2, a reaction ×1.6, weaving
+//           — an element other than the last one that struck it — ×1.5, the charm stream ×0.6); at 0 the foe staggers
+//           (stun ×1.25 def.staggerT, knocked back a step, 'enemy:stagger' { enemy, interrupted }), then it refills to a
+//           25 % larger stance (cap 2×) and cannot be worn down again for 1 s after it recovers (no stunlock). A stagger
+//           during a wind-up interrupts it: 「打断」, a longer opening, 'enemy:interrupt'. Regenerates after 2.5 s
+//           without hits.
 //   affixes e.affixes = ['frenzy', ...] — elites. See AFFIXES.
 import * as THREE from 'three';
 import { G } from '../core/game.js';
 import { t } from '../core/i18n.js';
 import { clamp, TAU } from '../core/util.js';
+import { mine } from './pacing.js';
 
 const _v = new THREE.Vector3(), _w = new THREE.Vector3(), _n = new THREE.Vector3();
 
@@ -172,26 +177,49 @@ export function initPoise(e) {
 }
 export function poiseHit(e, n, info, countered) {
   if (!(e.poiseMax > 0) || info.dot) return;
+  const now = G.time.t;
+  const el = info.element || null;
+  // weaving: an element other than the last one that struck this foe (within 4 s) hits its stance harder
+  const weave = !!(el && e._elLast && el !== e._elLast && now - e._elT < 4);
+  if (el) { e._elLast = el; e._elT = now; }
+  if (e._poiseLockT > 0) return;   // just back on its feet: no stunlock
   let k = info.heavy ? 1.8 : 1;
   if (countered) k *= 1.5;
   if (info.shatter) k *= 2;
+  if (info.reaction) k *= 1.6;
+  if (weave) k *= 1.5;
+  if (el === 'sun' && mine(info.source)) k *= 0.6;   // the charm stream chips; spells break
   e.poise -= n * k;
   e._poiseT = 2.5;
   if (e.poise <= 0) {
+    e.poiseBase ??= e.poiseMax;
+    e.staggers = (e.staggers || 0) + 1;
+    e.poiseMax = Math.min(Math.round(e.poiseBase * 2), Math.round(e.poiseMax * 1.25));
     e.poise = e.poiseMax;
-    const sec = e.def.staggerT ?? (e.def.heavy ? 1.6 : 1.1);
+    const sec = (e.def.staggerT ?? (e.def.heavy ? 1.6 : 1.1)) * 1.25;
+    const interrupted = !!(e.atk && !e.atk.fired);
     e.stun(sec);
-    e.exposedT = Math.max(e.exposedT || 0, sec + 0.6);
+    e._poiseLockT = sec + 1;
+    e.exposedT = Math.max(e.exposedT || 0, sec + (interrupted ? 1.4 : 0.8));
+    // knocked back a step, away from whoever broke it
+    if (!e.def.heavy && !e.boss && !e.def.noKnock) {
+      const src = info.source?.pos || G.player?.pos;
+      if (src) { _n.set(e.pos.x - src.x, 0, e.pos.z - src.z); if (_n.lengthSq() > 1e-4) { _n.normalize(); e.vel.x += _n.x * 5; e.vel.z += _n.z * 5; if (!e.fly) e.vel.y = Math.max(e.vel.y, 3); } }
+    }
     e.centerOut(_v); _v.y = e.pos.y + e.height + 0.55;
-    G.fx?.text?.(_v, t('combat.stagger'), { color: 0xffe7a4, size: 1.05, dur: 1.1 });
-    G.fx?.burst('spark', _v, { scale: 0.9, color: 0xffe7a4 });
-    G.fx?.starburst?.(e.centerOut(_w), { color: 0xffe7a4, radius: 1.3, dur: 0.26 });
-    G.audio?.sfx('hit_heavy', { pos: e.pos, vol: 0.7, pitch: 1.2 });
+    G.fx?.text?.(_v, t(interrupted ? 'combat.interrupt' : 'combat.stagger'), { color: interrupted ? 0xfff0a0 : 0xffe7a4, size: interrupted ? 1.2 : 1.05, dur: 1.2 });
+    G.fx?.burst('spark', _v, { scale: interrupted ? 1.3 : 0.9, color: 0xffe7a4 });
+    G.fx?.starburst?.(e.centerOut(_w), { color: 0xffe7a4, radius: interrupted ? 1.8 : 1.3, dur: 0.28 });
+    G.audio?.sfx('hit_heavy', { pos: e.pos, vol: 0.8, pitch: interrupted ? 1.05 : 1.2 });
+    G.hitstop(interrupted ? 0.09 : 0.07);
+    G.fx?.shake?.(interrupted ? 0.26 : 0.18, 0.25);
     if (e.cr) e.cr.play('hit', { once: true, speed: 0.8 });
-    G.events.emit('enemy:stagger', { enemy: e });
+    G.events.emit('enemy:stagger', { enemy: e, interrupted });
+    if (interrupted) G.events.emit('enemy:interrupt', { enemy: e });
   }
 }
 export function updatePoise(e, dt) {
+  if (e._poiseLockT > 0) e._poiseLockT -= dt;
   if (e._poiseT > 0) e._poiseT -= dt;
   else if (e.poise < e.poiseMax) e.poise = Math.min(e.poiseMax, e.poise + e.poiseMax * 0.18 * dt);
   if (e.exposedT > 0) e.exposedT -= dt;
@@ -209,7 +237,7 @@ export const AFFIXES = {
     apply(e) {
       if (e.ward) return;
       const els = ['fire', 'ice', 'thunder', 'water'];
-      addWard(e, e.opts.wardEl || els[(e.id * 7) % els.length], Math.round(e.maxHp * 0.55), { regen: 16 });
+      addWard(e, e.opts.wardEl || els[(e.id * 7) % els.length], Math.round(e.maxHp * 0.4), { regen: 16 });
     },
   },
   bulwark: {

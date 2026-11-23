@@ -1,7 +1,8 @@
 // 星尘试炼 — after the journey (quest 'mages' done), a chalk ring in Fran's clearing: five rounds of phantoms Fran
 // conjures out of stardust, each asking for a different answer (pages and mud, a flanking pack, two duelling mages,
 // a warded stag under bats, and a finale of rider, ember serpent and stone guard). Timed; the best time and the number
-// of clears live in G.state.combat.trials. She is never killed here: at 1 hp the trial ends and Fran calls it.
+// of clears live in G.state.combat.trials. She is never killed here: at 1 hp the trial ends and Fran calls it. Between
+// waves she gets a fifth of her hp and a third of her mana back.
 import * as THREE from 'three';
 import { G } from '../core/game.js';
 import { t } from '../core/i18n.js';
@@ -105,6 +106,9 @@ export function createTrials(C) {
       await C.spawnWave(ROUNDS[i], { x: c.x, z: c.z }, { r: 10, stagger: 0.25, hpMul: 0.9 + i * 0.05, color: 0xffe9b0,
         onSpawn: (e) => { e.noDrop = true; e.phantom = true; e.camp = null; T.members.add(e); } });
       if (!T.active || run !== my) return;
+      // a breather between waves: since the "longer fights" round the phantoms land their moves, and five waves on one
+      // bar of hp with no drops became a wall; a fifth of her hp and a third of her mana come back
+      if (i < ROUNDS.length - 1 && P && !P.dead) { P.heal?.(P.maxHp * 0.2); P.addMana?.(P.maxMana * 0.3); }
     }
     end('clear');
   }

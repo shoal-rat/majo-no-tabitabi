@@ -394,8 +394,8 @@ function thiefHit(e, amount, info) {
 // ---- defs ----------------------------------------------------------------------------------------------------------------
 export function installRogues(TYPES) {
   TYPES.caster = {
-    humanoid: true, asset: 'char_villager_c', tint: 'rogue_caster', hp: 120, radius: 0.45, height: 1.7, speed: 3.8, sight: 22, material: 'flesh', ranged: true,
-    drops: { stardust: [5, 8], heart: 0.4 }, poise: 46, staggerT: 1.3, cfg: MAGE_CFG,
+    humanoid: true, asset: 'char_villager_c', tint: 'rogue_caster', hp: 440, radius: 0.45, height: 1.7, speed: 3.8, sight: 22, material: 'flesh', ranged: true,
+    drops: { stardust: [5, 8], heart: 0.4 }, poise: 175, staggerT: 1.3, cfg: MAGE_CFG,
     onSpawn(e) {
       dress(e, 'caster');
       e.dir = new THREE.Vector3(0, 0, 1);
@@ -407,8 +407,8 @@ export function installRogues(TYPES) {
     think: mageThink,
   };
   TYPES.raider = {
-    humanoid: true, asset: 'char_town_a', tint: 'rogue_raider', hp: 160, radius: 0.5, height: 1.7, speed: 3.6, sight: 30, material: 'flesh', ranged: true,
-    fly: true, hover: 1.2, drops: { stardust: [6, 9], heart: 0.4 }, poise: 40, staggerT: 1.3, cfg: { ...MAGE_CFG, range: [7, 12] },
+    humanoid: true, asset: 'char_town_a', tint: 'rogue_raider', hp: 640, radius: 0.5, height: 1.7, speed: 3.6, sight: 30, material: 'flesh', ranged: true,
+    fly: true, hover: 1.2, drops: { stardust: [6, 9], heart: 0.4 }, poise: 130, staggerT: 1.3, cfg: { ...MAGE_CFG, range: [7, 12] },
     onSpawn(e) {
       dress(e, 'raider');
       e.dir = new THREE.Vector3(0, 0, 1);
@@ -424,7 +424,7 @@ export function installRogues(TYPES) {
   };
   TYPES.thief = {
     humanoid: true, asset: 'char_villager_b', tint: 'rogue_thief', hp: 64, radius: 0.42, height: 1.6, speed: 4.4, sight: 0, material: 'flesh',
-    fly: false, hover: 1.2, drops: { stardust: [2, 3] }, poise: 22, noKnock: false,
+    fly: false, hover: 1.2, drops: { stardust: [2, 3] }, poise: 22, noKnock: false, rally: false,
     onSpawn(e) {
       dress(e, 'thief');
       e.dir = new THREE.Vector3(0, 0, 1);

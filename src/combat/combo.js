@@ -1,11 +1,15 @@
 // Combo + fight rating. Every hit of hers within 3 s extends the chain; style comes from mixing elements, reactions,
-// broken wards, staggers, riders knocked off brooms, perfect reflects and mid-air clashes. Getting hit breaks the chain.
+// broken wards, staggers, interrupted wind-ups, blows dodged or parried through (pacing.js), riders knocked off brooms,
+// perfect reflects and mid-air clashes. Getting hit breaks the chain.
 // When the fight ends (no foe engaged for 3 s after a kill) the fight is rated and a good rating pays out in stardust.
 // C.combo = { count, style, rank (0..5), best, t (seconds since the last hit), fightStyle, kills }
 import { G } from '../core/game.js';
 import { t, raw } from '../core/i18n.js';
 
-const RANKS = [0, 10, 25, 45, 70, 100];
+// "longer fights" round: a fight now lasts ~2.5× as long and yields ~2.5× the style, so the ranks and the payout scale
+// with it (was [0, 10, 25, 45, 70, 100] and 22 %): the same fight earns the same rank and about the same stardust
+const RANKS = [0, 25, 60, 110, 175, 250];
+const PAYOUT = 0.09;
 const WINDOW = 3;
 
 export function createCombo(C) {
@@ -37,6 +41,8 @@ export function createCombo(C) {
   G.events.on('enemy:ward', (ev) => { if (ev?.state === 'break') add(5); });
   G.events.on('enemy:stagger', () => add(3));
   G.events.on('enemy:knocked', () => add(4));
+  G.events.on('enemy:interrupt', () => add(4));
+  G.events.on('enemy:read', () => add(3));
   G.events.on('enemy:killed', (ev) => { if (ev?.by !== 'self' && ev?.by !== 'split') { K.kills++; add(2); } });
   G.events.on('spell:clash', (ev) => {
     if (!ev) return;
@@ -56,7 +62,7 @@ export function createCombo(C) {
     const r = rankOf(K.fightStyle);
     if (K.kills > 0 && r >= 1 && !C.trial?.active) {
       const name = (raw('combat.combo.ranks') || [])[r] || '';
-      const n = r >= 2 ? Math.round(K.fightStyle * 0.22) : 0;
+      const n = r >= 2 ? Math.round(K.fightStyle * PAYOUT) : 0;
       if (n > 0) { G.gameplay?.spawnPickup?.('stardust', G.player.pos, n); G.ui?.toast?.(t('combat.combo.bonus', { rank: name, n }), { dur: 3, icon: 'stardust' }); }
       else G.ui?.toast?.(t('combat.combo.rating', { rank: name }), { dur: 2.5 });
       G.events.emit('combat:rated', { rank: r, style: K.fightStyle, kills: K.kills, bonus: n });

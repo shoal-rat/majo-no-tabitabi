@@ -70,8 +70,9 @@ export function front(e, dt) {
 }
 /** Fear of fire for beasts: a fire hit or a blaze at their paws sends them running for a moment. */
 function scare(e, sec = 2.2) {
-  if (e.fearT > 0.5 || e.elite) return;
+  if (e.fearT > 0.5 || e.elite || G.time.t < (e._braveT ?? -1)) return;
   e.fearT = sec;
+  e._braveT = G.time.t + sec + 6;   // it comes back angrier: no new scare for 6 s (fire buys time, it does not end the fight)
   e.stopAttack();
   if (G.time.t - (e._fearTxt || -9) > 5) { e._fearTxt = G.time.t; G.fx?.text?.(_v.set(e.pos.x, e.pos.y + e.height + 0.5, e.pos.z), t('combat.fear'), { color: 0xffb070, size: 0.85 }); }
   G.audio?.sfx('growl', { pos: e.pos, pitch: 1.6, vol: 0.6 });
@@ -82,8 +83,8 @@ function hasteDt(e, dt) { return dt * (e.haste || 1); }
 export function installBeasts(TYPES) {
   // 流浪书页 — stray pages
   TYPES.paper = {
-    asset: null, primitive: makePages, scale: 1.45, tint: null, castShadow: true, blobRadius: 0.45, material: 'paper', hp: 26, radius: 0.5, height: 1.9, fly: true, hover: 0.35,
-    bob: 0.16, speed: 3.8, sight: 12, flammable: 1, burnTime: 2, burnDps: 45, mult: { fire: 3, wind: 2 }, drops: { stardust: [1, 3], heart: 0.05 }, poise: 10,
+    asset: null, primitive: makePages, scale: 1.45, tint: null, castShadow: true, blobRadius: 0.45, material: 'paper', hp: 110, radius: 0.5, height: 1.9, fly: true, hover: 0.35,
+    bob: 0.16, speed: 3.8, sight: 12, flammable: 1, burnTime: 2.5, burnDps: 30, mult: { fire: 3, wind: 2 }, drops: { stardust: [1, 3], heart: 0.05 }, poise: 40,
     dissolve: 0xfff1c4, ranged: true,
     think(e, dt) {
       flapPages(e, G.time.t, e.atk ? 1 : 0.35);
@@ -100,7 +101,7 @@ export function installBeasts(TYPES) {
           during: (en, a) => { en.face(P.pos.x, P.pos.z, dt, 10); if (a.fired) en.data.dy = 0; } });
         return;
       }
-      if (d >= 5 && d < 13 && e.cd <= 0) {
+      if (d >= 4 && d < 13 && e.cd <= 0) {
         // paper cuts: three cream darts flicked off the leaves
         e.cd = 2.6 + Math.random();
         e.attack('cuts', 0.55, 0.4, (en) => {
@@ -116,8 +117,8 @@ export function installBeasts(TYPES) {
 
   // 泥沼团 — bog mud
   TYPES.blob = {
-    asset: null, primitive: makeMud, tint: null, material: 'flesh', hp: 64, radius: 0.62, height: 0.85, speed: 1.9, sight: 12, drops: { stardust: [2, 3], heart: 0.1 },
-    poise: 26, dissolve: 0xc9a57a, mult: { earth: 1.3 },
+    asset: null, primitive: makeMud, tint: null, material: 'flesh', hp: 240, radius: 0.62, height: 0.85, speed: 1.9, sight: 12, drops: { stardust: [2, 3], heart: 0.1 },
+    poise: 95, dissolve: 0xc9a57a, mult: { earth: 1.3 },
     think(e, dt) {
       const D = e.data;
       if (D.bakedT > 0) {
@@ -176,20 +177,20 @@ export function installBeasts(TYPES) {
       G.combat?.kill(e, 'split', { silent: true });
     },
   };
-  TYPES.blob_small = Object.assign({}, TYPES.blob, { scale: 0.62, hp: 30, radius: 0.42, height: 0.58, speed: 2.5, drops: { stardust: [1, 1] }, poise: 12, onDamaged: TYPES.blob.onDamaged });
+  TYPES.blob_small = Object.assign({}, TYPES.blob, { scale: 0.62, hp: 75, radius: 0.42, height: 0.58, speed: 2.5, drops: { stardust: [1, 1] }, poise: 28, rally: false, onDamaged: TYPES.blob.onDamaged });
 
   // 荒原狼 — the pack
   TYPES.wolf = {
-    asset: 'ani_wolf', scale: 1.6, tint: null, material: 'flesh', hp: 72, radius: 0.6, height: 1.15, speed: 7, sight: 18, drops: { stardust: [2, 4], heart: 0.12 },
-    poise: 30, staggerT: 1.2, flammable: 0.5, burnDps: 8,
+    asset: 'ani_wolf', scale: 1.6, tint: null, material: 'flesh', hp: 240, radius: 0.6, height: 1.15, speed: 7, sight: 18, drops: { stardust: [2, 4], heart: 0.12 },
+    poise: 100, staggerT: 1.2, flammable: 0.5, burnDps: 8,
     clips: { idle: 'Idle', move: 'Walk', run: 'Gallop', attack: 'Attack', hit: 'Idle_HitReact_Left', death: 'Death', leap: 'Gallop_Jump' },
     onAggro() {},
     think(e, dt) {
       const D = e.data;
-      if (e.burning && !(e.fearT > 0)) scare(e, 2.4);
+      if (e.burning && !(e.fearT > 0)) scare(e, 1.6);
       // a blaze at its paws
       D.fireT = (D.fireT ?? Math.random()) - dt;
-      if (D.fireT <= 0) { D.fireT = 0.5; if (G.elements?.isBurningAt?.(e.pos.x, e.pos.z)) scare(e, 1.8); }
+      if (D.fireT <= 0) { D.fireT = 0.5; if (G.elements?.isBurningAt?.(e.pos.x, e.pos.z)) scare(e, 1.2); }
       const s = front(e, dt); if (s !== 'fight') return;
       const P = G.player, d = distP(e);
       e.cd -= hasteDt(e, dt);
@@ -214,9 +215,10 @@ export function installBeasts(TYPES) {
       const fx = Math.sin(fy), fz = Math.cos(fy);
       const toE = flatDir(P.pos, e.pos, _d);
       const facing = toE.x * fx + toE.z * fz;   // 1 = in front of her eyes
-      const behind = facing < -0.2;
       const isBait = bait === e || n < 2;
-      if (e.cd <= 0 && lunging === 0 && d > 2.5 && d < 11 && (isBait ? facing < 0.55 || Math.random() < 0.02 : behind)) {
+      // the bait strikes when she looks away — or when she has stared it down for 1.2 s with nothing happening
+      if (e.cd <= 0 && lunging === 0) D.ready = (D.ready || 0) + dt; else D.ready = 0;
+      if (e.cd <= 0 && lunging === 0 && d > 2.5 && d < 11 && (isBait ? facing < 0.55 || D.ready > 1.2 : facing < 0.2)) {
         e.cd = 2.8 + Math.random() * 1.4;
         const target = new THREE.Vector3();
         const quick = !isBait;   // a flanker strikes faster: the reason to keep turning
@@ -256,7 +258,7 @@ export function installBeasts(TYPES) {
     },
     onDamaged(e, amount, info) {
       if (e.dead) return;
-      if (info.element === 'fire') scare(e, 2.6);
+      if (info.element === 'fire') scare(e, 1.6);
       if (info.element === 'wind' && info.dir) { _d.set(info.dir.x, 0, info.dir.z).normalize(); e.vel.addScaledVector(_d, 7); e.vel.y = Math.max(e.vel.y, 3); }
       if (e.data.leader && !e.data.called && e.hp < e.maxHp * 0.5) {
         e.data.called = true;
@@ -272,8 +274,8 @@ export function installBeasts(TYPES) {
 
   // 啄星蝠 — broom harriers
   TYPES.moth = {
-    asset: 'mon_bat', scale: 1.3, tint: null, material: 'flesh', hp: 34, radius: 0.55, height: 0.75, fly: true, hover: 3.4, bob: 0.25,
-    speed: 7, sight: 22, drops: { stardust: [2, 3], heart: 0.06 }, flammable: 0.8, burnDps: 14, conductive: true, poise: 12, ranged: true, mult: { wind: 1.4 },
+    asset: 'mon_bat', scale: 1.3, tint: null, material: 'flesh', hp: 220, radius: 0.55, height: 0.75, fly: true, hover: 3.4, bob: 0.25,
+    speed: 7, sight: 22, drops: { stardust: [2, 3], heart: 0.06 }, flammable: 0.8, burnDps: 14, conductive: true, poise: 70, ranged: true, mult: { wind: 1.4 },
     clips: { idle: 'Bat_Flying', fly: 'Bat_Flying', move: 'Bat_Flying', attack: 'Bat_Attack', hit: 'Bat_Hit', death: 'Bat_Death' },
     think(e, dt) {
       const D = e.data;
@@ -336,8 +338,8 @@ export function installBeasts(TYPES) {
 
   // 迷路的灯火 — lost flames
   TYPES.wisp = {
-    asset: null, primitive: makeLostFlame, tint: null, castShadow: false, blobRadius: 0.35, hp: 30, radius: 0.45, height: 0.95, fly: true, hover: 1.2,
-    bob: 0.2, speed: 2.6, sight: 14, immune: ['fire'], mult: { water: 4, wind: 2 }, drops: { stardust: [1, 3] }, noFlee: true, dissolve: 0xffb060, poise: 6,
+    asset: null, primitive: makeLostFlame, tint: null, castShadow: false, blobRadius: 0.35, hp: 60, radius: 0.45, height: 0.95, fly: true, hover: 1.2,
+    bob: 0.2, speed: 2.6, sight: 14, immune: ['fire'], mult: { water: 4, wind: 2 }, drops: { stardust: [1, 3] }, noFlee: true, dissolve: 0xffb060, poise: 10, rally: false,
     onSpawn(e) {
       const em = G.fx?.emitter?.('flame', { color: 0xffa040, scale: 0.5 });
       if (em) { e.data.em = em; e.own(() => em.remove()); }
@@ -367,7 +369,7 @@ export function installBeasts(TYPES) {
 
   // 隘口石卫 — the old stone guards of the pass
   const golem = TYPES.golem;
-  golem.poise = 140; golem.staggerT = 1.8;
+  golem.poise = 360; golem.staggerT = 1.8; golem.hp = 950; golem.armor = 320;
   golem.think = function (e, dt) {
     const s = front(e, dt); if (s !== 'fight') return;
     const P = G.player, d = distP(e);
@@ -383,8 +385,8 @@ export function installBeasts(TYPES) {
         during: (en) => en.face(P.pos.x, P.pos.z, dt, 3) });
       return;
     }
-    if (d > 7 && d < 26 && e.cd <= 0) {
-      e.cd = 5 + Math.random() * 2;
+    if (d > 5.2 && d < 26 && e.cd <= 0) {   // was > 7: a heroine kiting at 6 m left it standing idle
+      e.cd = 4.2 + Math.random() * 1.6;
       e.attack('barrage', 0.8, 1.6, (en) => {
         rockBarrage({ owner: en, team: 'enemy', alive: () => !en.dead, dmgK: en.atkMul }, P, { n: 5, rise: 0.8, speed: 22, damage: 11, ring: 2.8 });
       }, { tell: (en) => { headPos(en, _o, 1); G.fx?.burst('charge_done', _o, { color: 0xd6c3a0, scale: 1.2 }); G.audio?.sfx('rumble', { pos: en.pos }); en.cr?.play('attack', { once: true, speed: 0.6 }); },
@@ -398,11 +400,11 @@ export function installBeasts(TYPES) {
 
   // 霜角鹿 — frost stag
   TYPES.froststag = {
-    asset: 'ani_stag', scale: 1.05, tint: 'paper', material: 'flesh', hp: 170, radius: 0.85, height: 2.2, speed: 4.6, sight: 18, immune: ['frozen'],
-    drops: { stardust: [6, 9], heart: 0.4 }, poise: 80, staggerT: 1.6, mult: { fire: 1.3 },
+    asset: 'ani_stag', scale: 1.05, tint: 'paper', material: 'flesh', hp: 520, radius: 0.85, height: 2.2, speed: 4.6, sight: 18, immune: ['frozen'],
+    drops: { stardust: [6, 9], heart: 0.4 }, poise: 210, staggerT: 1.6, mult: { fire: 1.3 },
     clips: { idle: 'Idle', move: 'Walk', run: 'Gallop', attack: 'Attack_Headbutt', kick: 'Attack_Kick', hit: 'Idle_HitReact_Left', death: 'Death', leap: 'Gallop_Jump' },
     onSpawn(e) {
-      addWard(e, 'ice', Math.round(e.maxHp * 0.7), { regen: 14 });
+      addWard(e, 'ice', Math.round(e.maxHp * 0.5), { regen: 14 });
       // a white stag: the sculpted coat carries its colour in the vertices, so the pale coat is set on its own clone
       e.cr?.model.traverse((o) => {
         if (!o.isMesh || o.userData.outline || !o.material || Array.isArray(o.material) || o.userData._frost) return;
@@ -476,11 +478,11 @@ export function installBeasts(TYPES) {
 
   // 余烬蛇 — ember serpent
   TYPES.embersnake = {
-    asset: 'mon_serpent', scale: 0.82, tint: { color: 0xffa070, emissive: 0x7a2000, emissiveIntensity: 0.45 }, material: 'flesh', hp: 150, radius: 0.8, height: 2.3,
-    speed: 2.8, sight: 16, immune: ['burning', 'fire'], drops: { stardust: [6, 9], heart: 0.4 }, poise: 70, staggerT: 1.5, mult: { water: 1.3, ice: 1.2 },
+    asset: 'mon_serpent', scale: 0.82, tint: { color: 0xffa070, emissive: 0x7a2000, emissiveIntensity: 0.45 }, material: 'flesh', hp: 470, radius: 0.8, height: 2.3,
+    speed: 2.8, sight: 16, immune: ['burning', 'fire'], drops: { stardust: [6, 9], heart: 0.4 }, poise: 185, staggerT: 1.5, mult: { water: 1.3, ice: 1.2 },
     clips: { idle: 'Snake_Idle', move: 'Snake_Walk', attack: 'Snake_Attack', leap: 'Snake_Jump', hit: 'Snake_Idle', death: 'Snake_Idle' },
     onSpawn(e) {
-      addWard(e, 'fire', Math.round(e.maxHp * 0.65), { regen: 13 });
+      addWard(e, 'fire', Math.round(e.maxHp * 0.5), { regen: 13 });
       const em = G.fx?.emitter?.('embers', { color: 0xff8a3a, scale: 0.8 });
       if (em) { e.data.em = em; e.own(() => em.remove()); }
     },

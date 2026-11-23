@@ -17,12 +17,13 @@ import { creaturePoolStats } from '../actors/creature.js';
 import { warmScene, warmCreatures } from '../render/warmup.js';
 import { installBeasts } from './beasts.js';
 import { installRogues } from './rogues.js';
-import { wardHit, updateWard, poiseHit, updatePoise, affixEvent, COUNTER, counterOf } from './wards.js';
+import { wardHit, updateWard, poiseHit, updatePoise, affixEvent, COUNTER, counterOf, makeElite } from './wards.js';
 import { updatePatterns, clearPatterns } from './patterns.js';
 import { createEncounters } from './encounters.js';
 import { createCombo } from './combo.js';
 import { createTrials } from './trials.js';
 import { warnAt, shockwave } from './attacks.js';
+import { installPacing, committed, hitFeedback, checkRally, fling, updateFling, mine } from './pacing.js';
 
 const _v = new THREE.Vector3(), _w = new THREE.Vector3(), _f = new THREE.Vector3();
 const SLEEP_R = 62;
@@ -47,6 +48,8 @@ const C = {
   /** the clearing trial (combat/trials.js) while it runs, else null */
   trial: null,
   counterOf,
+  /** makeElite(e, affixes): turn a spawned foe into an elite (encounters.js uses it; the pacing probe too) */
+  makeElite,
   nestsEnabled: true,
   wildlifeEnabled: true,
   after,
@@ -103,24 +106,29 @@ const C = {
     }
     if (!info.dot) {
       e.hitFlash();
+      // a committed wind-up (pacing.js) holds through flinches: it pushes less and is not cancelled
+      const held = committed(e);
       if (!e.def.heavy && !e.boss && !e.def.noKnock) {
         if (info.dir && info.dir.lengthSq && info.dir.lengthSq() > 0.01) _f.set(info.dir.x, 0, info.dir.z);
         else { const s = info.source?.pos || G.player?.pos; if (s) _f.set(e.pos.x - s.x, 0, e.pos.z - s.z); else _f.set(0, 0, 0); }
         if (_f.lengthSq() > 1e-4) {
           _f.normalize();
-          const kb = clamp(1.5 + n * 0.12, 1.5, 9) * (info.heavy ? 1.5 : 1);
+          // airborne foes barely brake (friction 0.6), so a body in the air takes less push and only real blows lift it
+          const kb = clamp(1.5 + n * 0.12, 1.5, 9) * (info.heavy ? 1.5 : 1) * (held ? 0.3 : 1) * (e.grounded || e.fly ? 1 : 0.4);
           e.vel.x += _f.x * kb; e.vel.z += _f.z * kb;
-          if (n >= 18 && !e.fly) e.vel.y = Math.max(e.vel.y, 2.5);
+          if (n >= 26 && !e.fly && !held && e.grounded) e.vel.y = Math.max(e.vel.y, 2.5);
         }
-        if (n >= 12) e.stun(Math.min(0.5, 0.12 + n * 0.006));
+        // a flinch needs a real blow and comes at most every 1.2 s: the charm stream no longer stun-locks a foe
+        if (n >= 18 && !held && G.time.t - (e._flinchT ?? -9) > 1.2) { e._flinchT = G.time.t; e.stun(Math.min(0.45, 0.1 + n * 0.006)); }
       }
-      if (!info.silentHit) G.audio?.sfx(big ? 'hit_heavy' : 'enemy_hit', { pos: e.pos, vol: big ? 0.9 : 0.6 });
-      if (big) { G.hitstop(info.shatter ? 0.09 : 0.05); G.fx?.shake?.(info.shatter ? 0.3 : 0.18, 0.25); }
+      if (!info.silentHit) G.audio?.sfx(big || exposed ? 'hit_heavy' : 'enemy_hit', { pos: e.pos, vol: big ? 0.9 : exposed ? 0.7 : 0.6, pitch: exposed && !big ? 1.25 : 0.92 + Math.random() * 0.16 });
+      hitFeedback(e, n, info, exposed);
       if (e.cr && !e.atk && !e.cr.busy && e.cr.has('hit')) e.cr.play('hit', { once: true, speed: 1.4 });
     }
     G.events.emit('enemy:hit', { enemy: e, amount: n, element: info.element || null, pos: e.pos.clone(), by: info.source || null, dot: !!info.dot, countered, exposed, reaction: info.reaction || null });
     try { e.def.onDamaged?.(e, n, info); } catch (err) { G.reportError('combat:onDamaged', err); }
-    if (!e.dead) { poiseHit(e, n, info, countered); affixEvent(e, 'onDamaged', n, info); }
+    // the killing blow does not stagger, rally or trigger an affix (a dying blink elite used to teleport beside her)
+    if (!e.dead && e.hp > 0) { poiseHit(e, n, info, countered); affixEvent(e, 'onDamaged', n, info); checkRally(e); }
     if (e.hp <= 0 && !e.dead) {
       if (e.onZero) { e.hp = 0; e.onZero(info); }
       else C.kill(e, info.by || info.element || 'hit');
@@ -147,6 +155,7 @@ const C = {
       if (G.state?.stats) G.state.stats.kills = (G.state.stats.kills || 0) + 1;
       if (!o.noDrop) drop(e, pos);
       combatT = G.time.t;
+      if (by !== 'self' && by !== 'split' && by !== 'caught') { fling(e); if (mine(e.hitBy) || e.hitBy == null) G.hitstop(0.05); }
     }
     spawner?.onKilled(e);
     if (e.actor) { e.actor.play('death', { once: true }); e._dieT = 1.6; }
@@ -311,7 +320,7 @@ function updateEnemies(dt) {
     const e = dying[i];
     let done;
     if (e.actor) { e.render(dt); e._dieT -= dt; done = e._dieT <= 0; if (e._dieT < 0.8 && !e._puffed) { e._puffed = true; G.fx?.burst('purify', e.centerOut(_v), { scale: 1.4 }); e.actor.group.visible = false; e.blob && (e.blob.visible = false); } }
-    else { e.cr?.update(dt); done = !e.cr || e.cr.dissolved; if (e.bar) e.bar.visible = false; }
+    else { updateFling(e, dt); e.cr?.update(dt); done = !e.cr || e.cr.dissolved; if (e.bar) e.bar.visible = false; }
     if (done) { dying.splice(i, 1); e.dispose(); }
   }
 }
@@ -320,6 +329,7 @@ export const combatSystem = {
   name: 'combat',
   async init(G) {
     G.combat = C;
+    installPacing();
     installBeasts(TYPES);
     installRogues(TYPES);
     spawner = createSpawner(C);        // waves (the clearing trial); the journey's camps live in encounters.js

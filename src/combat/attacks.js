@@ -5,6 +5,7 @@ import { G } from '../core/game.js';
 import { PAL } from '../core/mats.js';
 import { clamp } from '../core/util.js';
 import { affixEvent } from './wards.js';
+import { perfectDodge, parry } from './pacing.js';
 
 const _v = new THREE.Vector3(), _w = new THREE.Vector3(), _d = new THREE.Vector3();
 export const DARK = 0x8a3cff;
@@ -49,8 +50,10 @@ export function hurtPlayer(e, amount, o = {}) {
   // ambushers want the purse, not her life: they never take her below their mercy floor
   if (e && e.mercyFloor != null) a = Math.min(a, Math.max(0, Math.floor(G.player.hp - e.mercyFloor)));
   if (!(a > 0)) return 0;
+  if (e && parry(e)) return 0;   // a guard raised just in time turns the blow aside whole (pacing.js)
   const dealt = G.player.takeDamage?.(a, { element: o.element, from: o.from || (e ? e.pos : null), knock: o.knock ?? 0, source: e }) || 0;
   if (dealt > 0 && e) { e._hitPlayerT = G.time.t; if (e.affixes) affixEvent(e, 'onHitPlayer'); }
+  else if (e && !dealt) perfectDodge(e);   // she dodged through it: the attacker is open (pacing.js)
   return dealt;
 }
 

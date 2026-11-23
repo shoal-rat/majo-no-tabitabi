@@ -8,18 +8,24 @@ import { volley, starRain, seal, counterCast, incomingAt, bolt, EL_COL, ANSWER }
 //
 // Three movements, each a cycle of rest -> windup (a chalk circle at her wand: read it) -> the spell -> opening:
 //   0 读杖尖    single stardust bolts. Shield as one arrives and it flies back at her.
-//   1 星尘乱舞  (hp <= 28 or 3 casts) on her broom, low: a fan of bullets, a star-fall bombardment, slow water
+//   1 星尘乱舞  (hp <= 84 or 6 casts) on her broom, low: a fan of bullets, a star-fall bombardment, slow water
 //               bubbles, a frost seal under your feet. Hitting her mid-windup with the answer to that spell scatters it.
 //               She also meets your spells mid-air with the countering element.
-//   2 流星掠空  (hp <= 12 or 6 casts) up in the air, circling the clearing: diving passes that rake the ground with
+//   2 流星掠空  (hp <= 36 or 12 casts) up in the air, circling the clearing: diving passes that rake the ground with
 //               stardust, volleys from above. A gust of wind knocks her off the broom (a long opening); her landing
 //               after a pass is always an opening.
 // Outcomes are unchanged: 'break' (her hp to 0), 'yield' (the heroine is worn down to the floor), 'hold' (she weathered
 // the whole performance).
-const PHASE_AT = [Infinity, 28, 12];
-const CAST_AT = [Infinity, 3, 6];
-const HOLD_AT = 10;
-const OPEN_BUDGET = [12, 13, 15];
+// "Longer fights" round (2026-11): a bout three times as long — 126 hp (the recollection 180), the movements and the hold
+// (20 casts) scaled with it so a good duellist now sees all three movements, a little more to take from each opening but
+// less extra for a scattered spell (+5, was +8), and her bolts at 0.6 so what she deals over the longer bout stays about
+// what it was.
+const PHASE_AT = [Infinity, 84, 36];
+const CAST_AT = [Infinity, 6, 12];
+const HOLD_AT = 20;
+const OPEN_BUDGET = [13, 14, 16];
+const BREAK_BONUS = 5;
+const FRAN_DMG = 0.6;
 const CYCLE = [['bolt'], ['fan', 'rain', 'bubbles', 'frost'], ['dive', 'volley', 'dive', 'rain']];
 const ANSWERS = { fan: ['wind'], rain: ['wind', 'earth'], bubbles: ['fire', 'thunder'], frost: ['fire'], dive: ['wind'], volley: ['wind', 'ice'] };
 
@@ -111,6 +117,7 @@ export function createFranSpar(S) {
         hand: (out) => wandTip(d, out),
         data: { franSpar: d.id },
         power: 0.7,
+        dmgK: FRAN_DMG,
         onShot: (p) => d.shots.add(p),
       };
     return d.ctx;
@@ -141,7 +148,7 @@ export function createFranSpar(S) {
       taken: 0,
       attempts: 0,
     });
-    const max = story ? 42 : 60;
+    const max = story ? 126 : 180;
     const hp = Math.max(0, max - (log.hits || 0));
     duel = {
       story,
@@ -242,7 +249,7 @@ export function createFranSpar(S) {
     d.handle = null;
     d.stage = 'opening';
     d.wait = 2.6;
-    d.budget = OPEN_BUDGET[d.phase] + 8;
+    d.budget = OPEN_BUDGET[d.phase] + BREAK_BONUS;
     d.log.fired++;   // a scattered spell still counts as one she cast
     say(key);
     G.fx?.burst?.('clash_big', d.n.pos.clone().add(tmp2.set(0, 1.3, 0)), { color: 0xffe7a4, color2: 0xb89de3, scale: 0.7 });
@@ -259,7 +266,7 @@ export function createFranSpar(S) {
     circle.visible = false;
     d.stage = 'opening';
     d.wait = 2.8;
-    d.budget = OPEN_BUDGET[d.phase] + 8;
+    d.budget = OPEN_BUDGET[d.phase] + BREAK_BONUS;
     say('tumble');
     G.fx?.burst?.('hit_wind', d.n.pos.clone().add(tmp2.set(0, 1.2, 0)), { scale: 1.3 });
     G.fx?.starburst?.(d.n.pos.clone().add(tmp2.set(0, 1.2, 0)), { color: 0xe6fff2, radius: 2 });

@@ -1,6 +1,7 @@
 // Foe plates and the combo meter (combat's UI; ui.js creates it and calls update / late).
 //   plates: up to 6 engaged foes near her (and the lock target): name (elites in gold with their title), a brush-stroke
-//           hp bar with a trailing ghost, the elemental ward as a coloured bar with the element that breaks it,
+//           hp bar with a trailing ghost, a thin gold posture line that fills as its stance is worn down (full and
+//           pulsing while it staggers), the elemental ward as a coloured bar with the element that breaks it,
 //           affix chips and a 破绽 tag while a foe is open (status marks are drawn by ui/reactions.js just below).
 //   combo:  the chain count, 连击, and the rank word of the fight so far; it pops on rank-ups and fades after the window.
 // G.ui.foePlates = true tells enemy.js to hide its old floating 3D bars.
@@ -26,6 +27,11 @@ addCss(`
 .foe-plate .hp .ghost { background: rgba(255,238,205,.8); }
 .foe-plate .hp .fill { background: linear-gradient(180deg, #ff9a78 0%, #e0503a 50%, #b2301f 100%); }
 .foe-plate.elite .hp .fill { background: linear-gradient(180deg, #ffd58a 0%, #e8962e 50%, #b8661a 100%); }
+.foe-plate.rally .hp .fill, .foe-plate.elite.rally .hp .fill { background: linear-gradient(180deg, #ffb08a 0%, #f0602e 50%, #c03a14 100%); animation: mv-pulse .8s infinite; }
+.foe-plate .ps { position: relative; height: 3u; margin: 1u 14u 0; border-radius: 2u; background: rgba(14,12,22,.55); overflow: hidden; opacity: 0; transition: opacity .25s; }
+.foe-plate .ps.on { opacity: 1; }
+.foe-plate .ps i { position: absolute; inset: 0; transform-origin: 50% 50%; background: linear-gradient(90deg, #ffe9a8, #ffc65a, #ffe9a8); box-shadow: 0 0 4u rgba(255,206,110,.8); will-change: transform; }
+.foe-plate .ps.broke i { animation: mv-pulse .35s infinite; }
 .foe-plate .wd { display: none; align-items: center; gap: 3u; margin: 2u 6u 0; }
 .foe-plate .wd.on { display: flex; }
 .foe-plate .wd .bar { flex: 1; height: 4u; border-radius: 2u; background: rgba(14,12,22,.7); overflow: hidden; position: relative; }
@@ -104,6 +110,7 @@ export function createFoes(root) {
     const nm = el('div', 'nm', p);
     const hp = el('div', 'hp', p);
     const ghost = el('i', 'ghost', hp), fill = el('i', 'fill', hp);
+    const ps = el('div', 'ps', p), pfill = el('i', '', ps);
     const wd = el('div', 'wd', p);
     const wic = icon('fire', 'ic', wd);
     const wbar = el('i', '', el('div', 'bar', wd));
@@ -112,7 +119,7 @@ export function createFoes(root) {
     const ex = el('span', 'ex', ch);
     const af = [];
     for (let k = 0; k < AFFIX_SHOW; k++) af.push(el('span', 'af', ch));
-    plates.push({ p, nm, ghost, fill, wd, wic, wbar, ans, ex, af, e: null, f: -1, g: 1, gw: -1, wf: -1, key: '', x: -1, y: -1, s: -1, wel: '' });
+    plates.push({ p, nm, ghost, fill, ps, pfill, wd, wic, wbar, ans, ex, af, e: null, f: -1, g: 1, gw: -1, wf: -1, pf: -1, rl: null, br: null, key: '', x: -1, y: -1, s: -1, wel: '' });
   }
   const combo = el('div', 'foe-combo', root);
   const cN = el('div', 'n', combo), cL = el('div', 'lb', combo), cR = el('div', 'rk', combo);
@@ -173,7 +180,7 @@ export function createFoes(root) {
         _v.applyMatrix4(cam.projectionMatrix);
         if (Math.abs(_v.x) > 1.1 || Math.abs(_v.y) > 1.1) { setOn(pl.p, false); continue; }
         setOn(pl.p, true);
-        if (pl.e !== e) { pl.e = e; pl.key = ''; pl.f = -1; pl.g = clamp(e.hp / e.maxHp); pl.gw = -1; pl.wf = -1; pl.wel = ''; }
+        if (pl.e !== e) { pl.e = e; pl.key = ''; pl.f = -1; pl.g = clamp(e.hp / e.maxHp); pl.gw = -1; pl.wf = -1; pl.pf = -1; pl.rl = null; pl.br = null; pl.wel = ''; }
         const sx = Math.round((_v.x * 0.5 + 0.5) * UI.w), sy = Math.round((-_v.y * 0.5 + 0.5) * UI.h);
         const sc = Math.round(clamp(1.25 - depth / 60, 0.72, 1.1) * 20) / 20;
         if (sx !== pl.x || sy !== pl.y || sc !== pl.s) { pl.x = sx; pl.y = sy; pl.s = sc; pl.p.style.transform = `translate3d(${sx}px,${sy}px,0) translateY(-100%) scale(${sc})`; }
@@ -191,6 +198,12 @@ export function createFoes(root) {
           setText(pl.ex, t('combat.exposed'));
         }
         bar(pl, e.hp / e.maxHp, rdt);
+        if (pl.rl !== !!e.rallied) { pl.rl = !!e.rallied; pl.p.classList.toggle('rally', pl.rl); }
+        // posture: grows from the middle as the stance is worn down; full and pulsing while staggered
+        const broke = e._poiseLockT > 0 && e.stunT > 0;
+        const pf = broke ? 1 : e.poiseMax > 0 ? Math.round(clamp(1 - e.poise / e.poiseMax) * 50) / 50 : 0;
+        if (pf !== pl.pf) { pl.pf = pf; pl.pfill.style.transform = `scaleX(${Math.max(0.001, pf)})`; setOn(pl.ps, pf > 0.02); }
+        if (pl.br !== broke) { pl.br = broke; pl.ps.classList.toggle('broke', broke); }
         // ward
         const w = e.ward;
         setOn(pl.wd, !!w);
