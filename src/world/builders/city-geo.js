@@ -94,6 +94,36 @@ export class GeoBuilder {
       this.quad(B[i], B[j], R[j], R[i], sides[i][1]);
     }
   }
+  /**
+   * Convex polygon `poly` ([[x,y],...], either winding) in the xy plane, extruded from z0 to z1, its front (z1) edges
+   * chamfered by b: a dressed stone whose arrises catch the light (voussoirs, impost blocks). back = also the z0 face.
+   */
+  prismBevel(poly, z0, z1, b = 0.03, back = false) {
+    const n = poly.length;
+    let area = 0;
+    for (let i = 0; i < n; i++) { const [ax, ay] = poly[i], [bx, by] = poly[(i + 1) % n]; area += ax * by - bx * ay; }
+    const sgn = area > 0 ? 1 : -1, ins = [];
+    for (let i = 0; i < n; i++) {
+      const p = poly[(i + n - 1) % n], c = poly[i], q = poly[(i + 1) % n];
+      let ex = c[0] - p[0], ey = c[1] - p[1], el = Math.hypot(ex, ey) || 1;
+      const n1 = [(-ey / el) * sgn, (ex / el) * sgn];
+      ex = q[0] - c[0]; ey = q[1] - c[1]; el = Math.hypot(ex, ey) || 1;
+      const n2 = [(-ey / el) * sgn, (ex / el) * sgn];
+      const k = b / (1 + n1[0] * n2[0] + n1[1] * n2[1]);
+      ins.push([c[0] + (n1[0] + n2[0]) * k, c[1] + (n1[1] + n2[1]) * k]);
+    }
+    let cx = 0, cy = 0;
+    for (const [x, y] of poly) { cx += x / n; cy += y / n; }
+    const zb = z1 - b;
+    for (let i = 1; i < n - 1; i++) this.tri([ins[0][0], ins[0][1], z1], [ins[i][0], ins[i][1], z1], [ins[i + 1][0], ins[i + 1][1], z1], [0, 0, 1]);
+    for (let i = 0; i < n; i++) {
+      const j = (i + 1) % n, a = poly[i], c = poly[j];
+      const ox = (a[0] + c[0]) / 2 - cx, oy = (a[1] + c[1]) / 2 - cy;
+      this.quad([a[0], a[1], zb], [c[0], c[1], zb], [ins[j][0], ins[j][1], z1], [ins[i][0], ins[i][1], z1], [ox, oy, 1]);
+      this.quad([a[0], a[1], z0], [c[0], c[1], z0], [c[0], c[1], zb], [a[0], a[1], zb], [ox, oy, 0]);
+    }
+    if (back) for (let i = 1; i < n - 1; i++) this.tri([poly[0][0], poly[0][1], z0], [poly[i][0], poly[i][1], z0], [poly[i + 1][0], poly[i + 1][1], z0], [0, 0, -1]);
+  }
   /** Box whose top edges are chamfered by b (a dressed slab: sills, caps, copings). skipBottom leaves the underside out. */
   slab(x0, y0, z0, x1, y1, z1, b = 0.025, skipBottom = true) {
     b = Math.min(b, (x1 - x0) * 0.3, (z1 - z0) * 0.3, (y1 - y0) * 0.6);
@@ -129,19 +159,23 @@ export class GeoBuilder {
    * Surface of revolution about +y: profile [[r, y], ...] bottom to top, seg sides, smooth normals around and
    * along. caps: 1 bottom disc, 2 top disc. ox/oy/oz offsets the axis.
    */
-  lathe(profile, seg = 10, ox = 0, oy = 0, oz = 0, caps = 0, phase = 0) {
+  lathe(profile, seg = 10, ox = 0, oy = 0, oz = 0, caps = 0, phase = 0, hard = false) {
     const m = profile.length;
-    const nrm = [];
+    const nrm = [], seg2 = [];
     for (let i = 0; i < m; i++) {
       const a = profile[Math.max(0, i - 1)], b = profile[Math.min(m - 1, i + 1)];
       const dr = b[0] - a[0], dy = b[1] - a[1], l = Math.hypot(dr, dy) || 1;
       nrm.push([dy / l, -dr / l]);
+      if (hard && i < m - 1) {
+        const er = profile[i + 1][0] - profile[i][0], ey = profile[i + 1][1] - profile[i][1], el = Math.hypot(er, ey) || 1;
+        seg2.push([ey / el, -er / el]);
+      }
     }
     for (let s = 0; s < seg; s++) {
       const t0 = phase + (s / seg) * Math.PI * 2, t1 = phase + ((s + 1) / seg) * Math.PI * 2;
       const c0 = Math.cos(t0), s0 = Math.sin(t0), c1 = Math.cos(t1), s1 = Math.sin(t1);
       for (let i = 0; i < m - 1; i++) {
-        const [r0, y0] = profile[i], [r1, y1] = profile[i + 1], [nr0, ny0] = nrm[i], [nr1, ny1] = nrm[i + 1];
+        const [r0, y0] = profile[i], [r1, y1] = profile[i + 1], [nr0, ny0] = hard ? seg2[i] : nrm[i], [nr1, ny1] = hard ? seg2[i] : nrm[i + 1];
         if (r0 < 1e-4 && r1 < 1e-4) continue;
         this.squad(
           [ox + r0 * s0, oy + y0, oz + r0 * c0], [ox + r0 * s1, oy + y0, oz + r0 * c1], [ox + r1 * s1, oy + y1, oz + r1 * c1], [ox + r1 * s0, oy + y1, oz + r1 * c0],
@@ -230,6 +264,38 @@ export class ByMat {
   }
 }
 
+/**
+ * Moulded surround of an opening (window, slit, lancet) on a wall facing +z: a front ring, a chamfer down to the wall
+ * and a reveal back to the glass plane. See the comment inside for `pts`.
+ */
+export function frontRing(b, pts, zf, zw, zg, grow, k = 1) {
+  // pts: inner outline points [x, y, mx, my] of a U / arch, bottom-left round to bottom-right, (mx, my) the mitre
+  // offset of a unit-wide border there; front ring between inner and outer (inner pushed out by grow[0]), chamfer
+  // from the outer front edge to the wall (grow[1] more), reveal back to the glass plane zg.
+  const out = (p, g) => [p[0] + p[2] * g, p[1] + p[3] * g];
+  const nrm = (p) => { const l = Math.hypot(p[2], p[3]) || 1; return [p[2] / l, p[3] / l]; };
+  for (let i = 0; i < pts.length - 1; i++) {
+    const a = pts[i], c = pts[i + 1];
+    const ao = out(a, grow[0]), co = out(c, grow[0]), aw = out(a, grow[0] + grow[1]), cw = out(c, grow[0] + grow[1]);
+    const na = nrm(a), nc = nrm(c);
+    b.squad([a[0], a[1], zf], [ao[0], ao[1], zf], [co[0], co[1], zf], [c[0], c[1], zf], [0, 0, 1], [0, 0, 1], [0, 0, 1], [0, 0, 1], [k, k, k, k]);
+    b.squad([ao[0], ao[1], zf], [aw[0], aw[1], zw], [cw[0], cw[1], zw], [co[0], co[1], zf], [na[0] * 0.7, na[1] * 0.7, 0.7], [na[0] * 0.7, na[1] * 0.7, 0.7], [nc[0] * 0.7, nc[1] * 0.7, 0.7], [nc[0] * 0.7, nc[1] * 0.7, 0.7], [k, k * 0.97, k * 0.97, k]);
+    b.squad([c[0], c[1], zg], [c[0], c[1], zf], [a[0], a[1], zf], [a[0], a[1], zg], [-nc[0], -nc[1], 0], [-nc[0], -nc[1], 0], [-na[0], -na[1], 0], [-na[0], -na[1], 0], [k * 0.72, k * 0.9, k * 0.9, k * 0.72]);
+  }
+}
+/** squad() keeps the caller's corner order: flip the triangles (from triangle index `from`) whose face normal
+ *  disagrees with their vertex normals. */
+export function fixWinding(b, from) {
+  // squad() takes corners in the caller's order: flip any triangle whose face normal disagrees with its vertex normals
+  const P = b.p, N = b.n, C = b.c;
+  for (let i = from * 9; i < P.length; i += 9) {
+    const ax = P[i + 3] - P[i], ay = P[i + 4] - P[i + 1], az = P[i + 5] - P[i + 2];
+    const bx = P[i + 6] - P[i], by = P[i + 7] - P[i + 1], bz = P[i + 8] - P[i + 2];
+    const fx = ay * bz - az * by, fy = az * bx - ax * bz, fz = ax * by - ay * bx;
+    if (fx * (N[i] + N[i + 3] + N[i + 6]) + fy * (N[i + 1] + N[i + 4] + N[i + 7]) + fz * (N[i + 2] + N[i + 5] + N[i + 8]) >= 0) continue;
+    for (const arr of [P, N, C]) if (arr) for (let k = 0; k < 3; k++) { const t = arr[i + 3 + k]; arr[i + 3 + k] = arr[i + 6 + k]; arr[i + 6 + k] = t; }
+  }
+}
 /** Seeded 0..1 hash of two numbers (stable per house / bay). */
 export function hash01(a, b = 0) {
   const s = Math.sin(a * 127.1 + b * 311.7) * 43758.5453;

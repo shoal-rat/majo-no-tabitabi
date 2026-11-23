@@ -9,7 +9,7 @@
 import * as THREE from 'three';
 import { G } from '../../core/game.js';
 import { toon } from '../../core/mats.js';
-import { GeoBuilder, hash01 } from './city-geo.js';
+import { GeoBuilder, hash01, frontRing, fixWinding } from './city-geo.js';
 
 /** Modelled bays within this many metres of the camera: by tier (phones and low: none). */
 export const bayRange = () => (G.quality?.mobile || G.quality?.name === 'low' ? 0 : G.quality?.name === 'med' ? 34 : 50);
@@ -41,32 +41,6 @@ const WOOD = [0x7a5640, 0x6e4c38, 0x86603f].map(lin);
 // The painted window it covers (texture px -> m): glass x +-0.325, y 0.69..2.66; frame to +-0.39, 0.57..2.78;
 // shutters +-0.375..0.575; sill +-0.44, 0.42..0.59; arched head: ellipse centre y 2.56.
 const GL0 = 0.66, GL1 = 2.66, GX = 0.325, OX = 0.43, WX = 0.47, ZF = 0.09, ZG = 0.02, SPR = 2.56;
-function frontRing(b, pts, zf, zw, zg, grow, k = 1) {
-  // pts: inner outline points [x, y, mx, my] of a U / arch, bottom-left round to bottom-right, (mx, my) the mitre
-  // offset of a unit-wide border there; front ring between inner and outer (inner pushed out by grow[0]), chamfer
-  // from the outer front edge to the wall (grow[1] more), reveal back to the glass plane zg.
-  const out = (p, g) => [p[0] + p[2] * g, p[1] + p[3] * g];
-  const nrm = (p) => { const l = Math.hypot(p[2], p[3]) || 1; return [p[2] / l, p[3] / l]; };
-  for (let i = 0; i < pts.length - 1; i++) {
-    const a = pts[i], c = pts[i + 1];
-    const ao = out(a, grow[0]), co = out(c, grow[0]), aw = out(a, grow[0] + grow[1]), cw = out(c, grow[0] + grow[1]);
-    const na = nrm(a), nc = nrm(c);
-    b.squad([a[0], a[1], zf], [ao[0], ao[1], zf], [co[0], co[1], zf], [c[0], c[1], zf], [0, 0, 1], [0, 0, 1], [0, 0, 1], [0, 0, 1], [k, k, k, k]);
-    b.squad([ao[0], ao[1], zf], [aw[0], aw[1], zw], [cw[0], cw[1], zw], [co[0], co[1], zf], [na[0] * 0.7, na[1] * 0.7, 0.7], [na[0] * 0.7, na[1] * 0.7, 0.7], [nc[0] * 0.7, nc[1] * 0.7, 0.7], [nc[0] * 0.7, nc[1] * 0.7, 0.7], [k, k * 0.97, k * 0.97, k]);
-    b.squad([c[0], c[1], zg], [c[0], c[1], zf], [a[0], a[1], zf], [a[0], a[1], zg], [-nc[0], -nc[1], 0], [-nc[0], -nc[1], 0], [-na[0], -na[1], 0], [-na[0], -na[1], 0], [k * 0.72, k * 0.9, k * 0.9, k * 0.72]);
-  }
-}
-function fixWinding(b, from) {
-  // squad() takes corners in the caller's order: flip any triangle whose face normal disagrees with its vertex normals
-  const P = b.p, N = b.n, C = b.c;
-  for (let i = from * 9; i < P.length; i += 9) {
-    const ax = P[i + 3] - P[i], ay = P[i + 4] - P[i + 1], az = P[i + 5] - P[i + 2];
-    const bx = P[i + 6] - P[i], by = P[i + 7] - P[i + 1], bz = P[i + 8] - P[i + 2];
-    const fx = ay * bz - az * by, fy = az * bx - ax * bz, fz = ax * by - ay * bx;
-    if (fx * (N[i] + N[i + 3] + N[i + 6]) + fy * (N[i + 1] + N[i + 4] + N[i + 7]) + fz * (N[i + 2] + N[i + 5] + N[i + 8]) >= 0) continue;
-    for (const arr of [P, N, C]) if (arr) for (let k = 0; k < 3; k++) { const t = arr[i + 3 + k]; arr[i + 3 + k] = arr[i + 6 + k]; arr[i + 6 + k] = t; }
-  }
-}
 function sillAndGlass(b, arched) {
   const stone = lin(0xd9d1c1), sill = lin(0xcdc3b1), bar = lin(0xe6dfd0);
   // apron under the sill (covers the painted sill), then the sill slab with a drip
