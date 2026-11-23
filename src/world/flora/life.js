@@ -257,11 +257,31 @@ export function createLife(ctx) {
   }
 
   // ---- felling
+  // chopping: her ordinary attacks (the magic bullet, ice lances, a small rock pillar, gusts) wear a trunk down over a few
+  // blows and it falls away from her; the strong blows below still fell it at once. Story places are never chopped.
+  const CHOP = { sun: 0.36, ice: 0.42, earth: 0.75, wind: 0.2, fire: 0.12, water: 0.05 };
+  const chops = new Map();   // i -> { k, t }
+  function chop(i, el, power, info) {
+    const base = CHOP[el];
+    if (!base || info?.team !== 'player' || guarded(i)) return false;
+    const now0 = G.time?.t ?? 0, c = chops.get(i) || { k: 0, t: now0 };
+    if (now0 - c.t > 20) c.k = 0;
+    c.t = now0;
+    c.k += base * clamp(el === 'sun' ? power / 0.35 : power, 0.4, 1.6);
+    const hp = 1 + (defOf(i).trunkR || 0.3) * S.s[i] * 2.5;
+    G.fx?.burst?.('wood_break', _v.set(S.x[i], S.y[i] + 1.1, S.z[i]), { scale: 0.45, count: 0.4 });
+    G.audio?.sfx?.('hit_wood', { pos: _v, vol: 0.7 });
+    if (c.k < hp) { chops.set(i, c); G.events.emit('flora:chop', { id: i, k: +(c.k / hp).toFixed(2) }); return true; }
+    chops.delete(i);
+    const src = info?.source?.pos || G.player?.pos;
+    fell(i, src ? _v2.set(S.x[i] - src.x, 0, S.z[i] - src.z) : null, { splinter: false, char: false });
+    return true;
+  }
   function onTreeHit(i, el, power, info) {
     if (S.state[i] === 3) return;
     const strong = (el === 'thunder' && (info?.split || power >= 0.6)) || (el === 'earth' && power >= 0.9) || info?.heavy ||
       (el === 'fire' && power >= 2.2) || (el === 'wind' && power >= 1.6);
-    if (!strong) return;
+    if (!strong) { if (S.state[i] !== 1 && S.state[i] !== 4) chop(i, el, power, info); return; }
     let dir = null;
     if (info?.dir && (el === 'wind')) dir = _v2.copy(info.dir);
     else if (lastBlast?.pos) dir = _v2.set(S.x[i] - lastBlast.pos.x, 0, S.z[i] - lastBlast.pos.z);

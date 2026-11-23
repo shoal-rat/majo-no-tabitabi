@@ -524,6 +524,7 @@ function stepGround(dt, P, S, I) {
   if (r) { if (r.burning) maxV *= 1.1; if (r.wet > 0) maxV *= 0.95; if (!r.frozen) maxV *= Math.max(0.4, r.speedMul ?? 1); } // mud / frost fields slow her too
   if (S.wade) maxV *= 0.68;
   if (P.guarding) maxV *= 0.45;
+  if (G.craft?.holding) maxV *= 0.6;   // carrying a part on the star thread (craft THREAD.WALK)
   const tvx = I.wx * maxV * I.wish, tvz = I.wz * maxV * I.wish;
   let acc = air ? MOVE.AIR_ACCEL : (I.wish ? MOVE.ACCEL : MOVE.DECEL);
   // sharp reversal on the ground: brake harder
@@ -581,8 +582,10 @@ function integrate(dt, P, S, I) {
     else if (S.jumpCut) g *= MOVE.CUT_MUL;
     P.vel.y = Math.max(-MOVE.MAX_FALL, P.vel.y - g * dt);
   }
-  // horizontal move + side collisions
+  // horizontal move + side collisions; standing on a moving body (a raft, a log afloat) carries her with it
   p.x += P.vel.x * dt; p.z += P.vel.z * dt;
+  const sb = P.state === 'ground' ? S.support : null;
+  if (sb && sb.isDynamic && sb.alive !== false && !sb.held) { p.x += sb.vel.x * dt; p.z += sb.vel.z * dt; }
   W.resolveCollisions(p, MOVE.RADIUS, MOVE.HEIGHT);
   pushProps(P, S, dt);
   // block climbing walls of terrain that rise too steeply (cliffs), step up small ledges
@@ -941,6 +944,7 @@ export const playerSystem = {
     }
 
     const I = readInput(P, S);
+    if (P.craftAim) S.faceAimT = Math.max(S.faceAimT, 0.15);   // the star thread is out: she faces her aim
     if (I.jumpP) S.buffer = MOVE.BUFFER;
     if (I.jumpH) S.jumpHeldT += dt; else S.jumpHeldT = 0;
 
@@ -1360,5 +1364,5 @@ function updateAim() {
   A.target = target;
   A.body = body;
   A.surface = surface;
-  P.aiming = G.mode === 'play' && (G.input.held('cast') || G.input.held('attack'));
+  P.aiming = G.mode === 'play' && (G.input.held('cast') || G.input.held('attack') || !!P.craftAim);
 }

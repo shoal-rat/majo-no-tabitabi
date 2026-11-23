@@ -6,6 +6,7 @@ export default {
     attack: '魔力弹', cast: '施法', swap: '换魔法', jump: '跳跃', climb: '上升', descend: '下降', dodge: '闪身',
     guard: '防护', broom: '唤帚', dismount: '下帚', interact: '互动', sprint: '疾跑', boost: '加速', heal: '面包',
     lock: '锁定', summon: '使魔', ultimate: '金环', map: '地图', menu: '暂停', skip: '跳过',
+    thread: '星线', rewind: '溯光', craftTurn: '转向', craftTilt: '翻转', craftNear: '拉近', craftFar: '推远',
   },
   // 句子里的 {key}（教学提示、敌人蓄力的提醒）：触屏时说按钮的名字
   key: {
@@ -15,6 +16,7 @@ export default {
     wheel: '「换魔法」', el1: '「换魔法」', el2: '「换魔法」', el3: '「换魔法」', el4: '「换魔法」', el5: '「换魔法」',
     el6: '「换魔法」', el7: '「换魔法」', el8: '「换魔法」',
     forward: '摇杆', back: '摇杆', left: '摇杆', right: '摇杆', confirm: '轻触',
+    thread: '「星线」', rewind: '「溯光」',
   },
   titleHint: '轻触想去的地方',
   wheelHint: '轻触想用的魔法　点空白处收起',

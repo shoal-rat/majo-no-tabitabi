@@ -35,6 +35,8 @@ function makeApi() {
     timeBubbles: [],
     PhysBody,
     get count() { return P ? P.dyn.length : 0; },
+    /** The PhysBody that owns a Rapier collider (or a collider handle), or null. */
+    bodyOf(col) { return P ? P.byHandle.get(typeof col === 'number' ? col : col?.handle) || null : null; },
     get bodies() { return P ? P.all : []; },
     /** +1 if a G.world box `rot` turns like Object3D.rotation.y, -1 if the other way (measured at init). */
     get rotSense() { return P ? P.statics.rotSense : 1; },

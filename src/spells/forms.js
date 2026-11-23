@@ -124,7 +124,9 @@ function charmLife(c) {
 const charmDef = {
   impact(p, h) {
     const at = h.point;
-    if (h.reactor || h.body) G.elements?.apply('sun', at, 1.1, 0.35 * p.power, info(p, { noGround: true }));
+    // a tree trunk is a static collider, not a reactor in the way: a hit on one still reaches the tree (chopping, flora/life.js)
+    const trunk = !h.reactor && !h.body && h.ground && p.team === 'player' && G.flora?.treesNear?.(at, 1.6)?.some?.((tr) => Math.hypot(tr.pos.x - at.x, tr.pos.z - at.z) < 1.4);
+    if (h.reactor || h.body || trunk) G.elements?.apply('sun', at, 1.1, 0.35 * p.power, info(p, { noGround: true }));
     G.fx?.burst('hit_sun', at, { dir: p.vel, scale: 0.7 });
     G.audio?.sfx('paper', { pos: at, vol: 0.5, pitch: 1.2 });
     if (h.body && G.physics) { _v.copy(p.vel).normalize().multiplyScalar(1.2); h.body.applyImpulse?.(_v.multiplyScalar(Math.min(6, h.body.mass * 0.06))); }

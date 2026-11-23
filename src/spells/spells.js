@@ -316,6 +316,12 @@ function playerInput(dt) {
     if (P.dead && S.arts.holdsFor(P)) S.arts.drop();
     return;
   }
+  // the star thread is out (craft): attack / cast / guard / the wheel belong to it until she puts it away
+  if (G.craft?.busy) {
+    if (PI.charging) stopCharge();
+    if (PI.guard) { S.arts.stopGuard(PI.guard); PI.guard = null; }
+    return;
+  }
   // selection: 1–8, mouse wheel
   for (let i = 0; i < 8; i++) {
     if (inp.pressed('el' + (i + 1))) { const id = ELEMENT_ORDER[i]; if (knows(id)) api.select(id); else S.toast('unknown'); }
@@ -382,8 +388,8 @@ function playerInput(dt) {
   // guard
   if (inp.pressed('guard') && knows('guard') && !PI.guard) PI.guard = tryCast('guard', 'small', true);
   if (PI.guard && !inp.held('guard')) { S.arts.stopGuard(PI.guard); PI.guard = null; }
-  if (inp.pressed('summon')) { if (knows('shikigami')) tryCast('shikigami'); else S.toast('unknown'); }
-  if (inp.pressed('ultimate')) { if (knows('kinkan')) tryCast('kinkan'); else S.toast('unknown'); }
+  if (inp.pressed('summon')) { if (knows('shikigami')) tryCast('shikigami'); else if (!G.craft?.knows?.('thread')) S.toast('unknown'); }
+  if (inp.pressed('ultimate')) { if (knows('kinkan')) tryCast('kinkan'); else if (!G.craft?.knows?.('rewind')) S.toast('unknown'); }
 }
 
 // default impact of G.spells.shoot(): the element lands where it hits; enemy shots never light the grass

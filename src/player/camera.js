@@ -83,7 +83,8 @@ export function createCamera() {
       if (G.mode === 'title' || !P || !G.started) { titleShot(rdt); return; }
 
       // ---- look input ----
-      const lx = inp.lookX, ly = inp.lookY;
+      // while the star thread turns a held part (craft: {guard} + mouse) the mouse turns the part, not the view
+      const lx = G.craft?.turning ? 0 : inp.lookX, ly = G.craft?.turning ? 0 : inp.lookY;
       if (G.mode === 'play' && !cine) {
         C.yaw -= lx * sens;
         C.pitch = clamp(C.pitch - ly * sens * yMul, -1.25, 1.05);

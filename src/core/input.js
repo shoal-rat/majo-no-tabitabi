@@ -24,6 +24,9 @@ export const BINDINGS = {
   ultimate: ['KeyG'],           // 金环
   lock: ['Mouse1', 'KeyT'],
   wheel: ['Tab'],               // hold: spell wheel
+  thread: ['KeyZ'],             // 牵星线 star thread (craft, src/craft/craft.js; shares the key with the unused 式神)
+  rewind: ['KeyG'],             // 溯光 back-light (craft restoration; shares the key with the unused 金环)
+  craftTurn: [], craftTilt: [], craftNear: [], craftFar: [],   // touch buttons while a part is on the thread
   el1: ['Digit1'], el2: ['Digit2'], el3: ['Digit3'], el4: ['Digit4'], el5: ['Digit5'], el6: ['Digit6'], el7: ['Digit7'], el8: ['Digit8'],
   // always available
   map: ['KeyM'], journal: ['KeyJ'], spellbook: ['KeyB'], pause: ['Escape', 'KeyP'],
@@ -39,7 +42,7 @@ export function setKeyLabelHook(fn) { labelHook = typeof fn === 'function' ? fn 
 /** Human-readable key label for an action (first binding), e.g. keyLabel('interact') -> 'E'. */
 export function keyLabel(action) {
   if (labelHook) { const l = labelHook(action); if (l) return l; }
-  const c = (BINDINGS[action] || [''])[0];
+  const c = (BINDINGS[action] || [''])[0] || '';
   if (has('core.key.' + c)) return t('core.key.' + c);
   if (c.startsWith('Key')) return c.slice(3);
   if (c.startsWith('Digit')) return c.slice(5);

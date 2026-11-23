@@ -229,7 +229,8 @@ export function stepClimb(dt, P, S, I, h) {
   C.phase += (Math.abs(vu) + Math.abs(vs) * 0.8) * dt * (Math.PI * 2 / 0.85);
   // collider top: the hands reached it
   if (C.col && p.y + CLIMB.HANDS > C.col.y1) {
-    if (vu > 0 && findLedge(p, C.nx, C.nz, CLIMB.GAP, C.col.y1 + 0.05)) { startMantle(P, S, 'wall'); return; }
+    // the first step of a roof that has one (the hometown's stepped roof supports) may sit a little above the wall top
+    if (vu > 0 && findLedge(p, C.nx, C.nz, CLIMB.GAP, C.col.y1 + 0.6)) { startMantle(P, S, 'wall'); return; }
     if (vu > 0 && C.col.eave && !C.eaveTold) { C.eaveTold = true; G.events.emit('player:eave', { col: C.col }); }
     p.y = Math.min(p.y, C.col.y1 - CLIMB.HANDS);   // nothing to stand on up there (a roof above the eaves): she hangs at the top
   }
@@ -252,9 +253,11 @@ export function stepClimb(dt, P, S, I, h) {
   C.t += dt;
   const g = h.groundBelow(P, S, p.x, p.z, p.y + 0.3);
   if (p.y <= g + 0.04) {
-    p.y = g;
-    // going down onto the ground, or up a face that has eased into walkable land under her feet (a cliff's shoulder)
-    if (vu <= 0.01 || (C.t > 0.4 && (g > W.heightAt(p.x, p.z) + 0.05 || W.slopeAt(p.x, p.z) < CLIMB.WALK))) { S.setState('ground'); S.groundY = g; S.climbCd = 0.35; G.events.emit('player:climb', { on: false, why: 'ground' }); return; }
+    // going down onto the ground, or up a face that has eased into walkable land under her feet (a cliff's shoulder).
+    // Climbing up from the foot of a wall she rises a few centimetres a frame: only the land pushing up lifts her then
+    // (snapping her to the floor every frame kept her there at 60 fps).
+    if (vu <= 0.01 || (C.t > 0.4 && (g > W.heightAt(p.x, p.z) + 0.05 || W.slopeAt(p.x, p.z) < CLIMB.WALK))) { p.y = g; S.setState('ground'); S.groundY = g; S.climbCd = 0.35; G.events.emit('player:climb', { on: false, why: 'ground' }); return; }
+    if (p.y < g) p.y = g;
   }
   P.yaw = dampAngle(P.yaw, Math.atan2(-C.nx, -C.nz), 12, dt);
   P.vel.set(rx * vs, vu, rz * vs);

@@ -65,6 +65,8 @@ export const CATALOG = {
   log_short:    { rolling: { roll: 0.22 }, model: 'prop_log_a', shape: 'hull', phys: 'wood', el: 'wood', burnTime: 35, hp: 60, fragile: 16, debris: 'plank', debrisN: 5, debrisColor: [0x6b4a33, 0x8b5a3c, 0xc49a6c], fx: 'wood_break', sfx: 'wood_break' },
   planks:       { model: 'prop_planks_stack', shape: 'box', phys: 'wood', el: 'wood', hp: 40, fragile: 12, debris: 'plank', debrisN: 7, debrisColor: WOOD_DEBRIS, fx: 'wood_break', sfx: 'wood_break' },
   plank:        { model: 'prop_plank_a', shape: 'box', phys: 'wood', el: 'wood', hp: 14, fragile: 12, debris: 'plank', debrisN: 3, debrisColor: WOOD_DEBRIS, fx: 'wood_break', sfx: 'wood_break' },
+  // a little mast with a sailcloth on a cross foot: a craft part (src/craft/) that catches the wind when tied to a raft
+  sail:         { build: 'sail', shape: 'box', phys: 'wood', density: 0.07, el: 'wood', hp: 90, fragile: 45, debris: 'plank', debrisN: 4, debrisColor: WOOD_DEBRIS, fx: 'wood_break', sfx: 'cloth_rustle' },
   ladder:       { model: 'prop_ladder', shape: 'box', phys: 'wood', density: 0.3, el: 'wood', hp: 20, fragile: 12, debris: 'plank', debrisN: 5, debrisColor: WOOD_DEBRIS, fx: 'wood_break', sfx: 'wood_break' },
   bench:        { model: 'prop_bench', shape: 'box', phys: 'wood', el: 'wood', hp: 30, fragile: 12, debris: 'plank', debrisN: 5, debrisColor: WOOD_DEBRIS, fx: 'wood_break', sfx: 'wood_break' },
   stool:        { model: 'prop_stool', shape: 'box', phys: 'wood', density: 0.3, el: 'wood', hp: 14, fragile: 10, debris: 'plank', debrisN: 4, debrisColor: WOOD_DEBRIS, fx: 'wood_break', sfx: 'wood_break' },

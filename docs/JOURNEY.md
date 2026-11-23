@@ -96,7 +96,8 @@ The design core of the city: **tall buildings, a tall gate, dim street canyons b
     sails, felled-tree logs; mass under 600), carries it in 3D along her aim (wheel / two buttons pull it in and push it
     out), and turns it (hold {guard} and move the mouse, or the turn buttons on a phone) to set its pose. When the held
     part touches another loose part, tiny four-pointed **star knots 「结星」** glint at the contact; letting go there ties
-    them with a fixed joint (Rapier multibody joints: no drift, a log raft stays square) and the knots keep glowing faintly.
+    them with a fixed joint (a Rapier impulse joint per knot; every part stays its own body, so buoyancy and wind keep
+    acting on each) and the knots keep glowing faintly.
     {cast} while holding a tied part snips its knots. Assemblies float (bridges, ramps, rafts); a **sail** part catches
     the element system's wind (`G.elements.windAt`, her own gusts, tornado edges), so a raft with a sail sails when she
     blows wind into it. Caps by quality: parts per assembly mobile 8 / low 10 / med 16 / high 24, tied bodies alive

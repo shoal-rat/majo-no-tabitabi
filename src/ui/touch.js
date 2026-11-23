@@ -113,6 +113,13 @@ const GLYPH = {
   tap: SV('M8.2 12.6V5.6a1.5 1.5 0 0 1 3 0v5.6M11.2 10.4V4a1.5 1.5 0 0 1 3 0v6.6M14.2 10.6V5.4a1.5 1.5 0 0 1 3 0v7.4M8.2 11.4V9.6a1.5 1.5 0 0 0-3 0v4.6a7 7 0 0 0 7 7h.8a6.2 6.2 0 0 0 6.2-6.2v-2.4a1.5 1.5 0 0 0-3 0', 1.8),
   aim: SV('M12 4.5v4M12 15.5v4M4.5 12h4M15.5 12h4M12 12m-5.6 0a5.6 5.6 0 1 0 11.2 0a5.6 5.6 0 1 0 -11.2 0', 2),
   pause: FL('M7 5h3.4v14H7zM13.6 5H17v14h-3.4z'),
+  // craft: the star thread (a wand tip drawing a thread), the back-light (a circle running backwards), turning a held part
+  thread: SV('M4.5 19.5 14 10M14 10l2.6-2.6M17.8 3.6l.7 2 2 .7-2 .7-.7 2-.7-2-2-.7 2-.7zM4.5 19.5c2.6-.4 3.6-3.4 6.4-3.4s3.8 2 6.6 1.4', 2),
+  rewind: SV('M7.2 7.6A7 7 0 1 1 5 12.6M7.2 7.6V3.4M7.2 7.6H3M12 8.4V12l2.6 1.6', 2.1),
+  turn: SV('M18.6 12A6.6 6.6 0 1 1 12 5.4M12 5.4 9.6 3M12 5.4 9.6 7.8', 2.1),
+  tilt: SV('M12 18.6A6.6 6.6 0 1 1 18.6 12M18.6 12 21 9.6M18.6 12 16.2 9.6', 2.1),
+  near: SV('M12 4v12.5M6.6 11.2 12 16.6l5.4-5.4M6 20.2h12', 2.2),
+  far: SV('M12 20V7.5M6.6 12.8 12 7.4l5.4 5.4M6 3.8h12', 2.2),
   skip: FL('M4 5.5 12 12l-8 6.5zM12 5.5 20 12l-8 6.5z'),
 };
 // swap arrows: arcs plus heads
@@ -214,6 +221,13 @@ export function createTouch(root, deps = {}) {
   def('lock', { d: 40, x: 288, y: 100, g: 'aim', act: 'lock', kind: 'tap', ctx: FOOT | BROOM, cond: () => !!(G.combat?.inCombat || G.combat?.lockTarget) });
   def('summon', { d: 40, x: 366, y: 40, ic: 'shikigami', act: 'summon', kind: 'tap', ctx: FOOT | BROOM, cond: () => ability('shikigami') });
   const ult = def('ultimate', { d: 46, x: 362, y: 104, ic: 'kinkan', act: 'ultimate', kind: 'tap', ctx: FOOT | BROOM, cond: () => ability('kinkan') });
+  // craft (src/craft/): the star thread in the 式神 slot; while a part is on the thread, turn / tilt / pull in / push out
+  const holdingPart = () => !!G.craft?.holding;
+  def('thread', { d: 44, x: 366, y: 40, g: 'thread', act: 'thread', kind: 'tap', ctx: FOOT, cond: () => !!G.craft?.knows?.('thread') && !ability('shikigami') });
+  def('craftTurn', { d: 42, x: 362, y: 104, g: 'turn', act: 'craftTurn', kind: 'tap', ctx: FOOT, cond: holdingPart });
+  def('craftTilt', { d: 42, x: 424, y: 92, g: 'tilt', act: 'craftTilt', kind: 'tap', ctx: FOOT, cond: holdingPart });
+  def('craftNear', { d: 42, x: 428, y: 152, g: 'near', act: 'craftNear', kind: 'hold', ctx: FOOT, cond: holdingPart });
+  def('craftFar', { d: 42, x: 366, y: 164, g: 'far', act: 'craftFar', kind: 'hold', ctx: FOOT, cond: holdingPart });
   const broom = def('broom', { d: 46, x: 50, y: 214, ic: 'broom', act: 'broom', kind: 'tap', ctx: FOOT | BROOM, cond: () => ability('broom') });
   const sprint = def('sprint', { d: 44, x: 126, y: 202, g: 'run', act: 'sprint', kind: 'toggle', ctx: FOOT | BROOM });
   const act = def('interact', { d: 54, x: 212, y: 188, g: 'tap', act: 'interact', kind: 'tap', ctx: FOOT | BROOM, cls: 'act', cond: () => !!promptVerb });

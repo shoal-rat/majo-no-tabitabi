@@ -15,6 +15,7 @@
   { "name": "gameplay",   "path": "gameplay/gameplay.js",  "export": "gameplaySystem" },
   { "name": "player",     "path": "player/player.js",      "export": "playerSystem" },
   { "name": "spells",     "path": "spells/spells.js",      "export": "spellsSystem" },
+  { "name": "craft",      "path": "craft/craft.js",        "export": "craftSystem" },
   { "name": "combat",     "path": "combat/combat.js",      "export": "combatSystem" },
   { "name": "story",      "path": "story/story.js",        "export": "storySystem" }
 ]

@@ -8,7 +8,7 @@ import { G } from '../core/game.js';
 import { t, raw } from '../core/i18n.js';
 
 const KEY_ACTIONS = ['interact', 'attack', 'cast', 'guard', 'broom', 'jump', 'descend', 'sprint', 'dodge', 'heal', 'summon', 'ultimate',
-  'map', 'journal', 'spellbook', 'forward', 'back', 'left', 'right', 'el1', 'el2', 'el3', 'el4', 'el5', 'el6', 'el7', 'el8', 'wheel', 'lock', 'pause'];
+  'map', 'journal', 'spellbook', 'forward', 'back', 'left', 'right', 'el1', 'el2', 'el3', 'el4', 'el5', 'el6', 'el7', 'el8', 'wheel', 'lock', 'pause', 'thread', 'rewind'];
 const EXPRS = ['joy', 'fun', 'angry', 'sorrow', 'surprised'];
 const DLG_NS = ['story.dlg.main.', 'story.dlg.side.', ''];
 const _a = new THREE.Vector3(), _b = new THREE.Vector3(), _m = new THREE.Vector3(), _s = new THREE.Vector3(), _c = new THREE.Vector3(), _l = new THREE.Vector3();

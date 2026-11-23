@@ -12,7 +12,7 @@ export default {
     sack: '米袋', basket: '浆果篮', basket_mushrooms: '蘑菇篮', bucket: '木桶子', hay: '草垛', hay_sheaf: '稻束',
     book: '一摞书', book_big: '厚书', scroll: '卷轴',
     cart: '板车', wheelbarrow: '独轮车', log: '圆木', log_short: '短圆木', planks: '一叠木板', plank: '木板',
-    ladder: '梯子', bench: '长凳', stool: '小凳', table_low: '矮桌',
+    ladder: '梯子', sail: '小帆', bench: '长凳', stool: '小凳', table_low: '矮桌',
     boulder_l: '大滚石', boulder_m: '滚石', boulder_s: '小石块',
     snowball: '雪球', ice_block: '冰块',
     apple: '苹果', apple_roasted: '烤苹果', pumpkin: '南瓜', fish: '鲜鱼', fish_grilled: '烤鱼', mushroom: '蘑菇',

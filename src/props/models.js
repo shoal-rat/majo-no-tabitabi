@@ -135,6 +135,21 @@ const BUILDERS = {
     return g;
   },
   // 松明柱: tapered post, iron basket with rope wrap
+  // 帆: a mast on a cross of two planks, a yard and a cream sailcloth bellied a little to the front (craft part)
+  sail() {
+    const wood = M.wood(), dark = M.woodDark(), cloth = toon(0xf1e6cd, { surface: 'cloth', look: { detail: 0.8, trans: 0.25 } });
+    const g = grp(
+      rbox(1.1, 0.08, 0.2, dark, 0, 0.04, 0, 0.02, 2), rbox(0.2, 0.08, 1.1, dark, 0, 0.04, 0, 0.02, 2),
+      rcyl(0.045, 0.055, 2.3, wood, 0, 1.19, 0, 10, 0.01),
+      rbox(1.5, 0.05, 0.05, wood, 0, 2.2, 0.02, 0.012, 1),
+      ropeRing(0.06, 0.014, M.rope(), 0, 2.2, 0), ropeRing(0.06, 0.014, M.rope(), 0, 0.7, 0),
+    );
+    for (let i = 0; i < 5; i++) {   // the cloth in five panels, bellied forward in the middle
+      const u = (i - 2) / 2, belly = 0.09 * (1 - u * u);
+      g.add(rbox(0.29, 1.42, 0.02, cloth, u * 0.58, 1.43, 0.06 + belly, 0.004, 1));
+    }
+    return g;
+  },
   torch_post() {
     const wood = M.woodDark(), iron = M.ironDark();
     const g = grp(

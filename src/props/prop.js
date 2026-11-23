@@ -294,6 +294,8 @@ function onImpact(p, other, speed, info) {
   if (speed > 4.5 && S.t - p.hitSfxT > 0.18) { p.hitSfxT = S.t; sfx(def.sfxHit || HIT_SFX[def.phys] || 'hit_wood', b.pos, { vol: clamp(speed / 14, 0.25, 1), pitch: 0.9 + rand() * 0.2 }); }
   // creatures struck by heavy, fast props (telekinesis throws, rolling boulders)
   if (info && info.surface === 'character' && info.owner) S.pendingHurt.push([p, info.owner, speed]);
+  // carried on a thread (月引, the craft's 牵星线): knocks never break it; it is set down whole
+  if (b.held) return;
   const frozen = p.reactor && p.reactor.frozen > 0;
   // struck by something much heavier (a boulder, an iron ball): it hurts more than the speed change says
   if (other && other.mass > b.mass * 2) {
