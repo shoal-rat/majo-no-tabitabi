@@ -15,7 +15,7 @@ import { mat, beam, texGlow, texMat } from './kit.js';
 import { mulberry32 } from '../../core/util.js';
 import { modelGable, modelHip, chimney, modelTile } from './city-roofs.js';
 import { streetLamp, wallLantern, fountainModel, stallModel, planterModel } from './city-market.js';
-import { voussoirs, mouldX, mouldRing, corbel, merlon, arrowSlit, lancet, coursedSpire, hangBanner, STRING, IMPOST } from './city-stone.js';
+import { voussoirs, mouldX, mouldRing, corbel, merlon, arrowSlit, lancet, coursedSpire, hangBanner, archFrame, archivolt, roseTracery, STRING, IMPOST } from './city-stone.js';
 import { addBay, bayRange, startBays, BAY } from './city-bays.js';
 import { hash01, ByMat, GeoBuilder } from './city-geo.js';
 
@@ -56,7 +56,6 @@ export const ROOF = {
   umber: R(0x9a5938)
 };
 const ROOFMIX = [ROOF.red, ROOF.orange, ROOF.terra, ROOF.red, ROOF.gold, ROOF.umber, ROOF.orange, ROOF.slate, ROOF.terra, ROOF.red, ROOF.plum, ROOF.orange, ROOF.red];
-const RIDGE = mat.tile(0x8a3d27);
 export const WALLS = [0xf1e6cf, 0xf4efe4, 0xd3d9dc, 0xead5b4, 0xe0cba7, 0xc8d1d8, 0xefe0c2, 0xe6dccb].map((c) => mat.plaster(c));
 // one self-lit material for the teal gems and the blue street orbs (one draw per block)
 const gem = glow(0x74d6ec, 1.6),
@@ -106,32 +105,6 @@ function b(g, x, y, z, w, h, d, m, ry = 0) {
   if (ry) o.rotation.y = ry;
   g.add(o);
   return o;
-}
-/** Pitched roof shell over a w x d body whose eave is at h: triangular gable walls in the body colour and two
- *  tiled slabs; the ridge runs along z, or along x with alongX. */
-function gableRoof(g, w, d, h, rise, roofM, bodyM, alongX, ov = 0.5) {
-  const r = new THREE.Group();
-  const W = alongX ? d : w,
-    D = alongX ? w : d,
-    half = W / 2,
-    run = half + ov,
-    slope = Math.atan2(rise, half),
-    slant = run / Math.cos(slope);
-  prism(r, W - 0.02, rise, D - 0.02, bodyM, 0, h, 0);
-  for (const s of [-1, 1]) {
-    const o = box(slant + 0.05, 0.24, D + 0.8, roofM, s * (run / 2 + 0.12 * Math.sin(slope)), h + rise - (rise * run) / (2 * half) + 0.12 * Math.cos(slope), 0);
-    o.rotation.z = -s * slope;
-    r.add(o);
-    for (const e of [-1, 1]) {
-      const bb = box(slant, 0.18, 0.12, trim, s * (run / 2), h + rise - (rise * run) / (2 * half) + 0.02, e * (D / 2 + 0.42));
-      bb.rotation.z = -s * slope;
-      r.add(bb);
-    }
-  }
-  r.add(box(0.34, 0.22, D + 0.95, RIDGE, 0, h + rise + 0.2, 0));
-  if (alongX) r.rotation.y = Math.PI / 2;
-  g.add(r);
-  return r;
 }
 /** Casement window on a face whose outer plane is z = zf (facing +z). opt: 1 shutters, 2 window box, 4 simple. */
 function win(g, x, y, zf, ww, wh, seed, opt) {
@@ -1024,7 +997,7 @@ function clockTex() {
   _clock.colorSpace = THREE.SRGBColorSpace;
   return _clock;
 }
-function pointedArch(g, x, y, z, w, h, m, depth = 0.18) {
+function pointedArch(g, x, y, z, w, h, m, depth = 0.18, frameM = null) {
   const s = new THREE.Shape();
   s.moveTo(-w / 2, 0);
   s.lineTo(w / 2, 0);
@@ -1035,6 +1008,8 @@ function pointedArch(g, x, y, z, w, h, m, depth = 0.18) {
   const o = new THREE.Mesh(new THREE.ExtrudeGeometry(s, { depth, bevelEnabled: false, curveSegments: 5 }), m);
   o.position.set(x, y, z);
   g.add(o);
+  // a moulded stone frame with mullion and oculus (builders/city-stone.js)
+  if (frameM) later(() => archFrame(g, frameM, x, y, z + depth, w, h, Math.min(0.22, w * 0.11)));
   return o;
 }
 /** The cathedral north of the market square; its portal closes the gate street. */
@@ -1044,14 +1019,15 @@ export function cathedral(site, X = CORE.x, Z = CORE.z - 10, base = CORE.h) {
     wallM = mat.plaster(0xefe8da),
     stoneM = mat.stone(0xdad0bd),
     roofM = ROOF.gold,
-    lancet = mat.paint(0x35507a);
+    lancet = mat.paint(0x35507a),
+    CB = new ByMat(); // carved pieces (builders/city-stone.js), one mesh per material
   const NW = 14,
     NL = 26,
     NH = 21;
   b(g, 0, 0.25, 0, 30, 0.5, 31, foot);
   b(g, 0, 0.6, 0, 28.6, 0.2, 29.6, coping);
   b(g, 0, NH / 2, 0, NW, NH, NL, wallM);
-  gableRoof(g, NW, NL, NH, 10, roofM, wallM, false, 0.6);
+  modelGable(g, NW, NL, NH, 10, roofM, wallM, false, 0.6, 7);
   for (const s of [-1, 1]) {
     b(g, s * 10, 6.3, 0, 6, 12.6, NL - 1, wallM);
     const lean = b(g, s * 10.2, 14.05, 0, 7.2, 0.28, NL - 0.4, roofM);
@@ -1064,9 +1040,9 @@ export function cathedral(site, X = CORE.x, Z = CORE.z - 10, base = CORE.h) {
       if (k > 1) continue;
       // aisle and clerestory lancets between the buttresses
       const side = face(g, (s * Math.PI) / 2, 13.02);
-      pointedArch(side, -s * (kz + 2.7), 3.2, 0, 1.6, 6.2, lancet, 0.06);
+      pointedArch(side, -s * (kz + 2.7), 3.2, 0, 1.6, 6.2, lancet, 0.06, coping);
       const clere = face(g, (s * Math.PI) / 2, NW / 2 + 0.02);
-      pointedArch(clere, -s * (kz + 2.7), 15.6, 0, 1.4, 4.4, lancet, 0.06);
+      pointedArch(clere, -s * (kz + 2.7), 15.6, 0, 1.4, 4.4, lancet, 0.06, coping);
     }
   }
   // twin west-work towers with octagonal spires
@@ -1077,12 +1053,17 @@ export function cathedral(site, X = CORE.x, Z = CORE.z - 10, base = CORE.h) {
     for (const cxs of [-1, 1]) for (const czs of [-1, 1]) b(g, tx + cxs * 3.5, 17, tz + czs * 3.5, 0.9, 34, 0.9, wallM);
     for (const y of [12, 23.5]) b(g, tx, y, tz, 7.6, 0.4, 7.6, coping);
     const front = face(g, 0, 0);
-    pointedArch(front, tx, 25.2, tz + 3.62, 2.2, 6.4, dark, 0.06);
-    pointedArch(front, tx, 14.2, tz + 3.62, 1.6, 6.0, lancet, 0.06);
+    pointedArch(front, tx, 25.2, tz + 3.62, 2.2, 6.4, dark, 0.06, coping);
+    pointedArch(front, tx, 14.2, tz + 3.62, 1.6, 6.0, lancet, 0.06, coping);
     const outer = face(g, (s * Math.PI) / 2, 0);
-    pointedArch(outer, -s * tz, 25.2, s * tx + 3.62, 2.2, 6.4, dark, 0.06);
+    pointedArch(outer, -s * tz, 25.2, s * tx + 3.62, 2.2, 6.4, dark, 0.06, coping);
     b(g, tx, 34.4, tz, 7.8, 0.6, 7.8, coping);
-    g.add(cyl(3.1, 3.5, 2.2, stoneM, tx, 35.8, tz, 8), cone(3.35, 22, roofM, tx, 36.9 + 11, tz, 8));
+    g.add(cyl(3.1, 3.5, 2.2, stoneM, tx, 35.8, tz, 8));
+    later(() => {
+      const sp = new GeoBuilder();
+      coursedSpire(sp, 3.35, 22, 0.5, 36.9, 8, 0.35);
+      CB.get(modelTile(roofM)).append(sp, new THREE.Matrix4().makeTranslation(tx, 0, tz));
+    });
     g.add(cyl(0.07, 0.07, 2.2, brass, tx, 59.2, tz, 5), sphere(0.32, brass, tx, 58.4, tz, 8, 6));
     for (const cxs of [-1, 1]) for (const czs of [-1, 1]) g.add(cone(0.6, 4.2, roofM, tx + cxs * 3.2, 36.8, tz + czs * 3.2, 4));
   }
@@ -1095,15 +1076,23 @@ export function cathedral(site, X = CORE.x, Z = CORE.z - 10, base = CORE.h) {
     return m;
   })());
   rose.position.set(0, 16.2, 14.16);
-  g.add(rose, torus(4.25, 0.45, coping, 0, 16.2, 14.2, 8, 40), torus(1.6, 0.16, coping, 0, 16.2, 14.3, 6, 24));
-  for (let i = 0; i < 12; i++) {
-    const sp = box(2.4, 0.16, 0.14, coping, Math.cos((i * Math.PI) / 6) * 2.85, 16.2 + Math.sin((i * Math.PI) / 6) * 2.85, 14.3);
-    sp.rotation.z = (i * Math.PI) / 6;
-    g.add(sp);
-  }
+  g.add(rose);
+  // stone tracery in front of the glass: outer moulding, colonnette spokes, foils, inner ring and boss
+  later(() => roseTracery(CB.get(coping), 0, 16.2, 14.3, 4.0, lowQ()));
   pointedArch(g, 0, 0.7, 14.05, 6.2, 9.6, coping, 0.35);
   pointedArch(g, 0, 0.7, 14.42, 4.6, 8.2, stoneM, 0.12);
   pointedArch(g, 0, 0.7, 14.56, 3.4, 6.6, mat.wood(0x4b2f24), 0.08);
+  // archivolts round the portal, the door's iron straps and ring pulls
+  later(() => {
+    for (const [w, h, z, r] of [[6.0, 9.45, 14.42, 0.14], [5.15, 8.75, 14.5, 0.12], [4.4, 8.05, 14.58, 0.1]]) archivolt(CB.get(coping), 0, 0.7, z, w, h, r);
+    for (const y of [1.6, 3.4, 5.2]) for (const s of [-1, 1]) CB.get(iron).box(s > 0 ? 0.08 : -1.55, 0.7 + y - 0.06, 14.64, s > 0 ? 1.55 : -0.08, 0.7 + y + 0.06, 14.68, 'nz');
+    CB.get(iron).box(-0.03, 0.7, 14.64, 0.03, 0.7 + 6.4, 14.67, 'nz');
+    for (const s of [-1, 1]) {
+      const ring = [];
+      for (let i = 0; i <= 12; i++) { const a = (i / 12) * Math.PI * 2; ring.push([s * 0.32 + Math.cos(a) * 0.14, 3.3 + Math.sin(a) * 0.14, 14.71]); }
+      CB.get(brass).tube(ring, 0.022, 4);
+    }
+  });
   for (const s of [-1, 1]) b(g, s * 0.85, 3.4, 14.68, 0.12, 5, 0.05, brass);
   // crossing drum and golden dome with a lantern spire
   const cz = -3.5;
@@ -1113,15 +1102,36 @@ export function cathedral(site, X = CORE.x, Z = CORE.z - 10, base = CORE.h) {
     wf.rotation.y = (j * Math.PI) / 4;
     wf.position.z = cz;
     g.add(wf);
-    pointedArch(wf, 0, NH + 2.5, 6.22, 1.6, 5.2, lancet, 0.06);
+    pointedArch(wf, 0, NH + 2.5, 6.22, 1.6, 5.2, lancet, 0.06, coping);
   }
   const dome = new THREE.Mesh(new THREE.SphereGeometry(6.5, 18, 8, 0, Math.PI * 2, 0, Math.PI / 2), roofM);
   dome.position.set(0, NH + 12.4, cz);
   g.add(dome);
+  // ribs down the dome and a moulded ring at its foot
+  later(() => {
+    for (let i = 0; i < 12; i++) {
+      const a = (i / 12) * Math.PI * 2,
+        rib = [];
+      for (let k = 0; k <= 8; k++) { const ph = Math.PI / 2 - (k / 8) * (Math.PI / 2 - 0.27); rib.push([Math.sin(a) * Math.sin(ph) * 6.56, NH + 12.4 + Math.cos(ph) * 6.56, cz + Math.cos(a) * Math.sin(ph) * 6.56]); }
+      CB.get(coping).tube(rib, 0.16, 5, true);
+    }
+    mouldRing(CB.get(coping), [[0, 0], [0.25, 0.06], [0.32, 0.22], [0, 0.34]], 6.5, NH + 12.25, 24);
+  });
   g.add(cyl(1.6, 1.7, 3.8, wallM, 0, NH + 20.6, cz, 10), cyl(1.95, 1.95, 0.3, coping, 0, NH + 22.6, cz, 10));
-  g.add(cone(1.9, 10, roofM, 0, NH + 27.7, cz, 10), sphere(0.36, brass, 0, NH + 32.9, cz, 8, 6));
+  later(() => {
+    const t = new GeoBuilder();
+    coursedSpire(t, 1.9, 10, 0.42, NH + 22.7, 10, 0.2);
+    CB.get(modelTile(roofM)).append(t, new THREE.Matrix4().makeTranslation(0, 0, cz));
+  });
+  g.add(sphere(0.36, brass, 0, NH + 32.9, cz, 8, 6));
   // apse
-  g.add(cyl(6.6, 6.6, NH - 2, wallM, 0, (NH - 2) / 2, -NL / 2, 16), cone(7.1, 6.5, roofM, 0, NH - 2 + 3.25, -NL / 2, 16));
+  g.add(cyl(6.6, 6.6, NH - 2, wallM, 0, (NH - 2) / 2, -NL / 2, 16));
+  later(() => {
+    const t = new GeoBuilder();
+    coursedSpire(t, 7.1, 6.5, 0.42, NH - 2, 16, 0.25);
+    CB.get(modelTile(roofM)).append(t, new THREE.Matrix4().makeTranslation(0, 0, -NL / 2));
+    CB.flush(g);
+  });
   // the great church is the tallest mass of the town (ep. 2 aerial): everything above at 1.45 x
   const K = 1.45;
   g.scale.setScalar(K);
