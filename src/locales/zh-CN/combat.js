@@ -7,7 +7,7 @@ export default {
   stagger: '失衡',
   interrupt: '打断！',
   read: '看破！',
-  rally: '拼死一搏',
+  rally: '背水一战',
   exposed: '破绽',
   fear: '怕火！',
   knocked: '摔下扫帚了！',

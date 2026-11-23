@@ -7,7 +7,7 @@
 //                       exposed 1.8 s, a slow beat.
 //   parry               the same blow met by a guard raised within its perfect window (0.25 s, as for reflecting bolts)
 //                       is turned aside whole: 「弹开了！」, the attacker exposed 2.2 s, the parry beat.
-//   rally               once below 40 % hp (elites 50 %) a foe steels itself: 「拼死一搏」, its next move comes at once and
+//   rally               once below 40 % hp (elites 50 %) a foe steels itself: 「背水一战」, its next move comes at once and
 //                       it acts 20 % faster for the rest of the fight. def.rally === false opts out (fodder, the thief).
 //   hit feedback        tiered hit-stop (the charm stream never stutters), armour glints, starbursts on heavy hits,
 //                       a short fling of the body on the killing blow.

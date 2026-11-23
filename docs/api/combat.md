@@ -258,7 +258,7 @@ no cooldown. This round makes fights last 2–3× as long (elites and Fran's spa
   opens the attacker for 1.8 s: 「看破！」, the duel 'dodge' beat, `'enemy:read' { enemy }`, style +3.
 - **Parry**: the same blow met by her guard within its perfect window (0.25 s, as for reflecting bolts), facing the
   attacker, deals nothing and opens the attacker for 2.2 s: 「弹开了！」, the 'parry' beat, `'enemy:read' { enemy, parry }`.
-- **Rally**: once below 40 % hp (elites 50 %) a foe steels itself: 「拼死一搏」, its next move comes at once (cooldowns
+- **Rally**: once below 40 % hp (elites 50 %) a foe steels itself: 「背水一战」, its next move comes at once (cooldowns
   capped), haste ×1.2 and speed ×1.1 for the rest of the fight, stance refilled, a small fire aura, the plate's hp bar turns
   red and pulses. `def.rally === false` opts out (small mud, lost flames, the thief). `'enemy:rally' { enemy }`.
 - **The killing blow** no longer staggers, rallies or fires an affix's on-hit effect (a dying `blink` elite used to
