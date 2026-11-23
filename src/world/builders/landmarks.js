@@ -8,9 +8,11 @@
 // thatch, weathered timber. Nothing is placed on a road or near a story anchor (the data keeps them clear).
 import * as THREE from 'three';
 import { G } from '../../core/game.js';
+import { toon } from '../../core/mats.js';
 import { box, cyl, cone, torus, sphere } from '../../core/geo.js';
 import { mulberry32 } from '../../core/util.js';
-import { Site, mat, M, beam, rod } from './kit.js';
+import { Site, mat, M, beam, rod, bevelBox } from './kit.js';
+import { sculptGroup, sculptAsset } from './sculpt.js';
 import { LANDMARKS } from '../../data/landmarks.js';
 
 // ---------------------------------------------------------------- materials (shared by every landmark)
@@ -24,6 +26,73 @@ const plaster = mat.plaster(0xece2c9), plasterWarm = mat.plaster(0xe6cfa9), glas
 const red = mat.paint(0xb5473d), cream = mat.paint(0xf1eadb), straw = mat.thatch(0xd6b768), canvas = mat.cloth(0xe3d6b4);
 const ivy = mat.paint(0x5f8a46), earth = mat.paint(0x6a5844), ember = mat.paint(0x40302a);
 let lamp = null;
+
+// ---------------------------------------------------------------- sculpted pieces (tools/sculpt/assets/lm_*.mjs)
+// Vertex-coloured LODs with no textures, merged into the site's own baked meshes (builders/sculpt.js sculptGroup): the
+// stone and stone slates into one smooth stone family, wood, straw, iron and offerings into theirs, so a sculpted
+// landmark adds no draw call. Detail follows the quality tier. ?sculpt=0 (G.sculpt.enabled false) or a missing asset
+// builds the first round's primitives instead.
+// smooth stone whose painted surface layer is kept low: the sculpt's own form and vertex colour carry the detail
+const CARVED = toon(0xffffff, { surface: 'stone', look: { detail: 0.45, bump: 0.5 } });
+const SCULPT_MAT = (n) => (/^(Limestone|Sandstone|Slate|Stone)/.test(n) ? CARVED : /^Wood/.test(n) ? WD.wood : /^Straw/.test(n) ? M.straw()
+  : /^Iron/.test(n) ? iron : /^Moss/.test(n) ? ivy : cream);
+/** 0 = full detail (high), 1 = med, 2 = low / phones */
+const lmTier = () => { const q = G.quality || {}; return q.mobile || q.name === 'low' ? 2 : q.name === 'med' ? 1 : 0; };
+// The kit's COLOR_0 is linear albedo x its baked AO / cavity, which leaves a piece darker than the site surfaces it
+// stands among (those carry the game's own vertex shading instead). The pieces are lifted once here, in linear and
+// with the hue kept (core/assets.js's sRGB re-encode for the SCULPT_TYPES ids would also pale and grey them).
+const LIFT = 1.45;
+const _colourFixed = new Set();
+function fixColours(id, raw) {
+  if (_colourFixed.has(id) || G.sculpt?.typeOf?.(id)) return;
+  _colourFixed.add(id);
+  const done = new Set();
+  raw.scene.traverse((o) => {
+    const c = o.isMesh && o.geometry?.attributes?.color;
+    if (!c || done.has(c)) return;
+    done.add(c);
+    for (let i = 0; i < c.count; i++) {
+      const r = c.getX(i), g = c.getY(i), b = c.getZ(i), k = Math.min(LIFT, 0.97 / Math.max(r, g, b, 1e-3));
+      c.setXYZ(i, r * k, g * k, b * k);
+    }
+  });
+}
+/** a placeable group of sculpted piece `id` at LOD `lod` (clamped to what the asset has), or null (old primitives) */
+function piece(id, lod) {
+  if (G.sculpt?.enabled === false) return null;
+  const raw = G.assets?.raw?.(id);
+  if (!raw) return null;
+  fixColours(id, raw);
+  const A = sculptAsset(id);
+  return sculptGroup(id, Math.min(lod, (A?.lods.length || 1) - 1), SCULPT_MAT, { hero: false });
+}
+/** place piece `id` with its origin at local (x, y, z), Euler (rx, ry, rz), scale (sx, sy, sz); false when missing */
+function put(site, id, x, y, z, ry = 0, rx = 0, rz = 0, sx = 1, sy = 1, sz = 1, lod = lmTier()) {
+  const g = piece(id, lod);
+  if (!g) return false;
+  g.position.set(x, y, z); g.rotation.set(rx, ry, rz); g.scale.set(sx, sy, sz);
+  site.add(g);
+  return true;
+}
+/** full size [x, y, z] of a piece's LOD0 */
+const sizeOf = (id) => { const b = sculptAsset(id)?.box; return b ? [b.max.x - b.min.x, b.max.y - b.min.y, b.max.z - b.min.z] : [1, 1, 1]; };
+/** a standing stone (lm_standing_a|b) laid on its side: centred on (x, y, z), length `len` along local x, heading ry */
+function putLying(site, id, x, y, z, ry, len, hgt, dep, tilt = 0) {
+  const g = piece(id, lmTier());
+  if (!g) return false;
+  const [w, H, d] = sizeOf(id), sy = len / H;
+  g.scale.set(hgt / w, sy, dep / d); g.position.set(0, -H * sy / 2, 0);
+  const holder = new THREE.Group(); holder.add(g);
+  holder.position.set(x, y, z); holder.rotation.set(0, ry, Math.PI / 2 + tilt);
+  site.add(holder);
+  return true;
+}
+const UPRIGHT = 'sculpt_lm_upright', LINTEL = 'sculpt_lm_lintel', STAND = ['sculpt_lm_standing_a', 'sculpt_lm_standing_b'];
+/** a standing stone whose foot is at local (x, g, z), `h` tall from the foot (the old box's base and height) */
+function putStanding(site, k, x, g, z, w, h, d, ry, rx, rz) {
+  const id = STAND[k & 1], [sw, sh, sd] = sizeOf(id);
+  return put(site, id, x, g, z, ry, rx, rz, w / sw, h / sh, d / sd);
+}
 
 const rockGeo = new THREE.DodecahedronGeometry(1, 0);
 function add(site, mesh, rx = 0, rz = 0) { mesh.rotation.x += rx; mesh.rotation.z += rz; return site.add(mesh); }
@@ -432,10 +501,18 @@ function swing(site, ctx, r) {
 }
 function cairn(site, r) {
   let y = site.h(0, 0);
-  for (let k = 0; k < 7; k++) { const s = 0.85 - k * 0.1; stone(site, (r() - 0.5) * 0.2, y + s * 0.4, (r() - 0.5) * 0.2, s, s * 0.45, s * 0.9, k % 2 ? ST.grey : ST.old, r() * 3); y += s * 0.55; }
+  // sculpted stack of field stones (lm_cairn, 2.1 m like the old one), each cairn turned its own way
+  const carved = put(site, 'sculpt_lm_cairn', 0, y, 0, r() * 6.283);
+  for (let k = 0; k < 7; k++) { const s = 0.85 - k * 0.1; if (!carved) stone(site, (r() - 0.5) * 0.2, y + s * 0.4, (r() - 0.5) * 0.2, s, s * 0.45, s * 0.9, k % 2 ? ST.grey : ST.old, r() * 3); y += s * 0.55; }
   site.colCyl(0, 0, 0.8, y - 3, y);
 }
 function wayShrine(site, r) {
+  // carved post, niche head and stone-slate roof (lm_shrine.mjs); origin on the ground, niche to the road (+z)
+  if (put(site, 'sculpt_lm_shrine', 0, site.h(0, 0), 0, 0, 0, 0, 1, 1, 1, lmTier() ? 1 : 0)) {
+    const y = site.h(0, 0);
+    site.colBox(0, 0, 0.5, 0.45, 0, y - 1.2, y + 2.4);
+    return;
+  }
   const y = site.h(0, 0) - 0.2;
   B(site, 0.9, 1.4, 0.7, ST.lime, 0, y + 0.7, 0);
   B(site, 1.05, 0.9, 0.85, ST.lime, 0, y + 1.85, 0);

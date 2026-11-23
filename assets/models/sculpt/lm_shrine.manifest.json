@@ -1,0 +1,46 @@
+{
+ "sculpt_lm_shrine": {
+  "file": "models/sculpt/lm_shrine.glb",
+  "type": "model",
+  "license": "CC0 (original work)",
+  "author": "sculpted for this project",
+  "source": "tools/sculpt/assets/lm_shrine.mjs (node tools/sculpt/assets/landmarks_lib.mjs)",
+  "scale": 1,
+  "size": [
+   1.193,
+   3.216,
+   1.225
+  ],
+  "tris": 7000,
+  "lods": [
+   7000,
+   2200,
+   700
+  ],
+  "materials": [
+   "Limestone",
+   "Slate",
+   "Offering",
+   "Iron"
+  ],
+  "mats": {
+   "Limestone": {
+    "surface": "stone",
+    "look": {}
+   },
+   "Slate": {
+    "surface": "tile",
+    "look": {}
+   },
+   "Offering": {
+    "surface": "paint",
+    "look": {}
+   },
+   "Iron": {
+    "surface": "metal",
+    "look": {}
+   }
+  },
+  "notes": "Sculpted way shrine (landmarks wayShrine). Vertex colours on every LOD, no textures. Materials Limestone / Slate / Offering / Iron merge into the carved-stone, cream and iron families of the landmark site."
+ }
+}
