@@ -1,16 +1,16 @@
 # ui — as built
 
 ## Summary
-The whole UI (DESIGN.md §6.5) is built and verified. This third attempt kept the earlier work as it was on disk: dom/icons/style/model/hud/stage/dialogue/wheel plus the locale file. It then added the missing views: panels.js (settings, controls, confirm slip, paper-sheet modal, shared navList), title.js (vertical calligraphic name on a golden ring emblem over the live scene, plus a washi menu slip), map.js (an ink-wash island map painted progressively from heightAt/veilAt/roadDist/riverDist; Veil side in indigo with the ring emblem; DOM overlays for places, lanterns, great lanterns, markers and the player arrow; drag, wheel and keyboard pan/zoom), menu.js (the pause scroll with map/journal/spells/items/settings tabs, hotkeys, footer buttons, save-and-quit), shop.js (noren-curtained stall with purse, vermilion buy stamp and a shake when you can't afford it), ceremony.js (learnSpell ceremonial reveal, queued; showEnding: story lines in vertical clause columns, the 终 seal, a stats card and a credits roll generated from G.assets.manifest). ui.js now wires everything: G.ui API, menu hotkeys, pointer-lock-lost opens the pause menu, fade-in on game:start, relabel on locale change, background map painting while playing. One bug from earlier attempts is fixed: system update() was treating dt as rdt, so every sub-module received 0 while the game was paused. All runs have T.errors() empty. check-i18n passes for src/ui and the locale file.
+The whole UI (DESIGN.md §6.5) is built and verified. This third attempt kept the earlier work as it was on disk: dom/icons/style/model/hud/stage/dialogue/wheel plus the locale file. It then added the missing views: panels.js (settings, controls, confirm slip, paper-sheet modal, shared navList), title.js (vertical calligraphic name on a golden ring emblem over the live scene, plus a washi menu slip), map.js (an ink-wash island map painted progressively from heightAt/veilAt/roadDist/riverDist; Veil side in indigo with the ring emblem; DOM overlays for places, lanterns, great lanterns, markers and the player arrow; drag, wheel and keyboard pan/zoom), menu.js (the pause scroll with map/journal/spells/items/settings tabs, hotkeys, footer buttons, save-and-quit), shop.js (noren-curtained stall with purse, vermilion buy stamp and a shake when you can't afford it), ceremony.js (learnSpell ceremonial reveal, queued; showEnding: story lines in vertical clause columns, the 「终」 (The End) seal, a stats card and a credits roll generated from G.assets.manifest). ui.js now wires everything: G.ui API, menu hotkeys, pointer-lock-lost opens the pause menu, fade-in on game:start, relabel on locale change, background map painting while playing. One bug from earlier attempts is fixed: system update() was treating dt as rdt, so every sub-module received 0 while the game was paused. All runs have T.errors() empty. check-i18n passes for src/ui and the locale file.
 
 ## Public API
 G.ui (all ★ entries from §6.5 have the same names and parameters):
-- showTitle({hasSave, saveInfo}) -> Promise<'new'|'continue'>. The 继续 button shows place (from saveInfo.player x,z via G.world.regionAt) and play time. Starting a new journey over an existing save asks for confirmation. When a choice is made: requestLock (user gesture), fade to black, resolve. On 'game:start' the UI fades back in over 1.2 s.
+- showTitle({hasSave, saveInfo}) -> Promise<'new'|'continue'>. The 「继续」 (Continue) button shows place (from saveInfo.player x,z via G.world.regionAt) and play time. Starting a new journey over an existing save asks for confirmation. When a choice is made: requestLock (user gesture), fade to black, resolve. On 'game:start' the UI fades back in over 1.2 s.
 - toast(text,{icon,dur=3}), banner(title, subtitle?, {seal?}), prompt(text|null), setTracker({title,objective,progress?}|null), setMarkers([...]), bossBar({name,hp,max,sub?,kind?}|null), duelBars(d) (passed to bossBar with kind 'duel'), struggle({value}|null), fade(alpha,dur,color?) -> Promise, letterbox(on), hurt(k) (extra), say({name,text,portrait?,choices?,side?}) -> Promise<number|undefined>.
 - openMenu(tab?: 'map'|'journal'|'spells'|'items'|'settings'), closeMenu(), isOpen (true while ANY modal layer is open, title included). Extras: menuOpen, menuTab, talking, wheelOpen.
 - openShop({title?, items:[{id,name,desc,price,icon,owned?,max?}], currency:()=>number, onBuy:(id)=>boolean}) -> Promise (resolves on leave). If onBuy returns true and the caller did not change item.owned itself, the UI increments it. owned:true with no max means sold out.
 - learnSpell({id,name,desc,element,icon?}) -> Promise. Calls queue one after another. The world is paused during the reveal. Dismiss with E/Enter/Space/Esc/click after 1.6 s (click works after 1 s).
-- showEnding({lines?:string[] | text?:string, title?, stats?:boolean=true, credits?:string[], vertical?:boolean}) -> Promise. Sets G.mode='ending' and leaves it there (the caller decides what follows). Phases: story lines (auto-advance, or Space/E/Enter) -> 终 seal -> credits roll (hold Space/E/click to speed up, Esc/Enter to skip) -> wait for confirm. Credits are grouped by manifest type: author + licence, with an item count.
+- showEnding({lines?:string[] | text?:string, title?, stats?:boolean=true, credits?:string[], vertical?:boolean}) -> Promise. Sets G.mode='ending' and leaves it there (the caller decides what follows). Phases: story lines (auto-advance, or Space/E/Enter) -> 「终」 seal -> credits roll (hold Space/E/click to speed up, Esc/Enter to skip) -> wait for confirm. Credits are grouped by manifest type: author + licence, with an item count.
 - providers: {journal, mapMarkers, items, lore, spells}. Each is a function the other systems assign, read in the formats from §6.5. Spells gather fallback: G.spells.list / G.state.spells, abilities from G.state.abilities (charm and dodge are innate). Items fallback: stardust/dango/moontear from G.state.inventory.
 - debug: {UI} (UI.reload can be overridden in tests; save & quit calls G.save.write(), fades out, then UI.reload()).
 Input: Esc/P opens the pause menu (also from 'talk'). M/J/B open map/journal/spellbook and the same key closes that tab again. 'input:lockLost' while playing opens the pause menu, unless the UI released the lock itself or the wheel is open. Inside the menu: Q/E (or clicking the keycaps or tabs) switch tabs; arrows/WASD navigate; Tab moves focus to the footer buttons; Enter/Space confirm; Esc/Backspace close. Map tab: drag/wheel/±/arrows pan and zoom, Enter recentres on the player. A 180 ms guard after opening keeps the Esc that released the pointer from closing the menu straight away. Settings write G.settings and call G.save.writeSettings(). The language row appears only when locales().length > 1 and calls setLocale. Changing quality shows a 'takes effect next time' note.
@@ -32,11 +32,11 @@ New locale keys: ui.layout.clauseBreak, ui.menu.hintSub, ui.menu.hintFoot, ui.sp
 - `G.ui.setMarkers(list, layer = 'main')` replaces only that layer; layers are drawn together (races use 'race', quests 'main'). `setMarkers([], 'race')` clears the race rings only.
 - `G.ui.openShop({ ..., currencyIcon })`: icon of the price currency (default 'stardust'; the moon-tear altar passes 'moontear').
 - Items menu: usable items show a 'use' / 'eat' (food) action that calls `G.gameplay.useItem(id)`.
-- Lock-on reticle follows `G.combat.lockTarget` on real enemies and on 无明's weak-point lock proxies.
+- Lock-on reticle follows `G.combat.lockTarget` on real enemies and on 无明's (Mumyo's) weak-point lock proxies.
 
 ## Performance pass: boot (2026-11-14, see docs/api/perf.md "Boot and loading")
 - `showTitle({ hasSave, saveInfo, ready })`: `ready` (optional Promise) = the world is still loading. Until it resolves
-  the title shows a progress line (the `core.boot.*` texts, from the `boot:progress` event) and dims 继续 / 新的旅程;
+  the title shows a progress line (the `core.boot.*` texts, from the `boot:progress` event) and dims 「继续」 / 「新的旅程」 (New Journey);
   a choice made early (after the overwrite confirmation) is kept and carried out when the world is ready. Settings and
   controls work at once. Without `ready` the title behaves as before.
 
@@ -49,7 +49,7 @@ faces (zh-CN: `assets/fonts/zh-CN`, SIL OFL 1.1, unmodified) and declares them i
   `fontBody` (hand-written: dialogue, menus, HUD, every small label and numeral), `fontSign` (running script:
   signboards) — each ending in system fall-backs (Kaiti / Songti / PingFang);
 - `lettering: { '<exact text>': 'lettering/<locale>/x.png' }`: hero inscriptions painted as images (white ink on
-  transparent). zh-CN: the title 月帷巫女, the shrine plaque, two banners (generated, every character checked; see the
+  transparent). zh-CN: the title 「月帷巫女」 (Moonveil Miko), the shrine plaque, two banners (generated, every character checked; see the
   manifest). Other locales simply do not list them and get the font-drawn version.
 
 `ui.js` init awaits `loadFontsWithin(6000)` right after `installStyle`, so every system initialised after the UI
@@ -87,19 +87,19 @@ unchanged (the same number of nodes).
 
 **Requests (not done here).** `title.js`: draw `.tt-name .nm` from `handLetteringUrl(t('core.title'))` when present
 (mask the painted inscription, keep the text node), else `var(--ft)`; `stage.js` could likewise use `handLettering`
-for a place-name card whose name has a painted version (only 向日神社 today).
+for a place-name card whose name has a painted version (only 向日神社, Sunward Shrine, today).
 
 ## Touch and small screens (mobile round, 2026-11-22)
 **How it plays.** On a phone or tablet held sideways the game shows thumb controls over the HUD (`src/ui/touch.js`).
 Left half: a floating stick appears where the thumb lands; walking speed follows how far it is pushed (analog: half
 push = half speed), on the broom its sideways push turns the flight. Right half: drag to turn the view. Right-thumb
-buttons (ink discs with a gold ring, placed from the bottom-right corner, size/opacity in settings): 魔力弹 (hold =
-stream), 施法 (wears the selected element; tap = small form, hold-and-release = charged big form, charge ring and
-cooldown sweep on the disc), 换魔法 (tap = next known magic, hold = the magic wheel, flick from it = choose at once;
-an opened wheel waits for a tapped slot), 跳跃 (on the broom: hold to climb), 闪身 / 下降 (broom), 防护 (hold), 唤帚,
-疾跑 / 加速 toggle, 面包 (count badge), 锁定 (only in a fight), and a contextual 互动 button that appears with the verb
-of the current prompt. Dragging on 魔力弹 / 施法 also aims. Top-right: pause and map. In a conversation a tap anywhere
-reads on (a choice must be tapped itself); in a skippable cutscene a hold on 跳过 skips; on the ending a finger reads on
+buttons (ink discs with a gold ring, placed from the bottom-right corner, size/opacity in settings): 「魔力弹」 (Magic Shot; hold =
+stream), 「施法」 (Cast; wears the selected element; tap = small form, hold-and-release = charged big form, charge ring and
+cooldown sweep on the disc), 「换魔法」 (Switch Magic; tap = next known magic, hold = the magic wheel, flick from it = choose at once;
+an opened wheel waits for a tapped slot), 「跳跃」 (Jump; on the broom: hold to climb), 「闪身」 (Dodge) / 「下降」 (Descend; broom), 「防护」 (Guard; hold), 「唤帚」 (Call Broom),
+「疾跑」 (Sprint) / 「加速」 (Boost) toggle, 「面包」 (Bread; count badge), 「锁定」 (Lock On; only in a fight), and a contextual 「互动」 (Interact) button that appears with the verb
+of the current prompt. Dragging on 「魔力弹」 / 「施法」 also aims. Top-right: pause and map. In a conversation a tap anywhere
+reads on (a choice must be tapped itself); in a skippable cutscene a hold on 「跳过」 (Skip) skips; on the ending a finger reads on
 and, held, hurries the credits. Held upright, a card asks to turn the phone and the pause scroll opens beneath it.
 
 **Detection** (`src/ui/touchenv.js`): `?touch=1|0`, else `settings.touch` 'on'|'off', else 'auto' = coarse primary
@@ -127,12 +127,12 @@ pins stay above the thumbs.
   `G.ui.prompt(text)` also feeds the interact button's verb. Wheel: `openTouch()`, `touchVec(dx,dy)`,
   `touchRelease(commit)`, `touchOpen`. Dialogue: `choosing`, `root`. `UI.mapView` (map pan/zoom, tests).
 - Settings (`defaultSettings`): `touch: 'auto'|'on'|'off'`, `touchSize` 0.7–1.25, `touchAlpha` 0.25–1, `touchSens` 0.3–3
-  (look px per finger px = 2.6 × touchSens; mouse `sens` does not apply to touch). Settings panel: a 触屏 section on
-  any touch-capable device; in touch mode the key list and mouse speed are hidden, 操作 shows the touch guide.
-- Quality (`gpubench.js mobileDevice()`): a phone / tablet gets the 'mobile' tier (掌上) without the probe: at least
+  (look px per finger px = 2.6 × touchSens; mouse `sens` does not apply to touch). Settings panel: a 「触屏」 (Touch) section on
+  any touch-capable device; in touch mode the key list and mouse speed are hidden, 「操作」 (Controls) shows the touch guide.
+- Quality (`gpubench.js mobileDevice()`): a phone / tablet gets the 'mobile' tier (「掌上」, Handheld) without the probe: at least
   1080 rendered lines, handheld cuts, 30 fps unless the device clearly holds 60 (docs/api/perf.md "Phones"); an earlier
   automatic pick (old 'low', a probe result) is picked again; a tier the player chose is kept. The settings row on a
-  handheld lists 掌上 素描 淡彩 浓彩; every tier there keeps the 1080-line floor.
+  handheld lists 「掌上」 「素描」 (Sketch) 「淡彩」 (Light Colour) 「浓彩」 (Rich Colour); every tier there keeps the 1080-line floor.
 
 **Rules for other UI.** New HUD layers that sit over the 3D picture: `pointer-events: none`, created before the touch
 layer or at least below `.mv-dlg` (the touch layer is inserted right after the stage layers); keep clear of the lower

@@ -6,7 +6,7 @@
 const CLAIM_DAYS = 7;
 const DAY_MS = 24 * 60 * 60 * 1000;
 const LAST_PRE_RULE_PR = 10; // #9 and #10 were opened before the claim rule
-const LABEL = { name: 'claimed', color: 'fbca04', description: '已有人认领 · someone is working on this' };
+const LABEL = { name: 'claimed', color: 'fbca04', description: 'someone is working on this' };
 const BOT = 'github-actions[bot]';
 const RULES = 'CONTRIBUTING.md';
 const rulesLink = (context) => `https://github.com/${context.repo.owner}/${context.repo.repo}/blob/main/${RULES}`;
@@ -128,18 +128,17 @@ async function claim(github, context, core, st, who, now) {
   const { owner, repo } = context.repo;
   const n = st.issue.number;
   if (st.issue.state !== 'open') {
-    await say(github, context, n, `@${who} 这个议题已经关闭，不能再认领。\nThis issue is closed, so it can't be claimed.`);
+    await say(github, context, n, `@${who} This issue is closed, so it can't be claimed.`);
     return 'closed';
   }
   if (st.holders.some((h) => same(h, who))) {
-    await say(github, context, n, `@${who} 这个议题已经在你名下了。\nYou already hold this issue.`);
+    await say(github, context, n, `@${who} You already hold this issue.`);
     return 'already';
   }
   if (st.holders.length) {
     const since = st.record ? day(Date.parse(st.record.at)) : '';
     await say(github, context, n,
-      `@${who} 这个议题已由 ${st.holders.join('、')} 认领${since ? `（${since} 起）` : ''}。可以留言商量分工；认领人 ${CLAIM_DAYS} 天内没有 PR 也没有进度更新时，认领会自动释放。\n` +
-      `Already claimed by ${st.holders.join(', ')}${since ? ` since ${since}` : ''}. Talk it over here; a claim with no pull request and no progress update for ${CLAIM_DAYS} days is released automatically.`);
+      `@${who} Already claimed by ${st.holders.join(', ')}${since ? ` since ${since}` : ''}. Talk it over here; a claim with no pull request and no progress update for ${CLAIM_DAYS} days is released automatically.`);
     return 'taken';
   }
 
@@ -155,14 +154,11 @@ async function claim(github, context, core, st, who, now) {
 
   const until = day(now + CLAIM_DAYS * DAY_MS);
   const how = assigned
-    ? `已把这个议题指派给你。\nThe issue is now assigned to you.`
-    : `GitHub 没能把议题指派给你，所以用 \`${LABEL.name}\` 标签和这条评论记录：认领人是 ${who}。\n` +
-      `GitHub could not assign the issue to you, so the \`${LABEL.name}\` label and this comment record ${who} as the claimer.`;
+    ? `The issue is now assigned to you.`
+    : `GitHub could not assign the issue to you, so the \`${LABEL.name}\` label and this comment record ${who} as the claimer.`;
   await say(github, context, n,
-    `@${who} 认领成功。${how}\n\n` +
-    `- 有效期到 ${until}（UTC）。开 PR（描述里写 \`Closes #${n}\`）或在这里留进度评论，都会让认领继续有效。\n` +
-    `- 不做了请评论 \`/unclaim\`。流程见 [${RULES}](${rulesLink(context)})。\n\n` +
-    `Claimed until ${until} (UTC). Opening a pull request with \`Closes #${n}\` or posting a progress comment here keeps the claim alive. Comment \`/unclaim\` to let it go.` +
+    `@${who} Claim confirmed. ${how}\n\n` +
+    `Claimed until ${until} (UTC). Opening a pull request with \`Closes #${n}\` or posting a progress comment here keeps the claim alive. Comment \`/unclaim\` to let it go. Flow: [${RULES}](${rulesLink(context)}).` +
     marker({ action: 'claim', user: who }));
   return assigned ? 'claimed' : 'claimed-label';
 }
@@ -170,17 +166,17 @@ async function claim(github, context, core, st, who, now) {
 async function unclaim(github, context, st, who) {
   const n = st.issue.number;
   if (!st.holders.length) {
-    await say(github, context, n, `@${who} 这个议题目前没有人认领。\nNobody holds this issue right now.`);
+    await say(github, context, n, `@${who} Nobody holds this issue right now.`);
     return 'none';
   }
   const mine = st.holders.some((h) => same(h, who));
   if (!mine && !isOwner(who, context)) {
-    await say(github, context, n, `@${who} 只有认领人或维护者可以释放认领。\nOnly the claimer or the maintainer can release this claim.`);
+    await say(github, context, n, `@${who} Only the claimer or the maintainer can release this claim.`);
     return 'denied';
   }
   const users = mine ? [who] : st.holders;
   await release(github, context, st, users,
-    `已释放 ${users.join('、')} 的认领，其他人可以评论 \`/claim\` 接手。\nReleased the claim held by ${users.join(', ')}. Anyone can now comment \`/claim\` to take it.`);
+    `Released the claim held by ${users.join(', ')}. Anyone can now comment \`/claim\` to take it.`);
   return 'released';
 }
 
@@ -230,8 +226,7 @@ async function expireClaims({ github, context, core, now = Date.now(), dryRun = 
 
     if (!dryRun) {
       await release(github, context, st, [user],
-        `@${user} 认领已过期：${day(last)} 之后 ${CLAIM_DAYS} 天里没有 PR，也没有进度评论，这个议题重新开放认领。还想继续的话，再评论一次 \`/claim\` 就好。\n` +
-        `This claim expired: no pull request and no progress comment for ${CLAIM_DAYS} days after ${day(last)}, so the issue is open to claim again. Comment \`/claim\` to pick it back up.`);
+        `@${user} This claim expired: no pull request and no progress comment for ${CLAIM_DAYS} days after ${day(last)}, so the issue is open to claim again. Comment \`/claim\` to pick it back up.`);
     }
     results.push({ n, user, status: dryRun ? 'would-expire' : 'expired' });
   }
@@ -250,38 +245,38 @@ async function report(core, ok, lines) {
 async function checkPull({ github, context, core }) {
   const pr = context.payload.pull_request;
   const author = pr.user.login;
-  if (pr.number <= LAST_PRE_RULE_PR) return report(core, true, [`#${pr.number} 早于认领规则，免检。· Opened before the claim rule; exempt.`]);
-  if (isOwner(author, context) || isBot(pr.user)) return report(core, true, [`${author}：维护者或机器人，免检。· Maintainer or bot; exempt.`]);
+  if (pr.number <= LAST_PRE_RULE_PR) return report(core, true, [`#${pr.number} Opened before the claim rule; exempt.`]);
+  if (isOwner(author, context) || isBot(pr.user)) return report(core, true, [`${author}: Maintainer or bot; exempt.`]);
 
   const refs = closingRefs(pr.body, context.repo);
   const problems = [];
-  if (!refs.length) problems.push('PR 描述里没有 `Closes #议题号`。· The description has no `Closes #<issue>` line.');
+  if (!refs.length) problems.push('The description has no `Closes #<issue>` line.');
   const { owner, repo } = context.repo;
   for (const n of refs) {
     let issue;
     try { ({ data: issue } = await github.rest.issues.get({ owner, repo, issue_number: n })); } catch (e) {
-      problems.push(`#${n}：找不到这个议题。· Issue not found.`); continue;
+      problems.push(`#${n}: Issue not found.`); continue;
     }
-    if (issue.pull_request) { problems.push(`#${n} 是 PR，不是议题。· #${n} is a pull request, not an issue.`); continue; }
-    if (issue.state !== 'open') { problems.push(`#${n} 已经关闭。· #${n} is closed.`); continue; }
+    if (issue.pull_request) { problems.push(`#${n} is a pull request, not an issue.`); continue; }
+    if (issue.state !== 'open') { problems.push(`#${n} is closed.`); continue; }
     const comments = await github.paginate(github.rest.issues.listComments, { owner, repo, issue_number: n, per_page: 100 });
     const st = describe(issue, comments);
     if (st.holders.some((h) => same(h, author))) continue;
     if (!st.holders.length && pendingClaim(comments, author)) continue;
     problems.push(st.holders.length
-      ? `#${n} 由 ${st.holders.join('、')} 认领，不是 ${author}。· #${n} is claimed by ${st.holders.join(', ')}, not ${author}.`
-      : `#${n} 还没有人认领。· Nobody has claimed #${n} yet.`);
+      ? `#${n} is claimed by ${st.holders.join(', ')}, not ${author}.`
+      : `#${n}: Nobody has claimed #${n} yet.`);
   }
-  if (!problems.length) return report(core, true, [`认领检查通过：${refs.map((n) => '#' + n).join(' ')} 由 ${author} 认领。· Claim check passed.`]);
+  if (!problems.length) return report(core, true, [`Claim check passed: ${refs.map((n) => '#' + n).join(' ')} claimed by ${author}.`]);
   return report(core, false, [
-    '认领检查没有通过 · Claim check failed',
+    'Claim check failed',
     ...problems.map((p) => `- ${p}`),
     '',
-    '怎么办 · How to fix:',
-    '1. 先为这次修改发一个议题（改进提案或问题反馈模板）。· Open an issue for the change first (proposal or bug template).',
-    '2. 在议题下评论 `/claim`，等机器人回复确认。· Comment `/claim` on it and wait for the bot to confirm.',
-    '3. PR 描述里写 `Closes #议题号`，然后编辑一下描述或推送一次，检查会重跑。· Put `Closes #<issue>` in the description, then edit it or push to re-run this check.',
-    `规则 · Rules: ${rulesLink(context)}`,
+    'How to fix:',
+    '1. Open an issue for the change first (proposal or bug template).',
+    '2. Comment `/claim` on it and wait for the bot to confirm.',
+    '3. Put `Closes #<issue>` in the description, then edit it or push to re-run this check.',
+    `Rules: ${rulesLink(context)}`,
   ]);
 }
 

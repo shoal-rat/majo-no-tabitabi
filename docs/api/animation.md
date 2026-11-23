@@ -141,8 +141,8 @@ Translators edit only `text`.
 
 ## 6. NPC life (npcs.js)
 
-`def.work` = the activity while nobody is near: granny sweeps (broom), 鸣 drums on a taiko (two bachi, hits on the marks with
-sound), 烛 crafts lanterns seated, 磐翁 hammers stone (mallet + chisel), 镜 poles, the farmer hoes, the elder and cook fan,
+`def.work` = the activity while nobody is near: granny sweeps (broom), 鸣 (Naru) drums on a taiko (two bachi, hits on the marks with
+sound), 烛 (Shoku) crafts lanterns seated, 磐翁 (Banou) hammers stone (mallet + chisel), 镜 (Kagami) poles, the farmer hoes, the elder and cook fan,
 townfolk2 sits and fans. Props are primitives merged per material, lit through `toon()` with surface tags; they scale in and out
 (no pop). When the heroine comes within talking range the NPC stops, puts the tools away, turns to her and looks at her; in a
 conversation they listen.

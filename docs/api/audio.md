@@ -19,7 +19,7 @@ What it does:
   - region shrine or training gives shrine; town gives town; otherwise sun, dusk or night by land.
   
   A new mood must stay wanted for 0.3 s if urgent, 2.5 s for exploring, and an exploring track plays at least 8 s, so short flickers never restart a track. Exploring tracks resume where they stopped if you return within 150 s.
-- **Director, ambience.** Beds crossfade by land: meadow, dusk woods, night, mountain on 霜见岳, town murmur near 万灯镇. Layers on top: river (riverDist), lake and sea (an isWater ring sample), rain (isRainingAt), fire (burning ground cells and burning objects near the listener), wind rising with altitude and broom speed, and a broom rush that follows speed. Birds and crickets fade as she climbs.
+- **Director, ambience.** Beds crossfade by land: meadow, dusk woods, night, mountain on 霜见岳 (Frostview Peak), town murmur near 万灯镇 (Myriad Lantern Town). Layers on top: river (riverDist), lake and sea (an isWater ring sample), rain (isRainingAt), fire (burning ground cells and burning objects near the listener), wind rising with altitude and broom speed, and a broom rush that follows speed. Birds and crickets fade as she climbs.
 - **Stingers and event sounds.** Stingers play on 'greatlantern:lit', 'spell:learned', 'quest:completed', 'boss:defeated' and a won 'duel:end'. Sounds are also hooked to player:step by surface, player:healed, player:died, player:respawn, item:collected, enemy:killed, spell:clash, physics:impact by material, prop:broken by type keyword, race:start, race:finish and checkpoint. The player's own jump, land and dodge calls are not doubled.
 - **Instrumentation.** G.audio.debug({meter}) reports the state used by the tests, including a real output level meter.
 
@@ -71,7 +71,7 @@ G.audio (system 'audio', pausable:false):
 - Sounds that other systems call on events may play twice. The engine also plays sounds on some events (prop:broken, enemy:killed, item:collected, checkpoint, spell:clash, physics:impact). If gameplay, props or combat (being written now) call a different name for the same moment, both sounds play. The cooldown only stops repeats of the same name.
 - The ids for the final boss and the boss music are guesses. The final-boss pattern is /oboroyo|mumy|mumei|final|tsukuyomi/; any other boss id gets bgm_boss. The combat and story ids do not exist yet.
 - There is no music track of its own for 霜见岳 or the palace; they use sun or night music by land, and 霜见岳 gets the mountain wind bed.
-- The battle heuristic counts any 'enemy:hit', so attacking a harmless 纸魅 in the sunlit meadow also starts battle music for about 7 s.
+- The battle heuristic counts any 'enemy:hit', so attacking a harmless 纸魅 (paper wraith) in the sunlit meadow also starts battle music for about 7 s.
 - Memory: up to 3 decoded music tracks (about 45 MB each at 48 kHz stereo float) plus 8 ambience loops (about 10 MB each), roughly 220 MB at most. Lower LRU.music in audio.js if that is too much.
 - The fire bed samples isBurningAt on a 5×5 grid with 4 m spacing (only when fireCount > 0) and asks G.elements.nearest for a burning object within 14 m. Fires further away are not heard.
 - Positional one-shots get their pan and volume once, when they start; they do not follow a moving source. Use loop() with setPos for anything that moves.

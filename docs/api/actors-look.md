@@ -56,15 +56,15 @@ belong to the motion engineer), the skinned non-humanoid path of `toonify`, look
 in `src/combat/{types,wildlife,enemy,spawner}.js`, `tools/refine-creatures.mjs`, `assets/models/refined/{ani_*,mon_*}.glb`.
 Ambient small life (birds, insects, fish, frogs, jellies) is a separate system: docs/api/life.md.
 
-**Which bodies the game shows.** Enemies: 纸魅 paper (hand-built `makeHitogata`), 影团 blob / blob_small (hand-built
-`makeJelly`), wolf (`ani_wolf`, shade tint; also the boss), moth (`mon_bat`, shade), 鬼火 wisp (`makeWispFlame`), golem
+**Which bodies the game shows.** Enemies: 纸魅 (paper wraith) paper (hand-built `makeHitogata`), 影团 (shade blob) blob / blob_small (hand-built
+`makeJelly`), wolf (`ani_wolf`, shade tint; also the boss), moth (`mon_bat`, shade), 鬼火 (will-o'-wisp) wisp (`makeWispFlame`), golem
 (`mon_golem_big`, stone), plus the humanoid shade boss. Wildlife: fox deer stag chicken cow dog sheep koi frog raccoon
 cat hedgehog. The other 17 `mon_*` files in the manifest are not used by any spawn table and were not refined.
 
 **Hand-built bodies** (own shaders, one or two draws each, outline off):
 - 影团 jelly — translucent deep-violet bell with an inner ember core, Fresnel edge glow, ember eyes; wobble and
   squash in the vertex shader (`motion: 'jelly'`); dies by splatting flat and soaking into the ground.
-- 纸魅 hitogata — a folded paper doll (形代): washi canvas texture with brushed ink face, vermilion seal, ink edge;
+- 纸魅 hitogata — a folded paper doll (katashiro): washi canvas texture with brushed ink face, vermilion seal, ink edge;
   flutters in the vertex shader; dies by burning in from the edges (ember rim in the dissolve band).
 - 鬼火 wisp — flame body + soft halo + white eyes (`noFx`: flashes swap the body only, never the halo).
 
@@ -91,7 +91,7 @@ dissolves are uniform animations — no material swaps, no pops. `?crv=1` = the 
 - Only game code may set `e.cr.tell` (0..1) during an existing wind-up; it is visual only.
 
 **Measured cost** (1440×900 'high', 7 enemies at 6–10 m, game camera, best p25 A/B of renderFrame + gl.finish, machine
-load ~140 — rough): 曦光 +1.6 ms / +~27 draws incl. shadow passes, 常夜 +1.2 ms / +51 draws. The motion layer is CPU-only
+load ~140 — rough): 曦光 (dawnlight region) +1.6 ms / +~27 draws incl. shadow passes, 常夜 (evernight region) +1.2 ms / +51 draws. The motion layer is CPU-only
 (a few vector ops per creature); fx clones share programs, so no new shader compiles per creature.
 
 **Known shortfalls**
@@ -99,7 +99,7 @@ load ~140 — rough): 曦光 +1.6 ms / +~27 draws incl. shadow passes, 常夜 +1
   cards, no feather / scale painting beyond the cel grain. A hand re-model of the six most-seen animals (fox, deer,
   stag, chicken, cat, dog) is the next step.
 - Wolf / moth / golem keep stock clips; only the procedural layer adds life (no new attack or hit clips).
-- 影祟 shade wolves read as dark violet silhouettes with an edge glow; by day the edge glow is faint.
+- 影祟 (shade) wolves read as dark violet silhouettes with an edge glow; by day the edge glow is faint.
 - The 17 unused `mon_*` models were not refined; refine them with the tool if a spawn table ever uses them.
 
 ## Performance pass (2026-11-14, see docs/api/perf.md)
@@ -176,7 +176,7 @@ Shots that need a neutral pose should reset the idle fidget timer (the stretch f
 **Cost.** Draw calls, materials and texture sizes unchanged. Shide +32 triangles. Per humanoid fragment and light: ~15 ALU
 (rim + cap), no fetches. Spring: one branch + trig per sleeve joint with raised arms only. Same on all tiers (low checked).
 
-## Final round — 团子 and the animals (2026-11-14, final-beasts)
+## Final round — 团子 (Dango) and the animals (2026-11-14, final-beasts)
 Shots: `.tmp/play/fb_before/` (before) vs `.tmp/play/fb_c3/` (companion), `.tmp/play/fb_a4/` (animals, golem), `.tmp/play/fb_l1/`
 (hero life). Script: `tools/devkit/final-beasts/shots.js` (`only=c,b,a,g`), `tools/devkit/final-beasts/life.js`.
 

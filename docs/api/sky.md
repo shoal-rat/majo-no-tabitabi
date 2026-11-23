@@ -114,7 +114,7 @@ Render modules (internal): atmo.js exports pal(name, v), palScalars(v), daylight
 - The tiling of the open sea is reduced, not gone. From high vantage points a faint large-scale repeat can still be seen.
 - The clouds are a single slab: there are no towering cumulonimbus and no clouds below the camera when flying.
 - The motes and falling light are screen-cheap and procedural. They do not light anything.
-- The lake 镜湖 at dusk can read as a flat pink sheet. Its reflection is dominated by the sky, and the lake level is not part of `water.depthAt` (that covers the sea only).
+- The lake 镜湖 (Mirror Lake) at dusk can read as a flat pink sheet. Its reflection is dominated by the sky, and the lake level is not part of `water.depthAt` (that covers the sea only).
 - The reflection timings above were taken on a heavily loaded shared machine. No GPU timer query was available, so treat them as rough.
 
 ## Performance pass: boot (2026-11-14, see docs/api/perf.md "Boot and loading")

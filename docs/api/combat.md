@@ -1,14 +1,14 @@
 # combat — as built
 
 ## Summary
-Combat is built and replaces the stub. It has a generic Enemy core and the seven foe types. Camps stream in and out by distance and respawn. Three bramble-caged nests surround 千年枫. spawnWave serves the training camp. Duels against four rival mages run on a shared engine that 胧夜 also uses, with a ring, guard, dodge, big-form set pieces, a beam struggle, kneel-instead-of-death and restore afterwards. All four bosses are in. Wildlife wanders, grazes and flees. src/actors/creature.js is a pooled rig for the mon_/ani_ models.
+Combat is built and replaces the stub. It has a generic Enemy core and the seven foe types. Camps stream in and out by distance and respawn. Three bramble-caged nests surround 千年枫 (Thousand-Year Maple). spawnWave serves the training camp. Duels against four rival mages run on a shared engine that 胧夜 (Oboroyo) also uses, with a ring, guard, dodge, big-form set pieces, a beam struggle, kneel-instead-of-death and restore afterwards. All four bosses are in. Wildlife wanders, grazes and flees. src/actors/creature.js is a pooled rig for the mon_/ani_ models.
 
 All 8 headless tests ended with T.errors() empty at 60 fps. Every boss was finished only through the testWin drain; none has been played through its real mechanics.
 
 How it works:
 - Each Enemy has an elements reactor and a physics capsule. Damage resolution handles:
   - multipliers: sun ×2 and fire ×1.5 on shades (from elements), paper fire ×3, wisp water ×4, ×3 shatter
-  - moon heals and empowers shades (but not 月引 throws, which are flagged heavy)
+  - moon heals and empowers shades (but not 月引 (Moon Pull) throws, which are flagged heavy)
   - light and darkness change shade attack and speed; bright sun magic makes shades flee
 - Statuses: burning DoT, frozen = no movement or animation, shocked = stun.
 - Hits give knockback, hit flash, coloured damage numbers (gold when a multiplier applies) and hitstop + shake on big hits.
@@ -19,9 +19,9 @@ How it works:
 - The lock action (T / middle mouse) cycles targets in front of the camera, and pressing past the last one clears the lock. It drives the existing HUD reticle and camera.
 
 Models chosen:
-- 纸魅 = mon_ghost in washi white; 影团 = mon_slime (shade); 影狼 = ani_wolf (shade); 灯蛾 = mon_bat (shade); 晶傀 = mon_golem_big in stone tint with crystal shards; 影巫 = createActor char_villager_c, dark.
-- 鬼火 = a procedural violet flame core with eyes.
-- 胧牙 = ani_wolf ×7; 灯喰蛾 = mon_bat ×5.5; 无明 = mon_ghost ×24 rising behind the palace.
+- 纸魅 (paper wraith) = mon_ghost in washi white; 影团 (shade blob) = mon_slime (shade); 影狼 (shade wolf) = ani_wolf (shade); 灯蛾 (lantern moth) = mon_bat (shade); 晶傀 (crystal golem) = mon_golem_big in stone tint with crystal shards; 影巫 (shade witch) = createActor char_villager_c, dark.
+- 鬼火 (will-o'-wisp) = a procedural violet flame core with eyes.
+- 胧牙 (Oboroga) = ani_wolf ×7; 灯喰蛾 (Tomoshigui) = mon_bat ×5.5; 无明 (Mumyo) = mon_ghost ×24 rising behind the palace.
 
 Art review notes:
 - By day the lineup reads well (white paper sprites, blue-grey golem after a tint fix).
@@ -117,7 +117,7 @@ All runs used node tools/play.mjs at 960x540. Unless noted, the build was fx, au
   - With 24 mixed enemies awake: 60 fps, 246 draw calls, 0.35 M triangles.
   - 100 spawn-kill cycles: geometries 96 → 96, reactors and physics characters back to baseline, scene children 34 → 34, textures 193 → 211. This was after a fix: the first run leaked about 3 textures per cycle from humanoid bone textures; casters now come from a pool and skeletons are disposed.
   - All camp spots were checked for wards and water; dusk_ridge was moved out of the fox-village ward.
-- t5, duel 阳葵 against a scripted heroine (casting fire, ice, thunder and charm, answering the rival's beam with 天照, mashing Mouse0): 'beam:struggle' started and ended with the player winning. The scripted heroine then lost the duel. She reached exactly 0 → kneel with no death event, then was restored to 100 hp with control back. 'duel:start' and 'duel:end' (won: false) were emitted, and stats were clean afterwards.
+- t5, duel 阳葵 (Himawari) against a scripted heroine (casting fire, ice, thunder and charm, answering the rival's beam with 天照 (Heaven's Light), mashing Mouse0): 'beam:struggle' started and ended with the player winning. The scripted heroine then lost the duel. She reached exactly 0 → kneel with no death event, then was restored to 100 hp with control back. 'duel:start' and 'duel:end' (won: false) were emitted, and stats were clean afterwards.
 - t6, startDuel('kokonoe', { testWin }) → true. Then each boss with testWin: oboroga, tomoshigui, oboroyo and mumyo each ran start → phase 2 → phase 3 → defeated in about 10 s, with G.state.defeated set for all four and nothing left over afterwards. Screenshots of 胧牙, 灯喰蛾 and 无明 were checked.
 - t7, full build at the village: 7 animals streamed in (5 chickens, cow, dog). A fire 2 m away made a chicken flee 5.1 m. Pressing T locked the paper sprite in front. 60 fps, 558 draw calls, 1.28 M triangles for the whole village scene.
 - t8, full build at night camp night_pass: 4 enemies (3 wolves + caster), no errors, 203 draw calls.
@@ -132,11 +132,11 @@ Screenshots: .tmp/play/combat-t1 … combat-t8.
 - (fixed by fix2) Enemy fire no longer lights the grass and night camps cost ~25 hp per 5 s standing still. A tree can still occasionally catch fire in a night camp from a source not identified (seen once in ~8 camp runs).
 - (fixed by fix2) Humanoids flash through `actor.flash()` (shared material).
 - Wildlife has no reactors: animals cannot be burned, they only flee. Night-only spawning was not implemented. Koi swim at y = -0.55 and were not looked at on screen.
-- The training wave is data in WAVES.training (4 paper sprites at 神乐练习场). Story must call G.combat.spawnWave('training').
+- The training wave is data in WAVES.training (4 paper sprites at 神乐练习场, the Kagura Training Ground). Story must call G.combat.spawnWave('training').
 
 
 ## As-built updates (fix2, 2026-11)
-- Bosses played through with scripted input (scripts in .tmp/fix2/boss-*.js): 胧牙 (stalk → bite, leap landing burst with dust + earth hit, howl; 7× scale fits at 千年枫), 灯喰蛾 (flies to a lit lamp from `G.gameplay.litLanterns()`, drains and douses it; grounded by ice / wind in ~7 shots), 胧夜 (struggle winnable at 6 presses/s), 无明 (rises behind the real palace; weak points lock-on proxies, opened by any sun-element hit including charms, and by 金环; final breath struggle mandatory: hp cannot fall below 4 % until it is won, testWin excepted).
+- Bosses played through with scripted input (scripts in .tmp/fix2/boss-*.js): 胧牙 (stalk → bite, leap landing burst with dust + earth hit, howl; 7× scale fits at 千年枫), 灯喰蛾 (flies to a lit lamp from `G.gameplay.litLanterns()`, drains and douses it; grounded by ice / wind in ~7 shots), 胧夜 (struggle winnable at 6 presses/s), 无明 (rises behind the real palace; weak points lock-on proxies, opened by any sun-element hit including charms, and by 金环 (Golden Ring); final breath struggle mandatory: hp cannot fall below 4 % until it is won, testWin excepted).
 - Shade eyes on creatures are coloured embers (emissive 1.5 / 2.4, was 3.4) so bosses at night read as silhouette + eyes, not light bulbs.
 - Balance: `attacks.js` exports `CAMP_K = 0.6` and `campK(e)` (0.6 for camp foes, 1 otherwise) applied in hurtPlayer and darkOrb damage; shade night multiplier atkMul = (1 + 0.3·veil)… (was 0.5); casters' element spells use power 0.42·atkMul·campK (was 0.8·atkMul); every foe's first strike after aggro waits 1.2–2.8 s; wisp burst fire radius 2.2 m and noGround. Measured standing still 5 s in night camps at base stats: 15–31 hp (was 56–102).
 - Drops: under 40 % hp every foe drops a heart with ≥ 55 % chance, under 25 % always; under 25 % mana at night a mana orb half the time.
@@ -157,19 +157,19 @@ Wandering-Witch borderlands. Nothing spawns before the heroine has left home (qu
 NO_FOES (home, Fran's forest + clearing, the walled city), on warded ground, or within 35 m of a story anchor.
 
 ### Bestiary (type id → name, answer)
-| id | 名 | what it asks for |
+| id | name | what it asks for |
 |---|---|---|
-| paper | 流浪书页 | stray grimoire pages (procedural booklet), darts + paper-cut volleys; fire ×3, wind ×2 |
-| blob / blob_small | 泥沼团 | bog mud: splits on hits; fire bakes a crust (8 s, slow), then earth / thunder / heavy ×2.6; water heals it |
-| wolf | 荒原狼 | packs: the lowest-id wolf baits in front, the rest flank behind her facing and lunge faster from behind; fire (hit or a blaze at their paws) scares them; wind shoves; an elite leader howls (haste) and calls two more at 50 % |
-| moth | 啄星蝠 | harries broom riders at her height (13 m/s, a cruising broom outruns them), dives and nibbles mana (never below 30); wind / thunder tumbles it out of the air; conductive |
-| wisp | 迷路的灯火 | warm lantern flame; drifts in and bursts; water ×4, wind ×2 |
-| golem | 隘口石卫 | stone shell (thunder / earth / heavy), slams, rock barrages |
-| froststag | 霜角鹿 | ice ward (fire breaks it, earth secondary), charge down a marked lane, frost stomp, ice-lance volleys |
-| embersnake | 余烬蛇 | fire ward (water breaks it, ice secondary), lobbed fire, coiled bite, ring of flame |
-| caster | 拦路魔法使 | bandit mage (one element each): volleys, element signature (fire seal, ice lance stream, lightning call, water bubbles, gust, rock barrage), counter-casts that meet her spells mid-air, shield against a barrage, sidesteps; 破绽 after big casts |
-| raider | 黑帚强盗 | the same kit on a broom: orbits, strafes, swoops; wind / thunder / heavy / a stagger knocks him off the broom (exposed 3.5 s), he fights on foot and remounts after ~9 s |
-| thief | 扒手魔女 | sneaks up on a walker, lifts ~22 % of the stardust (or a dango), flees on a broom at 17.5 m/s; every hit returns 30 % of the loot, wind / thunder / <45 % hp knocks her down; caught = loot + 15; escapes after 45 s / 150 m |
+| paper | 流浪书页 (Wandering Pages) | stray grimoire pages (procedural booklet), darts + paper-cut volleys; fire ×3, wind ×2 |
+| blob / blob_small | 泥沼团 (Bog Blob) | bog mud: splits on hits; fire bakes a crust (8 s, slow), then earth / thunder / heavy ×2.6; water heals it |
+| wolf | 荒原狼 (Moor Wolf) | packs: the lowest-id wolf baits in front, the rest flank behind her facing and lunge faster from behind; fire (hit or a blaze at their paws) scares them; wind shoves; an elite leader howls (haste) and calls two more at 50 % |
+| moth | 啄星蝠 (Star-Pecking Bat) | harries broom riders at her height (13 m/s, a cruising broom outruns them), dives and nibbles mana (never below 30); wind / thunder tumbles it out of the air; conductive |
+| wisp | 迷路的灯火 (Lost Lamplight) | warm lantern flame; drifts in and bursts; water ×4, wind ×2 |
+| golem | 隘口石卫 (Pass Stone Guard) | stone shell (thunder / earth / heavy), slams, rock barrages |
+| froststag | 霜角鹿 (Frost-Horn Stag) | ice ward (fire breaks it, earth secondary), charge down a marked lane, frost stomp, ice-lance volleys |
+| embersnake | 余烬蛇 (Ember Snake) | fire ward (water breaks it, ice secondary), lobbed fire, coiled bite, ring of flame |
+| caster | 拦路魔法使 (Roadblock Mage) | bandit mage (one element each): volleys, element signature (fire seal, ice lance stream, lightning call, water bubbles, gust, rock barrage), counter-casts that meet her spells mid-air, shield against a barrage, sidesteps; 「破绽」 (Opening) after big casts |
+| raider | 黑帚强盗 (Black-Broom Bandit) | the same kit on a broom: orbits, strafes, swoops; wind / thunder / heavy / a stagger knocks him off the broom (exposed 3.5 s), he fights on foot and remounts after ~9 s |
+| thief | 扒手魔女 (Pickpocket Witch) | sneaks up on a walker, lifts ~22 % of the stardust (or a dango), flees on a broom at 17.5 m/s; every hit returns 30 % of the loot, wind / thunder / <45 % hp knocks her down; caught = loot + 15; escapes after 45 s / 150 m |
 
 ### Shared mechanics (src/combat/wards.js)
 - **Ward** `e.ward = { el, hp, max, regen, downT }` — counter (COUNTER[el][0]) ×3, secondary ×1.6, a matching reaction ×2, else
@@ -177,7 +177,7 @@ NO_FOES (home, Fran's forest + clearing, the walled city), on warded ground, or 
   `regen` s. Events `'enemy:ward' { enemy, state: 'break'|'reform', el }`. `addWard(e, el, max, { regen })`, `counterOf(el)`.
 - **Poise** `e.poise / poiseMax` (def.poise, default 40 % hp, 70 % heavy) — heavy ×1.8, countered ×1.5, shatter ×2; at 0 →
   stagger (stun def.staggerT, exposed), `'enemy:stagger' { enemy }`.
-- **Exposed** `e.exposedT > 0` → every hit ×1.5 (the gold number); the plate shows 破绽.
+- **Exposed** `e.exposedT > 0` → every hit ×1.5 (the gold number); the plate shows 「破绽」.
 - **Affixes** (elites) `frenzy warded bulwark blink leech volatile pack` — `makeElite(e, list)`; camps roll an elite 18 %.
 - Movement honours `reactor.speedMul` (muddy / chilled / frozen) — `e.handlesSlow = true` (enemy.js step). Inside a steam
   cloud (`G.elements.concealedAt(G.player.pos)`) foes drop her, walk to where she was last seen (±2.5 m) and search for 4 s;
@@ -206,12 +206,12 @@ Save `G.state.combat = { cleared: {campId: playTime}, elites: {id: playTime}, se
 ### Combo & rating (src/combat/combo.js) — `G.combat.combo`
 `{ count, style, rank 0..5, best, t, fightStyle, kills, rankName(r) }`. Hits within 3 s chain; style from new elements (+2),
 reactions (+3), counters, exposed hits, ward breaks (+5), staggers (+3), riders knocked off (+4), perfect reflects (+4), clashes;
-a hit on her resets the chain. The fight is rated 3 s after it ends (利落 漂亮 华丽 惊艳 星尘般); 漂亮 and up pays
+a hit on her resets the chain. The fight is rated 3 s after it ends (「利落」 Neat, 「漂亮」 Fine, 「华丽」 Splendid, 「惊艳」 Dazzling, 「星尘般」 Like Stardust); 「漂亮」 and up pays
 stardust (22 % of the style). Events `'combat:rank' { rank }`, `'combat:rated' { rank, style, kills, bonus }`.
 
 ### Fran's spar (src/story/fran-spar.js)
-Three movements: 0 读杖尖 (single stardust bolts — shield to reflect), 1 星尘乱舞 at hp ≤ 28 or 3 casts (fan of bullets 星尘连射,
-bombardment 星落, homing water bubbles 水泡, frost seal 冰阵), 2 流星掠空 at hp ≤ 12 or 6 casts (circles at 6 m; diving passes
+Three movements: 0 读杖尖 "reading the wand tip" (single stardust bolts — shield to reflect), 1 星尘乱舞 "stardust frenzy" at hp ≤ 28 or 3 casts (fan of bullets 星尘连射,
+bombardment 星落, homing water bubbles 水泡, frost seal 冰阵), 2 流星掠空 "meteor sweep" at hp ≤ 12 or 6 casts (circles at 6 m; diving passes
 that rake the ground then land = opening; volleys from the air; a wind hit throws her off the broom). From movement 1 she
 counter-casts her spells mid-air and raises a shield against a barrage. The answer element mid-windup (or a reflected bolt)
 scatters the spell (long opening, duel beat). Openings have a damage budget (12 / 13 / 15, +8 on a break / tumble), outside
@@ -219,15 +219,15 @@ them hits graze (×0.1 bullets, ×0.2 elements). Outcomes unchanged ('break' / '
 Events `'spar:phase' { phase }`, `'spar:broken' { pattern }`, `'spar:tumble'`, `'spar:end' { result, story, phase }`.
 
 ### Clearing trial (src/combat/trials.js) — `G.combat.trials`
-After quest `mages`, a chalk ring 9 m from Fran's spot (E: 「踏入试炼圈」): five rounds of stardust phantoms (pages + mud, a pack,
+After quest `mages`, a chalk ring 9 m from Fran's spot (E: 「踏入试炼圈」, Step into the trial ring): five rounds of stardust phantoms (pages + mud, a pack,
 two mages, a warded stag under bats, rider + ember serpent + stone guard). Timed, best time + clears in the save; first clear 80
 stardust + dango, a record 40, else 20. HP floor 1 (fails instead of dying), leaving the ring (34 m) aborts. Events
 `'trial:start'`, `'trial:end' { result: 'clear'|'fail'|'left', time, best }`.
 
 ### UI (src/ui/foes.js, created by ui.js)
 Plates over up to 6 engaged foes (+ the lock target): name (elites gold with title), brush hp bar with ghost, ward bar in the
-element colour with 「要用X才破得开」, affix chips, 破绽. Anchored at top + 1.05 m (elements' status pips sit just below).
-`G.ui.foePlates = true` hides enemy.js's old 3D bars. Combo meter right of centre (count, 连击, rank word that pops).
+element colour with 「要用X才破得开」 (Needs X to break), affix chips, 「破绽」. Anchored at top + 1.05 m (elements' status pips sit just below).
+`G.ui.foePlates = true` hides enemy.js's old 3D bars. Combo meter right of centre (count, 「连击」 = Combo, rank word that pops).
 
 ### Broom combat
 Player projectiles cast from a flying broom inherit 80 % of the broom's velocity (src/spells/spells.js cast(); lobbed shots only

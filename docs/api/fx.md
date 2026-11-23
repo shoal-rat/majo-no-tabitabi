@@ -105,7 +105,7 @@ Behaviour notes:
 
 ## As-built updates (u3 — the look of magic, 2026-11-13)
 What changed: magic is now drawn mainly with MESH shapes (painted, eroding, 2–3 flat tones) instead of glow sprites; every spell
-has the five beats; the 对波 struggle is a set piece; reactions have a readable shape each; the 月障 is a moonlight veil.
+has the five beats; the 对波 (beam clash) struggle is a set piece; reactions have a readable shape each; the 月障 (moon barrier) is a moonlight veil.
 
 **Shapes (`src/fx/shapes.js`, one instanced draw call, cap 160, renderOrder 22).** `G.fx.shape(opts)` → `true` | handle | null.
 - kinds `disc ring cyl cone dome sphere tongue arc crystal`; tex `billow streak cells glyph seams`; mode `flame sheet smoke glow glyph shell`.

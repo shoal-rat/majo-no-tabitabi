@@ -1,7 +1,7 @@
 # cloth — costumes, cloth / hair solver, garment shading (as built 2026-11-13, visual overhaul 2)
 
 Owner files: `src/actors/spring.js`, `src/actors/celmat.js`, the character path of `src/core/assets.js` (toonify / celify,
-?costume=v1), the spring / outline / contact-shadow sections of `src/actors/rig.js`, 磐翁's model line in `src/story/npcs.js`,
+?costume=v1), the spring / outline / contact-shadow sections of `src/actors/rig.js`, 磐翁's (Banou's) model line in `src/story/npcs.js`,
 `tools/install-costumes.mjs`, the `char_*` files in `assets/models/chars/` and their manifest entries.
 Builds on docs/api/actors-look.md (cel shading, outlines, life) — read that first.
 

@@ -15,20 +15,20 @@ THE SPOT (`G.world.veilAt`, same weights as fx/ambient.js) chooses the land, so 
 
 | land | group id | what |
 |---|---|---|
-| 曦光原 | `songbirds` | sparrow flocks pecking and hopping on open ground; burst up when she comes near, circle, settle again (elsewhere if she stays) |
+| 曦光原 (Dawnlight Plain) | `songbirds` | sparrow flocks pecking and hopping on open ground; burst up when she comes near, circle, settle again (elsewhere if she stays) |
 | | `swallows` | swallows swooping low round her (follow her lazily, leave when she changes land) |
 | | `butterflies` | butterflies over meadows away from roads; settle on flowers with wings closed upright |
-| | `bees` | bees darting between flowers on 向日丘 (POI `sunhill`) |
-| | `dragonflies` | dragonflies hovering and darting at water edges (also 薄暮) |
+| | `bees` | bees darting between flowers on 向日丘 (Sunflower Hill, POI `sunhill`) |
+| | `dragonflies` | dragonflies hovering and darting at water edges (also 薄暮, the dusk region) |
 | | `fish` | fish shadows under the surface; now and then one breaks it (`G.water.ripple`) |
 | coast / peaks | `gulls`, `gullsky` | gulls standing on beaches; gulls wheeling over the sea near the shore |
-| | `eagles` | eagles circling high over 霜见岳 (MOUNTAIN ellipse) |
-| 薄暮林 | `crows`, `crowsky` | crow flocks on the ground; crows wheeling against the sunset |
+| | `eagles` | eagles circling high over 霜见岳 (Frostview Peak; MOUNTAIN ellipse) |
+| 薄暮林 (Dusk Woods) | `crows`, `crowsky` | crow flocks on the ground; crows wheeling against the sunset |
 | | `geese` | a V skein crossing the sky, 40–55 m up |
 | | `moths` | moths orbiting stone lanterns and the great lanterns (data/world.js) |
 | | `frogs` | frogs on river banks: throat pumping, small hops, a leap + ripple into the water when she comes near |
 | | `cranes` | cranes standing in lake shallows (ground −0.15…−0.65), long feeding dips, slow heavy take-off |
-| 常夜原 | `glowmoths` | glowing moths (bloom) drifting low over the dark meadows |
+| 常夜原 (Evernight Plain) | `glowmoths` | glowing moths (bloom) drifting low over the dark meadows |
 | | `lightfish` | light-fish (HDR, bloom) in any deep water — the palace moat included |
 | | `bats` | bats flitting round her |
 | | `jellies` | lantern-jellies (additive, pulsing) drifting 2–7 m up over the dark shore |
@@ -102,11 +102,11 @@ draw call, no new mesh), every tier (`lowFloor`). Defined in `life/kinds.js` (`H
 `heroMothFind`), spawned by the normal manager when she is within reach of the spot:
 | group id | where | what |
 |---|---|---|
-| `hero_sparrows` | 向日神社 stone stairs (`STEPS`, builders/shrine.js) | 8 sparrows (0.44 m, was 0.3) pecking on the treads (`env.groundAt`, so they stand on the steps); burst up as she climbs, circle, come back to the stairs once she has passed |
-| `hero_crows` | two torii of the 千本鳥居 tunnel (`TUNNEL`, builders/dusk.js) | 4 crows (0.68 m) in a row on the top beam, no hopping; lift off when she walks under, return to the beam |
-| `hero_heron` | lake shallows nearest the 镜湖 ferry pier | a grey heron (1.2 m, new kind `heron`) wading; slow heavy take-off |
+| `hero_sparrows` | 向日神社 (Sunward Shrine) stone stairs (`STEPS`, builders/shrine.js) | 8 sparrows (0.44 m, was 0.3) pecking on the treads (`env.groundAt`, so they stand on the steps); burst up as she climbs, circle, come back to the stairs once she has passed |
+| `hero_crows` | two torii of the 千本鳥居 (Thousand Torii) tunnel (`TUNNEL`, builders/dusk.js) | 4 crows (0.68 m) in a row on the top beam, no hopping; lift off when she walks under, return to the beam |
+| `hero_heron` | lake shallows nearest the 镜湖 (Mirror Lake) ferry pier | a grey heron (1.2 m, new kind `heron`) wading; slow heavy take-off |
 | `hero_koi` | deep water nearest the pier end | 5 koi decals in orange / white / gold (0.75–1 m) turning slowly inside 4.5 m |
-| `hero_moths` | lamps of 万灯镇 within 30 m of her (`env.lamps` = `G.sky.lampList()`, **not yet provided by sky.js — requested**; until then this group never spawns) | moths (0.16 m) orbiting the lamp heads, up to 3 lamps |
+| `hero_moths` | lamps of 万灯镇 (Myriad Lantern Town) within 30 m of her (`env.lamps` = `G.sky.lampList()`, **not yet provided by sky.js — requested**; until then this group never spawns) | moths (0.16 m) orbiting the lamp heads, up to 3 lamps |
 | `moths` (ambient, changed) | stone lanterns and great lanterns, as before | now the larger `mothH` (0.16 m half-span, was 0.09) |
 Mechanics: perching groups may carry `g.groundFn(x, z)` (perch height), `g.noHop`, `g.fixed` + `g.landAt(agent)` (return to
 the same perch instead of settling elsewhere); fish groups `g.R` (home radius). life.js passes `groundAt` and `lamps` (`G.sky.lampList?.()`, an array of {x, y, z}) in the

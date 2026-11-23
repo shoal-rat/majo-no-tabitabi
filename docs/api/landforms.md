@@ -9,8 +9,8 @@ field, the water level, POIs, anchors, paths, quest logic or the save. URL param
 |---|---|
 | `landforms.js` | system facade `G.landforms`, per-frame update (drift rocks, cliff LOD, foam ripples), deform hook |
 | `landforms/isles.js` | floating islands (浮空岛): grass cap with the exact walkable top, layered broken rock underside narrowing into stalactites, roots + vines, falling streams into mist, night crystal veins, base cloud wisp, drifting rocks |
-| `landforms/cliffs.js` | steep ground: stratified faces (ledges with overhang lips), outcrops, talus at cliff feet, crag spires on 霜见岳 ridges, fluted dark columns around the palace crag; world-space snow / moss baked per vertex |
-| `landforms/coast.js` | west-coast sea stacks + 2 arches (swept section), river boulders, stepping stones at unbridged fords, the 雾见泉 → 暮川 rapids (stepped chute, white-water ribbons, spray, pond mist), foam rings |
+| `landforms/cliffs.js` | steep ground: stratified faces (ledges with overhang lips), outcrops, talus at cliff feet, crag spires on 霜见岳 (Frostview Peak) ridges, fluted dark columns around the palace crag; world-space snow / moss baked per vertex |
+| `landforms/coast.js` | west-coast sea stacks + 2 arches (swept section), river boulders, stepping stones at unbridged fords, the 雾见泉 (Mistview Spring) → 暮川 (Dusk River) rapids (stepped chute, white-water ribbons, spray, pond mist), foam rings |
 | `landforms/horizon.js` | far silhouettes coloured from `scene.fog` (aerial haze) in three depth layers — near stacks ~1.3–1.6 km (darkest), the isle ring ~1.75–2.75 km, broad pale ranges ~3 km — with spurs, gully streaks and crest light, + a low cloud sea far out — 2 draw calls |
 | `landforms/bands.js` | round 3: contour cliff bands (`buildBands`: marching squares on the height field at levels 5.75 + k·5.5 m on ground > 44°, ledge lips, overhangs, talus at the foot), `protoCrag` (sharp crag for the 霜见岳 summit), `buildArete` (knife ridge + snow cornice between two crags ≤ 40 m apart) |
 | `landforms/cells.js` | `CellStore`: pieces baked into 128 m cells, two LODs per cell, `shift` / `kill` per piece |

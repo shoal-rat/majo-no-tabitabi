@@ -1,10 +1,10 @@
 # structures — as built
 
 ## Summary
-I replaced the structures stub with a full system covering every built place in the world, each recognisable from a distance. Every place is built in code from primitives: curved hip, gable and thatch roofs with corrugated tiles and upturned eave corners, vermilion posts, plaster and shoji walls, engawa verandas, stone plinths and foundations on sloped ground. A few staged assets are used where they look good: the red pagoda, fox statues, the rowing boat, and recoloured trees (including tree_giant_ancient as the 千年枫).
+I replaced the structures stub with a full system covering every built place in the world, each recognisable from a distance. Every place is built in code from primitives: curved hip, gable and thatch roofs with corrugated tiles and upturned eave corners, vermilion posts, plaster and shoji walls, engawa verandas, stone plinths and foundations on sloped ground. A few staged assets are used where they look good: the red pagoda, fox statues, the rowing boat, and recoloured trees (including tree_giant_ancient as the 千年枫, Thousand-Year Maple).
 
 Places built:
-- 向日神社 (sunlit hilltop):
+- 向日神社, Sunward Shrine (sunlit hilltop):
   - Haiden facing south, with shimenawa, two ringable suzu bells and an offering box.
   - Raised honden behind it, with chigi, katsuogi and a tamagaki fence.
   - Kagura stage, temizuya beside the shrine_save anchor, ema rack beside ema_shrine.
@@ -12,28 +12,28 @@ Places built:
   - Bell house with a big bell, red pagoda on a podium, sacred tree with shimenawa.
   - Stone approach path with lanterns and nobori banners, cherry trees and pines, a rim wall.
   - Stone stairway of about 50 steps (y 14 → 30), centred on the road, under a torii avenue: a grand torii with plaque at the foot, one at the top, six small ones on the steps.
-- 神乐练习场: fence ring, 6 straw targets, rest shed, banners.
-- 朝颜村:
+- 神乐练习场 (Kagura Training Ground): fence ring, 6 straw targets, rest shed, banners.
+- 朝颜村 (Morning Glory Village):
   - 9 thatched farmhouses and drying racks.
   - Ushio's roofed well beside village_elder.
   - Dango stall with noren, red benches and parasols, set behind village_dango.
   - Notice board, jizo, a hokora.
   - Mill with a spinning waterwheel fed by a glowing flume.
   - Morning-glory fences, yard trees, 7 scarecrows out in the farm ring.
-- 暮桥: arched vermilion bridge whose deck is walkable (one platform per segment), with railing colliders, giboshi caps, piers and lanterns.
-- 狐火之里 (dusk):
+- 暮桥 (Dusk Bridge): arched vermilion bridge whose deck is walkable (one platform per segment), with railing colliders, giboshi caps, piers and lanterns.
+- 狐火之里, Foxfire Hamlet (dusk):
   - Torii tunnel of 34 torii along the road to the maple, guarded by fox statues.
   - Elder's hall with fox statues.
   - 6 shrine houses on stilts with fox-fire lanterns (3 of the 9 planned spots were skipped as not clear).
   - Lantern strings on poles, maples and ginkgo, 16 bobbing fox-fire wisps (one InstancedMesh).
 - 千年枫:
   - Giant maple, about 47 m, with a stone ring and shimenawa.
-  - 暮灯 dais with steps, lantern ring and a plaque torii on the road.
-- 雾见泉: spring hokora, a torii standing in the pond, stepping stones.
-- 镜湖:
+  - 暮灯 (Dusk Lamp) dais with steps, lantern ring and a plaque torii on the road.
+- 雾见泉 (Mistview Spring): spring hokora, a torii standing in the pond, stepping stones.
+- 镜湖 (Mirror Lake):
   - Pier from lake_ferryman: about 24 m of deck plus a ramp, with a lantern post and a moored boat.
-  - 镜心屿: dais, hokora, plaque torii facing the pier, 4 lanterns, lotus pads and flowers on the water.
-- 万灯镇 (night hub):
+  - 镜心屿 (Mirror-Heart Isle): dais, hokora, plaque torii facing the pier, 4 lanterns, lotus pads and flowers on the water.
+- 万灯镇, Myriad Lantern Town (night hub):
   - Lamp tower exactly at town_lamp: three tiers with lantern rings, a glowing lamp chamber and a gold finial; its roof is landable.
   - 22 two-storey machiya with glowing windows, lattice fronts, noren and eave lanterns.
   - Market street of stalls under zig-zag lantern strings.
@@ -42,16 +42,16 @@ Places built:
   - Taiko stage beside town_racer, lamp-maker's shop with lanterns on display beside town_lampmaker.
   - Two "bridges of light" over the market street: walkable, with glowing rails, landings and stairs.
   - Andon lamps around the plaza, glowing banners.
-- 星晶野:
+- 星晶野 (Starcrystal Moor):
   - Ruined moonstone circle with glowing runes, fallen stones and lintels; glowing crystal clusters.
-  - 晶灯 dais, hermit's hut beside crystal_hermit.
+  - 晶灯 (Crystal Lamp) dais, hermit's hut beside crystal_hermit.
   - 3 turnable crystal-pillar pedestals at 9.5 m from the dais (live factory objects).
-- 月读宫 (rock top, y 140):
+- 月读宫, Moon-Reading Palace (rock top, y 140):
   - Arena of radius 30 around palace_arena with glowing inlaid rings and spokes.
   - 14 slender silver and blue pillars with glowing orbs (2 of the 16 ring slots are left out near the landing and the lantern).
   - Moon-gate ring, landing terrace with balustrade at palace_landing.
-  - 月灯 dais with a crescent screen, two side halls (deep-blue roofs, cold windows).
-- 风祠: altar stone, hokora, wooden torii on the road, prayer-flag ring, wind chimes.
+  - 月灯 (Moon Lamp) dais with a crescent screen, two side halls (deep-blue roofs, cold windows).
+- 风祠 (Wind Shrine): altar stone, hokora, wooden torii on the road, prayer-flag ring, wind chimes.
 - 14 floating islands:
   - Noisy rock undersides (glowing crystal roots on night isles).
   - Grass top registered as a disc platform with a deep underside, so the broom stops below it.
@@ -217,7 +217,7 @@ iron bands, rivets, stave lid hinged at the back; same pivot, open animation and
   (crystals = flora, pillars = gameplay: untouched).
 - 风祠 (`far.js buildWindShrine`): carved altar, flagstones, prayer-flag lines (cloth), glass wind chimes with tanzaku,
   cairns, ice lanterns, `snowShell()` snow caps on roofs and the torii.
-- 暗潮岸 `builders/eastshore.js` (new, place id `eastshore`, built from `buildFar`): ruined pier (standing half
+- 暗潮岸 (Darktide Shore) `builders/eastshore.js` (new, place id `eastshore`, built from `buildFar`): ruined pier (standing half
   walkable), two funaya boat sheds with skiffs, a torii standing in the sea, weathered markers, mooring posts, a wreck.
 - 向日神社: `komainu(open, s)` (decor) pair at the approach, `basin()` rebuilt (granite trough, brimming water plane,
   bamboo spout with a trickle), sacred tree with `ropeRing` shimenawa + shide, honden `chigiBlade()` / `katsuogi()`.
@@ -292,7 +292,7 @@ grain), `gilded` (plaques, the inn sign: carved recess + lit edge + gold leaf). 
 broad dye clouds / long soft grain instead of flat fills. Crests (mon) are drawn in a few brush shapes: sun wheel on
 the shrine banners, fox mask on the 狐火之里 banners, lantern on the town banners and shop noren, wave on the lake isle
 plaque (crestFor), crescent available for the palace. Painted inscriptions (core.meta.lettering) replace the font for
-向日神社 (plaques), 日轮常在, 狐火稻荷.
+向日神社 (plaques), 「日轮常在」 (The Sun Wheel Abides), 「狐火稻荷」 (Foxfire Inari).
 
 **Revision (r2).** Shop boards (`board`, the town kanban atlas) are read across a street at night: brush regular
 script (not the running hand) with a firm stroke (+3 % of the glyph size), little dry-out (.16) and wear (.12), pale

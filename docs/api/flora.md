@@ -8,12 +8,12 @@ The flora system (G.flora) replaces the stub and works in headless play.mjs runs
 - **Where it places nothing.** Never inside G.world.isReserved (with extra padding), off roads and riverbanks, not on steep slopes, not near the palace moat or under water. Lily pads and lotus are the exception: they float on the lake, the rivers, the moat and the spring.
 
 **By land**
-- **曦光原:** broadleaf groves and lone trees, with willows by the rivers. Cherry groves concentrate around the shrine. The village fields are kept open. Flower patches, bushes and berry bushes in the meadows; a dense sunflower field on 向日葵之丘; pumpkin patches at the edge of the village.
-- **Village crops:** rice, wheat and vegetable rows are drawn on the GPU in the same 朝颜村 plots the terrain paints, using the terrain's own plot hash, so they line up.
-- **霜见岳:** pines, then snowy pines and snowy broadleaves, then snowy dead trees, then bare rock. Snow rocks and cliff chunks on the slopes.
-- **薄暮林:** dense red and orange maples with gold ginkgo, recoloured through the leaf materials. Thick bamboo groves around 狐火之里. Ferns, mossy rocks, logs, stumps, small mushrooms, and red flowers like spider lilies.
-- **常夜原:** dark teal trees with speckled glowing leaf tips. 萤茸林 has about 700 giant mushrooms whose caps glow in cyan, teal, violet, pink and gold. Glowing ferns, flowers and lotus. Short grass whose blade tips glow and pulse.
-- **星晶野 and 暗潮岸:** glowing crystal clusters, plus dead trees and standing stones.
+- **曦光原 (Dawnlight Plain):** broadleaf groves and lone trees, with willows by the rivers. Cherry groves concentrate around the shrine. The village fields are kept open. Flower patches, bushes and berry bushes in the meadows; a dense sunflower field on 向日葵之丘 (Sunflower Hill); pumpkin patches at the edge of the village.
+- **Village crops:** rice, wheat and vegetable rows are drawn on the GPU in the same 朝颜村 (Morning Glory Village) plots the terrain paints, using the terrain's own plot hash, so they line up.
+- **霜见岳 (Frostview Peak):** pines, then snowy pines and snowy broadleaves, then snowy dead trees, then bare rock. Snow rocks and cliff chunks on the slopes.
+- **薄暮林 (Dusk Woods):** dense red and orange maples with gold ginkgo, recoloured through the leaf materials. Thick bamboo groves around 狐火之里 (Foxfire Hamlet). Ferns, mossy rocks, logs, stumps, small mushrooms, and red flowers like spider lilies.
+- **常夜原 (Evernight Plain):** dark teal trees with speckled glowing leaf tips. 萤茸林 (Glowcap Wood) has about 700 giant mushrooms whose caps glow in cyan, teal, violet, pink and gold. Glowing ferns, flowers and lotus. Short grass whose blade tips glow and pulse.
+- **星晶野 (Starcrystal Moor) and 暗潮岸 (Darktide Shore):** glowing crystal clusters, plus dead trees and standing stones.
 - **Across the Veil's edge:** the land and colour are dithered by the same Veil weights the terrain uses, so the lands blend smoothly.
 
 **Rendering**

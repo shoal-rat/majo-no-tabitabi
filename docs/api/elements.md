@@ -1,7 +1,7 @@
 # elements — as built
 
 ## Summary
-The elements system (万物相生, G.elements) is written from scratch and replaces the stub. The previous attempt had left no code. It is split into seven modules under src/elements/. It covers: a reactor registry with a spatial hash and status timers; apply() with the full §3.2 reaction table; a 2 m ground-fire automaton over grassland; flames drawn as one instanced draw call (cel-banded, glowing, flickering, with ground firelight) plus 4 pooled flickering point lights; frost shells and sparks; rain zones with a cloud disc; wind (wandering breeze, updraft and gust fields, updraft above fires); ice floes; and lightAt/addLight. Every test in the assignment was run with --systems physics,elements and passes with no errors, at a steady 60 fps. The look was judged from screenshots by day (x≈-380), at night (290,60), at dusk on 镜湖, and in rain. Three visual bugs were found and fixed along the way: the rain streaks were invisible because their quads faced away from the camera; the flame cores were clipping to white; and the night fire did not show on the dark grass, so a ground glow and stronger night point lights were added. No core or locale changes were needed: the module shows no player-visible text, and check-i18n passes.
+The elements system ("all things act on each other", G.elements) is written from scratch and replaces the stub. The previous attempt had left no code. It is split into seven modules under src/elements/. It covers: a reactor registry with a spatial hash and status timers; apply() with the full §3.2 reaction table; a 2 m ground-fire automaton over grassland; flames drawn as one instanced draw call (cel-banded, glowing, flickering, with ground firelight) plus 4 pooled flickering point lights; frost shells and sparks; rain zones with a cloud disc; wind (wandering breeze, updraft and gust fields, updraft above fires); ice floes; and lightAt/addLight. Every test in the assignment was run with --systems physics,elements and passes with no errors, at a steady 60 fps. The look was judged from screenshots by day (x≈-380), at night (290,60), at dusk on 镜湖 (Mirror Lake), and in rain. Three visual bugs were found and fixed along the way: the rain streaks were invisible because their quads faced away from the camera; the flame cores were clipping to white; and the night fire did not show on the dark grass, so a ground glow and stronger night point lights were added. No core or locale changes were needed: the module shows no player-visible text, and check-i18n passes.
 
 ## Public API
 G.elements = {
@@ -25,7 +25,7 @@ G.elements = {
   ★ lightAt(pos)->0..1 · ★ addLight({pos (a passed Vector3 is kept live), radius=10, intensity=1, duration?})->{pos,radius,intensity,remove()}
   query(pos,r,cb), nearest(pos,r,filter), lastChain {links:[[V3,V3]],reactors,t}, reactors, clear(), stats()
 }
-Ground fire tunables: 2 m cells, cap 420, each cell burns 4.2–6.4 s and spreads faster downwind. Strength drops by about 0.055 per generation, so an unaided blaze reaches roughly 30 m and dies out on its own. Burnt grass regrows after 150 s. Ground watered by apply('water') resists fire for 25 s. Fire never starts on water/beach, roads (<2.4 m), rivers (<4.5 m), warded ground (protection > 0.35), slopes > 0.8 rad, h > 62 or high 霜见岳, craters, or the palace/moat/sea regions.
+Ground fire tunables: 2 m cells, cap 420, each cell burns 4.2–6.4 s and spreads faster downwind. Strength drops by about 0.055 per generation, so an unaided blaze reaches roughly 30 m and dies out on its own. Burnt grass regrows after 150 s. Ground watered by apply('water') resists fire for 25 s. Fire never starts on water/beach, roads (<2.4 m), rivers (<4.5 m), warded ground (protection > 0.35), slopes > 0.8 rad, h > 62 or high 霜见岳 (Frostview Peak), craters, or the palace/moat/sea regions.
 
 ## Known issues
 - Not tested with the real fx, sky/post-processing or terrain systems, because none of them are finished. I checked by code that smoke and ember emitters, burst names and lightning go through G.fx?.*, but have not seen them on screen. The bloom on flame cores (values above 1, toneMapped false) has not been checked against the real post chain.
@@ -72,8 +72,8 @@ hinfo.reaction is one of: conduct steam melt freeze shatter overload fan mire ig
 `lava`, `chargedfog`, `steamblast` for field / fusion damage. Field and fusion damage carries `hinfo.fusion = true`.
 
 ### Ground fields (src/elements/fields.js)
-Kinds: `puddle` 水洼 (water landing on ground), `charged` 电光水洼, `icesheet` 冰封水洼, `steam` 蒸汽云, `mud` 泥沼,
-`frost` 霜地 (a big ice burst), `lava` 熔岩. Field = `{ id, kind, x, z, y, r, t, life, power, team, source }`. ≤ 18 at once;
+Kinds: `puddle` 水洼 (puddle: water landing on ground), `charged` 电光水洼 (charged puddle), `icesheet` 冰封水洼 (frozen puddle), `steam` 蒸汽云 (steam cloud), `mud` 泥沼 (mire),
+`frost` 霜地 (frost ground: a big ice burst), `lava` 熔岩 (lava). Field = `{ id, kind, x, z, y, r, t, life, power, team, source }`. ≤ 18 at once;
 the same kind overlapping grows / refreshes. Ice sheets and charged water fall back to puddles; spell rain quenches lava.
 Steam swallows hostile fire projectiles flying into it. Looks are persistent G.fx.shape handles + timed kit accents.
 - **★ `G.elements.fieldAt(pos, kind?)`** → the most recent field holding (pos.x, pos.z) (pos.y optional: feet within ~1.9 m of
@@ -101,11 +101,11 @@ Steam swallows hostile fire projectiles flying into it. Looks are persistent G.f
 - `'element:applied'` now also carries `info` (the apply() info object; read only).
 
 ### Fusions (src/spells/fusions.js — her own lingering spells)
-Tornado (wind big) + fire 炎旋 / thunder 雷旋 / ice 冰旋 / water 水龙卷 (cast into it, shoot through it, or rain on it);
-rain cloud (water big) + thunder 雷雨云 (strikes foes under it ~1/s) / ice 冰雹 (hail + frost) / fire 暖雾 (fog bank) /
-wind 骤雨 (the cloud drifts on the gust); rock pillar + thunder 引雷石柱 (the pillar is conductive: it arcs to the nearest foe
-every 0.45 s for 6.5 s, then crumbles; strikes on it chain to wet foes); ice dais + her fire 蒸爆; meteor into a lake 巨浪
-(soaks r 16, shore puddles); meteor on land leaves lava in the crater; a gust through her own flying fireballs 风火.
+Tornado (wind big) + fire 炎旋 "fire whirl" / thunder 雷旋 "thunder whirl" / ice 冰旋 "ice whirl" / water 水龙卷 "waterspout" (cast into it, shoot through it, or rain on it);
+rain cloud (water big) + thunder 雷雨云 "thunderstorm" (strikes foes under it ~1/s) / ice 冰雹 "hail" (hail + frost) / fire 暖雾 "warm fog" (fog bank) /
+wind 骤雨 "squall" (the cloud drifts on the gust); rock pillar + thunder 引雷石柱 "lightning-rod pillar" (the pillar is conductive: it arcs to the nearest foe
+every 0.45 s for 6.5 s, then crumbles; strikes on it chain to wet foes); ice dais + her fire 蒸爆 "steam blast"; meteor into a lake 巨浪 "great wave"
+(soaks r 16, shore puddles); meteor on land leaves lava in the crater; a gust through her own flying fireballs 风火 "wind-fire".
 Only the same team fuses; fusion effects carry `info.fusion` and never fuse again. Rain zones got `vx, vz` (drift) and
 `mood` (null | 'storm' | 'hail').
 
@@ -114,7 +114,7 @@ Callouts at the meeting point (brush stroke in the two elements' colours, ×mult
 sit at its top + 2 m, above combat's foe plate); status marks over foes and creatures within 40 m (≤ 10, up to 4 pips with
 draining rings) hang just BELOW the point top + 1.05 m — the anchor of combat's plates (src/ui/foes.js), so a plate and
 the marks stack without overlapping. `G.ui.reactions.pips = false` hides the marks if another module draws statuses.
-Journal → 「元素笔记」 page (third sub-tab): every combo, discovered ones with recipe / text / multiplier / count, unknown
+Journal → 「元素笔记」 (Element Notes) page (third sub-tab): every combo, discovered ones with recipe / text / multiplier / count, unknown
 ones with a hint. A toast on each first discovery; a toast when the story grants thunder / big forms.
 
 ### Story

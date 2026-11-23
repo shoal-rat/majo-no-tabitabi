@@ -1,106 +1,104 @@
-name: 改进提案 · Proposal
-description: 想改进或新增什么，写清楚再动手；想自己做就在发帖后评论 /claim · A change you want to make or see
-title: "[提案] "
+name: Proposal
+description: A change you want to make or see. Write it up before starting; to do it yourself, comment /claim after posting
+title: "[Proposal] "
 labels: ["proposal"]
 body:
   - type: markdown
     attributes:
       value: |
-        一个议题只写一件事。想自己动手的话，发帖后在下面评论 `/claim` 认领，再开 PR（描述里写 `Closes #议题号`）。流程见 [CONTRIBUTING.md](https://github.com/shoal-rat/majo-no-tabitabi/blob/main/CONTRIBUTING.md)。
-        One change per issue. To work on it yourself, comment `/claim` after posting, then open a pull request with `Closes #<issue>`.
+        One change per issue. To work on it yourself, comment `/claim` after posting, then open a pull request with `Closes #<issue>` in the description. The flow is in [CONTRIBUTING.md](https://github.com/shoal-rat/majo-no-tabitabi/blob/main/CONTRIBUTING.md).
   - type: dropdown
     id: area
     attributes:
-      label: 涉及的系统 · Area
-      description: 可以多选。系统名来自 systems.manifest.json。· Pick one or more.
+      label: Area
+      description: Pick one or more. System names come from systems.manifest.json.
       multiple: true
       options:
-        - "story · 剧情、任务与手记目标"
-        - "gameplay · 委托、发现与物品"
-        - "player · 主角与扫帚飞行"
-        - "spells · 魔法"
-        - "combat · 斗法"
-        - "elements · 元素与组合"
-        - "ui · 界面、对话与触屏操作"
-        - "structures · 建筑与城镇（含魔法使之国）"
-        - "terrain · 地形与地面"
-        - "landforms · 岩石与地貌"
-        - "flora · 草木与花"
-        - "life · 小动物与环境生灵"
-        - "props · 场景物件"
-        - "destruction · 地形破坏与恢复"
-        - "sky · 天空、光照与天气"
-        - "fx · 视觉特效"
-        - "audio · 声音与音乐"
-        - "physics · 物理与碰撞"
-        - "其他（文档、工具、构建）· other"
+        - "story · plot, quests and journal goals"
+        - "gameplay · commissions, discoveries and items"
+        - "player · the heroine and broom flight"
+        - "spells · magic"
+        - "combat · spell duels"
+        - "elements · elements and combinations"
+        - "ui · interface, dialogue and touch controls"
+        - "structures · buildings and towns (incl. the City of Magic)"
+        - "terrain · terrain and ground"
+        - "landforms · rocks and landforms"
+        - "flora · plants and flowers"
+        - "life · small animals and ambient creatures"
+        - "props · scene props"
+        - "destruction · terrain destruction and recovery"
+        - "sky · sky, lighting and weather"
+        - "fx · visual effects"
+        - "audio · sound and music"
+        - "physics · physics and collision"
+        - "other (docs, tools, build)"
     validations:
       required: true
   - type: textarea
     id: problem
     attributes:
-      label: 问题或目标 · Problem or goal
-      description: 现在哪里不够好，或者想达到什么效果。· What is missing or wrong today, or what you want to achieve.
+      label: Problem or goal
+      description: What is missing or wrong today, or what you want to achieve.
     validations:
       required: true
   - type: textarea
     id: change
     attributes:
-      label: 打算怎么改 · Proposed change
-      description: 大致做法，会动到哪些文件或系统。· The approach and the files or systems it touches.
+      label: Proposed change
+      description: The approach and the files or systems it touches.
     validations:
       required: true
   - type: textarea
     id: effect
     attributes:
-      label: 玩家能看到的变化 · Player-visible effect
-      description: 玩家在哪里、做什么时会注意到不同。· Where and when a player notices the difference.
+      label: Player-visible effect
+      description: Where and when a player notices the difference.
     validations:
       required: true
   - type: dropdown
     id: playtime
     attributes:
-      label: 对游玩时长和难度的影响 · Effect on play time and difficulty
+      label: Effect on play time and difficulty
       options:
-        - "不变 · unchanged"
-        - "更长或更有挑战 · longer or harder"
-        - "更短、更快或更容易（下面必须说明理由）· shorter, faster or easier (explain below)"
+        - "unchanged"
+        - "longer or harder"
+        - "shorter, faster or easier (explain below)"
     validations:
       required: true
   - type: textarea
     id: playtime-why
     attributes:
-      label: 理由 · Why
+      label: Why
       description: |
-        这是一段慢慢走的旅行。缩短旅途、加快赶路或降低难度的提案，要说明为什么值得，维护者通常不接受只为省时间的改动。不变的话写一句为什么不变即可。
         This is a journey meant to be taken slowly. Shorter trips, faster travel or easier play must be justified; changes that only save time are usually declined. If nothing changes, say why in one line.
     validations:
       required: true
   - type: textarea
     id: verify
     attributes:
-      label: 怎么验证 · How to verify
-      description: 要跑的验收命令、要看的场景或截图。· Acceptance commands to run, scenes to check, screenshots to compare.
+      label: How to verify
+      description: Acceptance commands to run, scenes to check, screenshots to compare.
       placeholder: |
         node tools/acceptance/journey-flight.mjs
-        在湖面上低空飞行，看尾迹是否……
+        Fly low over the lake and check whether the wake ...
     validations:
       required: true
   - type: dropdown
     id: ai
     attributes:
-      label: 是否用 AI 协助 · AI-assisted
+      label: AI-assisted
       options:
-        - "否 · no"
-        - "是 · yes"
+        - "no"
+        - "yes"
     validations:
       required: true
   - type: checkboxes
     id: rules
     attributes:
-      label: 确认 · Confirm
+      label: Confirm
       options:
-        - label: 我搜过已有的议题和 PR，没有重复。· I searched existing issues and pull requests.
+        - label: I searched existing issues and pull requests; this is not a duplicate.
           required: true
-        - label: 内容是原创的，不用番剧截图、官方美术或其他游戏的角色和关卡。· The content is original; no anime stills, official art or other games' characters and levels.
+        - label: The content is original; no anime stills, official art or other games' characters and levels.
           required: true

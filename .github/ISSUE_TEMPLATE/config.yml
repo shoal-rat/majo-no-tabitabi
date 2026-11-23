@@ -1,8 +1,8 @@
 blank_issues_enabled: false
 contact_links:
-  - name: 问题反馈专帖 · Feedback thread (#7)
+  - name: Feedback thread (#7)
     url: https://github.com/shoal-rat/majo-no-tabitabi/issues/7
-    about: 小问题和建议直接在这里留言 · Small reports and ideas go here
-  - name: 参与开发的流程 · How to contribute
+    about: Small reports and ideas go here
+  - name: How to contribute
     url: https://github.com/shoal-rat/majo-no-tabitabi/blob/main/CONTRIBUTING.md
-    about: 先发议题、评论 /claim 认领，再开 PR · Open an issue, claim it, then open a pull request
+    about: Open an issue, claim it with /claim, then open a pull request

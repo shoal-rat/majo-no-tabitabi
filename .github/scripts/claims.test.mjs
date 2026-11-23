@@ -156,7 +156,7 @@ test('claim free issue → assigned, labelled, ack with expiry and record', asyn
   assert.ok(gh.db[12].labels.some((l) => l.name === 'claimed'));
   assert.deepEqual(kinds(gh.writes), ['assign', 'create-label', 'label', 'comment']);
   const ack = lastComment(gh, 12);
-  assert.match(ack, /@ayu 认领成功/);
+  assert.match(ack, /@ayu Claim confirmed/);
   assert.match(ack, /2026-11-30/);
   assert.match(ack, /Closes #12/);
   assert.match(ack, /majo-claim \{"action":"claim","user":"ayu"\}/);
@@ -167,10 +167,10 @@ test('claim when GitHub ignores the assignment → label + comment name the clai
   assert.equal(await onComment(gh, 12, 'ayu', '/claim'), 'claimed-label');
   assert.equal(gh.db[12].assignees.length, 0);
   assert.ok(gh.db[12].labels.some((l) => l.name === 'claimed'));
-  assert.match(lastComment(gh, 12), /认领人是 ayu/);
+  assert.match(lastComment(gh, 12), /ayu as the claimer/);
   // the label-only claim still blocks others and still counts for its holder
   assert.equal(await onComment(gh, 12, 'ren', '/claim'), 'taken');
-  assert.match(lastComment(gh, 12), /已由 ayu 认领（2026-11-23 起）/);
+  assert.match(lastComment(gh, 12), /Already claimed by ayu since 2026-11-23/);
   assert.equal(await onComment(gh, 12, 'ayu', '/claim'), 'already');
 });
 
@@ -274,7 +274,7 @@ test('expiry: idle, active, progress, open PR, closed PR, manual, label-only', a
   for (const n of [31, 35, 36, 38]) {
     assert.equal(gh.db[n].assignees.length, 0, `#${n} unassigned`);
     assert.equal(gh.db[n].labels.length, 0, `#${n} unlabelled`);
-    assert.match(lastComment(gh, n), /认领已过期/);
+    assert.match(lastComment(gh, n), /This claim expired/);
   }
   assert.deepEqual(gh.db[37].assignees.map((a) => a.login), ['shoal-rat']);
   assert.equal(gh.db[32].assignees.length, 1);

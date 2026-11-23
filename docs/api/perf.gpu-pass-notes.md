@@ -44,7 +44,7 @@ Correct views: town above main 22.2 (flat 6.5), layers terrain 4.1, structures 2
  dango main 17.9, gtao 2.5. 'pace' (rAF by performance.now): UI hidden no change; render off -> 17; half res -> 16.5 => GPU/pixel bound.
 ### Decision: 'high' (pr 1.5) cannot reach 60 without changing the picture -> measure 'high' at pr 1.25 as a new step
 ### 22:00 highfast (= high at ?pr=1.25, label gpu1_pr125): mean 17.22, 31/42 <= 17.5, worst 20.3 -> holds 60 -> new tier 'highfast'
-  (boot.js QUALITY.highfast name 'high' pr 1.25; gpubench: <=0.7 REF high, <=1.8 REF highfast; panels option; locale q.highfast 浓彩·流畅)
+  (boot.js QUALITY.highfast name 'high' pr 1.25; gpubench: <=0.7 REF high, <=1.8 REF highfast; panels option; locale q.highfast 「浓彩·流畅」 (Rich Colour · Smooth))
 ### picture: golden old(gpu=0) vs new: bug found (bloom add used rgb*a; three's blend is premultiplied ONE,ONE) -> fixed;
   after fix old vs new3 within noise floor (new vs new2) in all 8; 300% crops .tmp/gpu/crops_gold identical
 ## Next: after2 six tour cams (old/new), med+low golden subset, then final measurements (gpu-final, dynres), acceptance, docs

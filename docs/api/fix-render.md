@@ -12,12 +12,12 @@ The white-outs are fixed at their sources and the perf budget is met everywhere 
 Fixes:
 - atmo.js: the night lift now lives in the light and sky colour rows (LIFT = old/new exposure per palette key). Lit surfaces and the sky look as before; camera exposure is 1.15 at night (was 1.5) and 1.0 at deep dusk (was 1.12). The ring rim light in veilhook.js is compensated.
 - post.js: new bloom high-pass. Hue-preserving clamp (max channel ≤ BLOOM_CLAMP = 4), then a soft-knee threshold, so only the part above the threshold blooms. Mip tints are tighter to cut the wide haze. Bloom threshold/strength per key: 1.9/0.42, 1.6/0.48, 1.1/0.55, 1.0/0.6.
-- post.js: the composite pass now replaces NaN and inf with 0 and clamps negatives. A NaN from props (see core requests) had turned the whole frame black through bloom: at dusk after 祈雨, 陨星 rendered a black frame.
+- post.js: the composite pass now replaces NaN and inf with 0 and clamps negatives. A NaN from props (see core requests) had turned the whole frame black through bloom: at dusk after 祈雨 (Rain Prayer), 陨星 (Meteor) rendered a black frame.
 - fx/lights.js: budgetCandela() compresses every G.fx.flash and fx light (linear to 30 cd, then 50→43, 120→65, 500→100 cd). Reach is capped at 6 + 3.2·√I.
 - fx/particles.js: additive intensity is soft-compressed above 2 (5 → 3.4), and quads covering a large part of the screen are dimmed. The alpha-blended smoke part is unchanged.
 - elements/flames.js: fire lights go from 25 + 455·night to 8 + 20·night (about 45 cd peak). The core boost is lower and the flame colours more saturated. Ground glow pools go from 0.03 + 0.64 to 0.02 + 0.24, size 7 + 4k (they stack about 10 deep in big fires).
 - elements/weather.js: rain streaks are dimmer at night and fade out within 5 m of the camera.
-- spells/entities.js: the 日辉 light orb is golden 0xffc04a ×1.5 (was 0xffd27a ×2.2).
+- spells/entities.js: the 日辉 (Sun Gleam) light orb is golden 0xffc04a ×1.5 (was 0xffd27a ×2.2).
 - terrain/shader.js: frost on the terrain is ×(1 − 0.5·night) so it doesn't glare under the strong night ambient.
 - Flora: mushroom caps are now mostly emissive (glow 1.2, tint 80% toward near-black) and the glow palette is more saturated in linear space. Far cap stand-ins go from glow 1.35 to 0.85.
 - Reversed GLSL smoothsteps fixed in skydome.js (3), post.js (vignette), bolts.js, terrain/shader.js (2) and flames.js.
@@ -27,7 +27,7 @@ Fire repro at 400,210: mean screenshot luminance went from 0.66–0.75 (a white 
 Matrix of every element's small and big form at day (-500,40), dusk (-60,90) and night (205,-125, then 400,210). Measured on the HDR target after exposure:
 - Blown-white pixels (min channel > 3) are ≤ 0.4% in every case.
 - Pixels with luminance > 2 are ≤ 4% in every case except 日辉 by day (4.3%) and at dusk (3.1% now, 5.0% in the first run), which is its gold burst and ring.
-- Night 炎舞 went from 16.4% hot pixels with a screen-wide orange sheet to 1.2–1.9%.
+- Night 炎舞 (Flame Dance) went from 16.4% hot pixels with a screen-wide orange sheet to 1.2–1.9%.
 - Burning crates, a firework barrel, a grass fire and an explosion plus a 400 cd flash at night stay at 0% blown.
 
 2. PERF. Numbers below are high quality, 1440×900, built without the combat/gameplay/story systems. "Calls" includes the shadow pass and post passes.
@@ -62,7 +62,7 @@ What did it:
 - Trees rendering black (tree_cherry_1, tree_maple_1, tree_maple_3, tree_ginkgo_1): I could not reproduce it. Raw G.assets.model() instances render coloured (red maple, orange maple3, gold ginkgo, pink cherry). Their vertex colours are grey AO ramps, and flora handles them correctly. The note in docs/api/structures.progress.md looks stale.
 - Mushrooms seen from below now read as vivid violet, magenta and cyan.
 - Night ground in town and glowwood has life from lanterns, glowing flowers and veins.
-- The ring shows on the 月池 water as a warm gold glimmer that is not blown out.
+- The ring shows on the 月池 (Moon Pool) water as a warm gold glimmer that is not blown out.
 - Light shafts measured shaftK 0.35 by day, 0.14 at dusk and 0.5 toward the night ring, and looked right in every land.
 
 ## Public API
@@ -92,7 +92,7 @@ Most runs used --systems fx,audio,ui,physics,elements,sky,terrain,flora,structur
 - Rain streaks (dimmer at night, fading near the camera) and the frost change were re-checked only by build --check, not by screenshot.
 - Lowering night camera exposure (moving the lift into the light rows) means night land seen from the sunlit meadow is now lit by the lifted night palette without the old eye-adaptation drop, so it can look up to about 1.3× brighter from far away than before. It looked fine in the views I took, but there was no dedicated side-by-side.
 - Bloom is gentler overall (soft knee): glow plants get a subtle halo at night rather than a big one. Strength can be raised in atmo.js SCALARS (column 4) if art wants more glow.
-- 日辉 (sun small) still lifts the whole frame about 3–4× for ~0.15 s: two flash lights plus the gold ring and rays. It reads as a golden burst, not white. The 天照 beam core by day is a near-white column.
+- 日辉 (sun small) still lifts the whole frame about 3–4× for ~0.15 s: two flash lights plus the gold ring and rays. It reads as a golden burst, not white. The 天照 (Heaven's Light) beam core by day is a near-white column.
 - The cluster-simplified far LODs use flat normals and per-face colours; tiny trims melt into walls beyond about 170 m (120 m on low). I saw no holes, but I checked only the town and the fox-village views.
 - Bamboo swaps to cones at 62 m (53 m med, 45 m low). Flying low over a grove, the swap is more visible than for other trees.
 - CPU numbers are noisy (shared, loaded machine; headless fps capped at 60). The renderFrame CPU median ranged 1–7 ms run to run, and physics.update dominates CPU at 3–6 ms per frame.

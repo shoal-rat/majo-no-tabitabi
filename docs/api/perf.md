@@ -234,7 +234,7 @@ early were built again (measured: compileAsync 13.5 s, then the first frame stil
    start, the title comes up over the boot backdrop (`#boot.under`), and the world loads behind it: models, systems in
    manifest order (time-sliced), shader warm-up. `G.worldReady` (Promise), `G.bootReady`, events `boot:progress`
    `{frac, text}` / `boot:ready`, `G.bootProgress()`. The loop runs only the early systems and draws nothing until ready.
-   The title (`ui.md`) shows the progress line with the `core.boot.*` texts, dims 继续 / 新的旅程 until ready, and keeps
+   The title (`ui.md`) shows the progress line with the `core.boot.*` texts, dims 「继续」 (Continue) / 「新的旅程」 (New Journey) until ready, and keeps
    a choice made early. `?autostart` / `?continue` (tests) wait for the world as before.
 2. **Warm-up by drawing** (`render/warmup.js` `warmDraw`): one representative per (materials, object kind, geometry
    attribute set) — 586 of them — is drawn through the real frame path (`G.renderFrame`: shadow pass, water mirror,
@@ -529,7 +529,7 @@ at 60 fps, worst 27.6 (town from above).
 Tried and dropped: a 5-of-9 shadow-tap early-out (no gain), half-resolution AO depth and a reordered GTAO loop (no gain).
 
 **Decision: 'high' at pixel ratio 1.5 cannot hold 60 fps on this class of machine without changing the picture.** A new
-step between 'med' and 'high': **'highfast'** — everything 'high' has, at pixel ratio 1.25 (settings name 浓彩·流畅;
+step between 'med' and 'high': **'highfast'** — everything 'high' has, at pixel ratio 1.25 (settings name 「浓彩·流畅」, Rich Colour · Smooth;
 `QUALITY.highfast` in `src/core/boot.js`). Measured (label gpu1_pr125): mean frame p50 **17.2 ms**, 31 of 42 scenes at
 60 fps, worst 20.3. The first-start auto-pick (`src/render/gpubench.js`) now gives 'high' only to a GPU clearly faster than
 this one (score ≤ 0.7 × REF), 'highfast' up to 1.8 × REF, then 'med', then 'low'; the settings menu lists all four.
@@ -546,10 +546,10 @@ Players reported phones "very blurry" and "stuttering". Cause: a phone got 'low'
 3× screen of 1170, 0.33 MP stretched 3× by the browser; dynamic resolution took it down to ~0.19 MP), and it ran
 uncapped, so a handset that could not hold 60 fps alternated 16 / 33 ms frames.
 
-**The 'mobile' tier** (`QUALITY.mobile` in `src/core/boot.js`, settings key `mobile`, label 掌上). Picked automatically on a
+**The 'mobile' tier** (`QUALITY.mobile` in `src/core/boot.js`, settings key `mobile`, label 「掌上」, Handheld). Picked automatically on a
 phone / tablet (`gpubench.js mobileDevice()`) when the player never chose a tier; an older automatic pick (the old phone
 'low', a desktop probe result) is re-picked; a tier chosen in settings is kept (the settings panel clears
-`settings.qualityAuto`). On a handheld the settings row lists 掌上 素描 淡彩 浓彩 ('highfast' is a desktop-GPU step).
+`settings.qualityAuto`). On a handheld the settings row lists 「掌上」 「素描」 (Sketch) 「淡彩」 (Light Colour) 「浓彩」 (Rich Colour) ('highfast' is a desktop-GPU step).
 Systems see `name: 'low'` and inherit every low cut; `G.quality.mobile` adds:
 
 | knob | where | mobile | low |
@@ -577,7 +577,7 @@ outermost grass and flower rings hidden); 2 = level 2 (also the painterly surfac
 upscale + CAS draws the last pass). Steps 1–2 follow the usual rule (two 1 s windows over 1.14 × budget); a lines step only
 when lite 2 is on AND frames stay over 40 ms (< 25 fps at the cap) for 4 s (`stepRule` in `render/dynres.js`). Recovery
 is one step per quiet spell (8 s, doubling if it pumps), deepest first: lines back to 1080 before the lite levels lift.
-Settings 「保持 1080」 (`settings.keep1080`, default off, row shown on handhelds only): `G.dynRes.limit = 2`, the lines
+Settings 「保持 1080」 (Keep 1080; `settings.keep1080`, default off, row shown on handhelds only): `G.dynRes.limit = 2`, the lines
 never drop, lite levels still do. Checked with a simulated slow phone (a `.tmp` script spinning 45 ms inside `renderFrame`
 after a 24 ms trial → cap 30): lite 1 after 2 s, lite 2 after 4 s, 900 lines after 10 s, 720 after 14 s, held; quiet → 900
 after 8 s, 1080 after 16 s, lite 0 after 32 s; with keep1080 on the same load stops at lite 2, 1080 lines.

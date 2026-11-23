@@ -1,6 +1,6 @@
-# heroine — 灯里 v3: a base figure dressed in separate layers (as built 2026-11-17, round 'finish')
+# heroine — 灯里 (Akari) v3: a base figure dressed in separate layers (as built 2026-11-17, round 'finish')
 
-> **Current player model.** 灯里 wears 魔女旅行装 by default. Rebuild her sculpted face and body with `tools/sculpt/figure/build-akari.mjs`, the silver hairstyle with `tools/sculpt/figure/build-hair2.mjs`, then run `node tools/costume/wardrobe-build.mjs --install`. The travelling coat and hat are built by `witch-traveller.mjs` and `witch-hat.mjs`. All three outfits share the body, facial targets and hair. The following v3 construction notes describe the earlier shrine outfit.
+> **Current player model.** 灯里 wears 魔女旅行装 (witch's travelling outfit) by default. Rebuild her sculpted face and body with `tools/sculpt/figure/build-akari.mjs`, the silver hairstyle with `tools/sculpt/figure/build-hair2.mjs`, then run `node tools/costume/wardrobe-build.mjs --install`. The travelling coat and hat are built by `witch-traveller.mjs` and `witch-hat.mjs`. All three outfits share the body, facial targets and hair. The following v3 construction notes describe the earlier shrine outfit.
 
 Owner files: `tools/costume/v3.mjs`, `tools/costume/v3-layers.mjs`, `tools/costume/v3-install.mjs`, `tools/costume/cull.mjs`,
 `tools/costume/keepskel.mjs`, the field designs
@@ -158,19 +158,19 @@ back: run, sprint, stop, jump, roll, glide, broom, swim), q7_dusk_night, q8_whol
 - Posed layer check (`tools/costume/check.mjs`) was not re-run this round; checked by in-game pictures only.
 
 ## Wardrobe (installed 2026-11-18)
-> Original-engine wardrobe (灯里: miko / swim_a / swim_b, `tools/costume/wardrobe-build.mjs`). In 《魔女之旅》 the table,
+> Original-engine wardrobe (灯里: miko / swim_a / swim_b, `tools/costume/wardrobe-build.mjs`). In 《魔女之旅》 (Wandering Witch) the table,
 > unlock rules, files and page are those of **"Wardrobe (journey)"** at the end of this file; the API, the change mechanics
 > (`rig.adopt`, `heroineOwned`) and the picture tool below still hold.
 
 The shipped heroine is the base figure with long silver hair and a brass hair cuff, in one of three outfits the player changes at any time
-(pause scroll → 衣装), worn everywhere (combat, broom, swimming, dialogue included). All three are owned from the start.
+(pause scroll → 「衣装」, Wardrobe), worn everywhere (combat, broom, swimming, dialogue included). All three are owned from the start.
 
 ### Files and ONE command
-| outfit id | name key → zh-CN | manifest id | file | dressed by | picture (衣装 page) |
+| outfit id | name key → zh-CN | manifest id | file | dressed by | picture (「衣装」 page) |
 |---|---|---|---|---|---|
 | `miko` (default) | `ui.outfit.miko` → 魔女旅行装 | `char_akari` (preload) | `models/chars/char_akari_miko.glb` | `tools/costume/witch-traveller.mjs` + `witch-hat.mjs` | `ui_outfit_miko` |
-| `swim_a` | `ui.outfit.swim_a` → 潮祭水着 | `char_akari_swim_a` (preload false) | `models/chars/char_akari_swim_a.glb` | `tools/costume/swim_a.mjs` (docs/api/heroine-swim-a.md) | `ui_outfit_swim_a` |
-| `swim_b` | `ui.outfit.swim_b` → 暮海水着 | `char_akari_swim_b` (preload false) | `models/chars/char_akari_swim_b.glb` | `tools/costume/swim_b.mjs` (docs/api/heroine-swim-b.md) | `ui_outfit_swim_b` |
+| `swim_a` | `ui.outfit.swim_a` → 潮祭水着 (tide-festival swimsuit) | `char_akari_swim_a` (preload false) | `models/chars/char_akari_swim_a.glb` | `tools/costume/swim_a.mjs` (docs/api/heroine-swim-a.md) | `ui_outfit_swim_a` |
+| `swim_b` | `ui.outfit.swim_b` → 暮海水着 (dusk-sea swimsuit) | `char_akari_swim_b` (preload false) | `models/chars/char_akari_swim_b.glb` | `tools/costume/swim_b.mjs` (docs/api/heroine-swim-b.md) | `ui_outfit_swim_b` |
 
 ```
 node tools/costume/wardrobe-build.mjs --install    # THE command: rebuild what is stale from the CURRENT base + hair, check, write files + manifest
@@ -181,7 +181,7 @@ node tools/costume/wardrobe-build.mjs              #   the same without the mani
    --rebuild-hair        first rebuild akari_hair2.glb (tools/sculpt/figure/build-hair2.mjs)
    --out-dir <dir>       a trial: the three files go there, nothing in assets/, no manifest
    --only miko,swim_a    --no-check (skip the swim coverage checks; refused together with --install)
-node tools/costume/wardrobe-pics.mjs               # then, when an outfit's look changed: the three 衣装 pictures (game render, ~1 min)
+node tools/costume/wardrobe-pics.mjs               # then, when an outfit's look changed: the three 「衣装」 pictures (game render, ~1 min)
 ```
 **How it stays one command.** Each outfit is DRESSED by its own build (witch-traveller.mjs + witch-hat.mjs / swim_a.mjs / swim_b.mjs) on whatever
 `assets/models/sculpt/akari_base.glb` is current (body, face + its 13 shapes, undergarment) into
@@ -276,13 +276,13 @@ carried), while tinted (duel tint, dark shade version: the new model wears it) a
 the new model). Nothing in the game tints or flashes the heroine herself today (setTint / flash serve enemies and duel
 rivals); her frozen look is the held pose + the ice effect in the world, both carried.
 
-### The 衣装 page (`src/ui/wardrobe.js`)
+### The 「衣装」 page (`src/ui/wardrobe.js`)
 Three cards: a painted picture of her in the outfit (the game's own render, standing, front three-quarter, cut out by
 difference matting over two flat grounds: `tools/costume/wardrobe-pics.mjs` + `wardrobe-pics.shot.js` → 384×640 WebP with
 alpha, ~27 KB each, `assets/textures/ui/ui_outfit_<id>.webp`; no text in them) on a washi plate with the outfit's own colour
 wash, inside an ink frame torn with the scroll's own deckle masks (`--mk-deckle-rough` outside, `--mk-deckle` inside; the frame
 turns vermilion on the worn card), then the name, one line of description, the worn seal on the picture's corner and the
-"Enter 换上" line. Checked at 1920×1080 and 1280×720 (`.tmp/play/wf_menu1920`, `wf_menu1280`): the picture fills 68 % of the
+"Enter 换上" (Enter: put on) line. Checked at 1920×1080 and 1280×720 (`.tmp/play/wf_menu1920`, `wf_menu1280`): the picture fills 68 % of the
 card. Re-make the pictures after a wardrobe rebuild that changes a look (`node tools/costume/wardrobe-pics.mjs`).
 
 ### Save
@@ -306,7 +306,7 @@ The game has no New Game+; a new game starts in the default outfit.
    science / astronomy words); optionally a pictogram in icons.js.
 5. **Build + checks.** `node tools/costume/wardrobe-build.mjs --install` (the coverage checks run on the final file and stop
    the install), then `node tools/costume/wardrobe-pics.mjs` (add the id to its default list), `node tools/check-i18n.mjs`.
-The 衣装 page lays the cards out in a row of three; a fourth needs `.wd-grid` columns widened (src/ui/wardrobe.js).
+The 「衣装」 page lays the cards out in a row of three; a fourth needs `.wd-grid` columns widened (src/ui/wardrobe.js).
 
 ## Hair 2 prototype and spring rig (historical measurements)
 
@@ -363,13 +363,13 @@ node tools/costume/wardrobe-pics.mjs
 ```
 
 ## Wardrobe (journey) — Elaina's four outfits (2026-11-22)
-Pause scroll → 衣装 (tab between 行囊 and 设置; touch: tap the tab, tap a card). Four cards, each with her painted picture,
-name and a two-line description; the worn card is sealed 着.
+Pause scroll → 「衣装」 (tab between 「行囊」 (Pack) and 「设置」 (Settings); touch: tap the tab, tap a card). Four cards, each with her painted picture,
+name and a two-line description; the worn card is sealed 「着」 (Worn).
 
 | id | zh-CN | manifest model | file | built by | picture | the player may pick it |
 |---|---|---|---|---|---|---|
-| `apprentice` | 日常服 | `char_elaina_apprentice` (preload) | `models/journey/elaina_apprentice.glb` | `tools/journey/build-cast.mjs --only apprentice` | `ui_outfit_apprentice` | from `majo_named` |
-| `elaina` | 魔女服 | `char_elaina` (preload) | `models/journey/elaina.glb` | `tools/journey/build-cast.mjs --only elaina` | `ui_outfit_elaina` | from `majo_named` |
+| `apprentice` | 日常服 (everyday clothes) | `char_elaina_apprentice` (preload) | `models/journey/elaina_apprentice.glb` | `tools/journey/build-cast.mjs --only apprentice` | `ui_outfit_apprentice` | from `majo_named` |
+| `elaina` | 魔女服 (witch's robe) | `char_elaina` (preload) | `models/journey/elaina.glb` | `tools/journey/build-cast.mjs --only elaina` | `ui_outfit_elaina` | from `majo_named` |
 | `swim_a` | 潮祭水着 | `char_elaina_swim_a` (preload false) | `models/journey/elaina_swim_a.glb` | `tools/journey/swimwear.mjs` | `ui_outfit_swim_a` | from `majo_finished` |
 | `swim_b` | 暮海水着 | `char_elaina_swim_b` (preload false) | `models/journey/elaina_swim_b.glb` | `tools/journey/swimwear.mjs` | `ui_outfit_swim_b` | from `majo_finished` |
 
@@ -424,7 +424,7 @@ grounds and broke the matting). `ui_outfit_miko.webp` (the old heroine's picture
 
 **The page** (`src/ui/wardrobe.js`, strings `src/locales/zh-CN/ui.wardrobe.js`): 4 columns; a card the player may not pick yet
 (and is not wearing) shows no picture — the robe-stand pictogram, a lock and when it opens (`ui.wardrobe.lock.<flag>`);
-tapping it shakes the card. On touch the line under the selected card reads 轻触换上 instead of the Enter key.
+tapping it shakes the card. On touch the line under the selected card reads 「轻触换上」 (Tap to put on) instead of the Enter key.
 
 **A fifth outfit**: a model on the same skeleton (+ manifest row with chains), a row in `OUTFITS` (with `unlock`), the
 strings in `ui.wardrobe.js`, a pictogram in `icons.js`, a `WASH` colour in `ui/wardrobe.js`, the id in wardrobe-pics' default

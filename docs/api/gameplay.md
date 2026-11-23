@@ -13,29 +13,29 @@ I replaced the gameplay stub (G.gameplay) with seven modules under src/gameplay/
   - Fire, sun or E then calls G.gameplay.onGreatLanternTry(id). With no hook set it lights directly.
   - igniteGreatLantern plays the moment: fx 'greatlantern', rings, a sigil, a timed light pillar, sky flash, shake and hitstop, plus a permanent light of radius 46, then emits 'greatlantern:lit'.
 - **Rest points:** shrine_save, village_save, fox_save and town_save, plus every lit stone lantern. I built a save-lantern post at the village, fox and town anchors. Resting = checkpoint + full heal and mana + G.save.write() + toast + 'checkpoint' {id, pos}.
-- **Death:** on 'player:died' the screen fades out. respawnPlayer() revives her at the checkpoint, takes 10% of her 星屑 (at most 60), fades back in and shows toasts.
+- **Death:** on 'player:died' the screen fades out. respawnPlayer() revives her at the checkpoint, takes 10% of her 星屑 (stardust; at most 60), fades back in and shows toasts.
 - **Pickups:** stardust (split into up to 8 stars), heart, mana / mana_orb, and every food and ingredient kind props drop. Shapes are an extruded star, heart and orb drawn as instanced meshes; food uses the prop models.
   - They hop out, bounce, bob and sparkle, then magnet to her. Hearts and orbs only magnet when she needs them.
   - They emit 'item:collected', and food goes into the inventory.
 - **Collectibles** (deterministic data in placements.js, positions checked against colliders, water and terrain):
-  - 24 月之泪 on island tops, roofs, the town tower, mushroom caps, mountain ledges, the 雾见泉 pond and the cape. You collect them by touch, including from the broom.
-  - 10 绘马 lore tablets: a two-sisters legend in the locale, shown with G.ui.say.
+  - 24 月之泪 (moon tears) on island tops, roofs, the town tower, mushroom caps, mountain ledges, the 雾见泉 (Mistview Spring) pond and the cape. You collect them by touch, including from the broom.
+  - 10 绘马 (ema) lore tablets: a two-sisters legend in the locale, shown with G.ui.say.
   - 12 chests of my own, built with makeChest, with loot tables that include charm and broom upgrades.
-  - 5 fox kits (ani_fox at 0.62 scale, Eating loop, yips and hops), the kite on fi_kite, 8 glow mushrooms, 6 sunflower seed heads, 3 firefly clusters and 3 lotus lamps on 镜湖 (lit by fire, sun or E from the broom).
+  - 5 fox kits (ani_fox at 0.62 scale, Eating loop, yips and hops), the kite on fi_kite, 8 glow mushrooms, 6 sunflower seed heads, 3 firefly clusters and 3 lotus lamps on 镜湖, Mirror Lake (lit by fire, sun or E from the broom).
   - 3 moon-tear altars open an openShop list: 4 tears buy +1 hp or mana level.
 - **Races:** 3 courses (shrine 6 rings, dusk slalom 8, night sky-way 11).
   - Only the first ring shows until a race starts. The race has a 3-2-1 countdown with taiko and broom auto-mount.
   - The HUD timer uses setTracker, and a compass marker points to the next ring, which also pulses.
   - Medals give first-time 星屑 rewards, best times go to G.state.races, and 'race:start' / 'race:finish' are emitted.
   - A race is abandoned if she is off the broom for more than 3 s, more than 260 m off course, or very slow.
-- **Updraft vents:** 3 on 霜见岳 and 1 beside the palace rock, height 175. Each has a permanent elements updraft, a stone ring base, two scrolling helix ribbons and an fx 'updraft' emitter when near.
+- **Updraft vents:** 3 on 霜见岳 (Frostview Peak) and 1 beside the palace rock, height 175. Each has a permanent elements updraft, a stone ring base, two scrolling helix ribbons and an fx 'updraft' emitter when near.
 - **Mushroom caps:** landing on a G.flora.bouncePads cap launches her at the pad's power; holding C lands softly instead.
-- **月障:** a lattice dome shader over the palace (ellipsoid rx 90 / ry 185) with a ripple where she hits it.
+- **月障 (moon barrier):** a lattice dome shader over the palace (ellipsoid rx 90 / ry 185) with a ripple where she hits it.
   - It pushes her out along its surface, turns the broom outward and shows a hint.
   - When 3 great lanterns other than gl_moon are lit, it dissolves with a gold burn edge, bursts and a toast, and emits 'barrier:down'.
 - **Crystal puzzle:** the three pedestals turn in 30° steps by E, by a sun or moon hit, or by a moon cast aimed at one.
   - A light beam falls from the sky onto pedestal 0, and visible beams link each pedestal that is aimed correctly.
-  - The last link into 晶灯 solves it: 'puzzle:solved' {id:'crystal'} and the onPuzzleSolved hook. With no story running, it makes gl_crystal ready.
+  - The last link into 晶灯 (Crystal Lamp) solves it: 'puzzle:solved' {id:'crystal'} and the onPuzzleSolved hook. With no story running, it makes gl_crystal ready.
 - **Shops:** the village dango stall and the town shop (food plus broom / charm / hp / mana upgrades at rising prices) through G.ui.openShop. Upgrades go into G.state.upgrades, then G.player.recalcStats().
 - **UI providers:** mapMarkers (rest points, shops, altars, race starts, and discovered uncollected tears / chests / 绘马), items (inventory with names, descriptions, counts, usable flag) and lore (绘马 read so far).
 - **Persistence:** everything is saved in G.state (lanterns, greatLanterns, collected, lore, races, upgrades, inventory, checkpoint) plus G.state.gp, which start() fills with defaults.
@@ -203,7 +203,7 @@ mode (`h`, `h0`, `top`, `abs`, `pool`, `lip`, `clear` = first height above every
   clock. Next ring bright + compass marker (`setMarkers(…, 'race')`), HUD tracker; given up when off the broom > 4 s,
   > 320 m from the next ring or > 300 s. Medals calibrated by the acceptance bot at cruise (heart 50.3 s, coast 95.6 s,
   vale 66.6 s; gold ≈ ×0.88, silver ≈ ×1.04, bronze ≈ ×1.35); a better medal pays the difference of `RING_PAY`.
-- Journal: fourth sub-tab 「旅途见闻」 (menu.js → wilds-page.js): 迷星 + the note lines, one entry per region
+- Journal: fourth sub-tab 「旅途见闻」 (Sights Along the Road; menu.js → wilds-page.js): 迷星 + the note lines, one entry per region
   (`WILD_REGIONS`, `regionOf(x, z)`: places found, stars, chests, the names found), the ring courses (best, medal).
 - Map: discovered landmarks (pin + name, small ones without a label), sighted uncollected stars, seen unopened chests /
   unlit lanterns, ring starts. story.js concatenates `G.wilds.markers()`; without the story the gameplay fallback does.
@@ -255,20 +255,20 @@ system. Placements reuse `resolveAt` of wilds.js (landmark-local records).
   `majo_named`). A traveller near her shows on the compass (`setMarkers(…, 'errand')`), once met on the map. Talking
   (interact, also from the broom / touch) plays a script; the first choice accepts. Needs a spell she lacks (fire, ice)
   → the traveller only tells the trouble.
-  - `er_letter` 隔着荒原的信 — Marta (north farm, moor) → Greta (west farm, vale) → the one-line reply back. Keepsake 母亲的面包方子.
-  - `er_hat` 风里的帽子 — the painter Otto under the swing oak; a gust in the talk tears his felt hat off. It rides the wind
+  - `er_letter` 隔着荒原的信 (A Letter Across the Moor) — Marta (north farm, moor) → Greta (west farm, vale) → the one-line reply back. Keepsake 母亲的面包方子 (Mother's bread recipe).
+  - `er_hat` 风里的帽子 (The Hat in the Wind) — the painter Otto under the swing oak; a gust in the talk tears his felt hat off. It rides the wind
     along `HAT.path` (14–34 m up, 7 m/s, shies sideways when she reaches for it, leaf trail), and settles in the
     tallest moor snag if nobody catches it. A wind spell whose line passes within ~3 m catches it and carries it back
-    toward her for 1.6 s (also knocks it out of the snag). Touch it (3.3 m on the broom) → return it. Keepsake 荒原速写.
-  - `er_stove` 牧羊人的炉子 — Hanna at the shepherd hut; fire on the iron stove by the door (kind 'lantern' reactor).
-  - `er_ford` 断桥边的南瓜车 — the carter Tomas below the broken bridge; ice on the ford (a 'water' reactor spanning the
+    toward her for 1.6 s (also knocks it out of the snag). Touch it (3.3 m on the broom) → return it. Keepsake 荒原速写 (Moor sketch).
+  - `er_stove` 牧羊人的炉子 (The Shepherd's Stove) — Hanna at the shepherd hut; fire on the iron stove by the door (kind 'lantern' reactor).
+  - `er_ford` 断桥边的南瓜车 (The Pumpkin Cart by the Broken Bridge) — the carter Tomas below the broken bridge; ice on the ford (a 'water' reactor spanning the
     brook, crossing line square to `eastbrook`, water edges sampled from the terrain) lays an ice sheet + walkable
     platform for 45 s; he pushes the cart across (held frozen while he crosses), thanks on the far bank.
-  - `er_stars` 不肯落下的星星 — Ilse at the city-road shrine; once 6 stray stars are found she hears the note's first line
-    and knows who wrote it (the careless witch's note, wilds.js). Keepsake 空星瓶.
+  - `er_stars` 不肯落下的星星 (The Stars That Won't Fall) — Ilse at the city-road shrine; once 6 stray stars are found she hears the note's first line
+    and knows who wrote it (the careless witch's note, wilds.js). Keepsake 空星瓶 (Empty star jar).
 - An accepted errand owns the HUD tracker within `TRACK_NEAR` (700 m) of its next target (always once both episodes
   are done; the flying hat always) — `quests.js syncUi` asks `G.errands.tracker()` first. Rewards: 60–90 星屑 + bread
-  (dango) / produce via `G.wilds.grant`. Journal: a 「路边的托付」 row on the 旅途见闻 page (objectives, done lines, keepsakes).
+  (dango) / produce via `G.wilds.grant`. Journal: a 「路边的托付」 (Roadside Requests) row on the 「旅途见闻」 page (objectives, done lines, keepsakes).
 - Never in story places: a traveller with no errand under way steps aside while the current main step's target is
   within `ERRAND_CLEAR` (220 m); talks only in `G.mode === 'play'`, not during a race, a spar or story busy.
 

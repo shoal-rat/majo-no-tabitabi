@@ -10,7 +10,7 @@ lexicon:
 - loc = src/locales/zh-CN/<ns>.js; read via t()/raw(); ns filename starts with owning system name
 - J = docs/JOURNEY.md (source of truth; wins all conflicts)
 - api = docs/api/<system>.md; trailing "round/as built" sections = this game
-- moon = inherited Moonveil engine docs (docs/DESIGN.md + early api sections: shrine/灵诀/影祟/月帷)
+- moon = inherited Moonveil engine docs (docs/DESIGN.md + early api sections: shrine/Spirit Arts/shade/Moonveil)
 - play = $node tools/play.mjs (headless, throwaway profile, autostart=1 writes no save)
 - acc = `tools/acceptance/journey-{story,activities,errands,flight,city-clouds,eclipse}.mjs`
 - q = G.quality tier mobile|low|med|high (phones default mobile, ≥1080 lines)
@@ -48,6 +48,7 @@ F credits `src/locales/zh-CN/ui.js` credits: "Director: Shoal_Rat" · "github.co
 F wardrobe: swimsuits unlock only after finished (heroine 14–15 in ep1); designs modest; during an active quest the story picks the outfit.
 F city: City of Magic = vertical city (tall houses, tall gate, dim street canyons, life on balconies/broom). N shrink|lower|brighten canyons.
 F readme: README.md = Chinese (default) · README.en.md = English · keep in sync.
+F lang: dev-facing text (docs, templates, bot replies, comments, AGENTS.md) = English · player-facing (README*, loc, bug.yml, issue #7, CREDITS) keeps its language.
 
 ## verify
 V always: $node tools/check-i18n.mjs src · $node tools/dead-code.mjs

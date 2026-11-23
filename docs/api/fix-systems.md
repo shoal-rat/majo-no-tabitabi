@@ -88,7 +88,7 @@ Builds used `--systems fx,audio,ui,physics,elements,sky,terrain,flora,structures
 - **t-gohei2.js:** stick direction while idle went from (0.08, 0.66, 0.75) to (-0.2, 0.93, 0.3); the walking angle is unchanged.
 - **t-roll.js** (slope 0.23): boulder_m and boulder_l roll about 19–20 m in 4 s (vmax 8.7 m/s, still rolling); the iron ball rolls 19.3 m; logs and barrels stop after about 1.8 m. Impact events carry relSpeed and impulse.
 - **t-leak.js:** 410 cycles of register / status / unregister; objects 184 → 184, geometries 28 → 28, all shells hidden, emitters 0, lights 0.
-- **t-ui.js:** cooling = true with --cd 0.75; charge 0.54; wet icon on; toast z-index 8; ghost glyph for guard is 界 with the art kicker. Looked at fix-ui/hud-sun.png (HUD with charge ring, cooldown sweep, gauge, status and toast) and learn-guard.png and hud-night-broom.png (the toasts sit above the learn modal; the guard name and description show).
+- **t-ui.js:** cooling = true with --cd 0.75; charge 0.54; wet icon on; toast z-index 8; ghost glyph for guard is 「界」 (ward) with the art kicker. Looked at fix-ui/hud-sun.png (HUD with charge ring, cooldown sweep, gauge, status and toast) and learn-guard.png and hud-night-broom.png (the toasts sit above the learn modal; the guard name and description show).
 - **t-place.js:** inWall 0, high 0 (fox village 2, which are deliberately stacked jars), onRoad 0, nearAnchor 0 for village, town, fox village and shrine. Looked at fix-place/place-village.png (goods now beside the houses) and place-town.png.
 - check-i18n passes for src/audio, ui, props, player, physics and elements; `build --check` passes for every changed file.
 

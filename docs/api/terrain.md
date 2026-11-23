@@ -12,11 +12,11 @@ The terrain system replaces the stub, and it works in headless play.mjs runs. T.
   - land by Veil: spring-green meadow, olive-gold dusk with soft red patches, dark teal-indigo night with thin pulsing teal/violet glow veins that fade with distance;
   - large- and mid-scale noise so nothing is flat;
   - a warm tint on the sunflower hill;
-  - farm plots around 朝颜村 (rice, tilled soil, grain, vegetables, with dikes), kept off the shrine hill;
+  - farm plots around 朝颜村, Morning Glory Village (rice, tilled soil, grain, vegetables, with dikes), kept off the shrine hill;
   - gravel river banks with damp grass beside them;
   - shore sand, wet sand, and sea bed under the water;
   - steep-slope rock with tall Voronoi facet planes that tilt the normal, dark seams and strata bands;
-  - snow line on 霜见岳 that thins on steep faces;
+  - snow line on 霜见岳 (Frostview Peak) that thins on steep faces;
   - worn earth footpaths with trampled edges, turning into stone slabs inside settlements;
   - plazas: raked gravel rings at the shrine, stone at the town, palace, lake isle, crystal field and wind shrine, dirt at the village and fox village;
   - bare earth in craters and rock on raised mounds;
@@ -25,7 +25,7 @@ The terrain system replaces the stub, and it works in headless play.mjs runs. T.
 - **Craters and scorch marks.** On 'terrain:deformed' the chunks currently in view are rebuilt in the same frame, the height texture rows are re-uploaded, and craters get a soft scorched rim. 'terrain:scorch' paints ragged marks that fade by themselves: wet in about 45 s, frost in about 75 s, burn in about 200 s. The fade does about one pass per second over the active 16×16 tiles, with row-range uploads.
 
 **Water (src/world/water.js)**
-- One flat 9000 m sheet at y=0 that follows the camera, so there is no visible edge of the world. It covers the sea, 镜湖, the rivers, the spring pond, 月池 and any crater dug below sea level.
+- One flat 9000 m sheet at y=0 that follows the camera, so there is no visible edge of the world. It covers the sea, 镜湖 (Mirror Lake), the rivers, the spring pond, 月池 (Moon Pool) and any crater dug below sea level.
 - Shader: MeshPhongMaterial customised and passed through hookMaterial, so the Veil lighting and height fog apply. It provides:
   - colour by depth from the baked height texture;
   - alpha that fades toward the shore;
@@ -179,11 +179,11 @@ System object: export const terrainSystem = { name: 'terrain', pausable: true, i
   `textures.bakeWallMask()` from the registered box colliders (walls > 1.2 m) and low floor / plinth platforms
   (reach 4 m). Shader: damp, darker, cooler ground along every wall; leaf drifts against walls in yards. Builders that
   register walls after `start()` are not in it.
-- Settlements: dirt yards (村 / 狐火之里) get worn pale centres, damp packed patches, pale dust, clay, sole prints,
-  two cart ruts, leaf litter (狐火之里: dense, thinner in the walked centre); flagstone plazas (万灯镇, palace,
+- Settlements: dirt yards (the village / Foxfire Hamlet 狐火之里) get worn pale centres, damp packed patches, pale dust, clay, sole prints,
+  two cart ruts, leaf litter (狐火之里: dense, thinner in the walked centre); flagstone plazas (Myriad Lantern Town 万灯镇, palace,
   isle / crystal sites, wind shrine with snow drifts) get worn lanes, stained slabs, moss toward the rim, wind-blown
   leaves; the raked-gravel shrine forecourt keeps its rings plus wall damp.
-- 薄暮林: puddles in damp hollows and path ruts (dark film + sky sheen in emission). 常夜原: ash-blue soil patches,
+- 薄暮林 (Dusk Woods): puddles in damp hollows and path ruts (dark film + sky sheen in emission). 常夜原 (Evernight Plain): ash-blue soil patches,
   faintly glowing lichen rosettes (< 40 m). Beaches: wind ripples on dry sand, dune-grass fringe, wrack line, wet band.
 - Rivers: voronoi bed cobbles through the shallows, pale gravel bars, undercut bank shadow with a lit grass edge.
 ### Cost
