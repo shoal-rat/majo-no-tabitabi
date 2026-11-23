@@ -220,7 +220,17 @@ export function flowerBox(g, P, x, y, z, w, lv = homeDetail(), rnd = Math.random
   }
 }
 const _ico = new Map();
-function icoGeo(r) { let gg = _ico.get(r); if (!gg) { gg = new THREE.IcosahedronGeometry(r, 0); gg.userData.shared = true; _ico.set(r, gg); } return gg; }
+/** 20-triangle blob with round (radial) normals: leaf mounds and blossom read soft, not faceted. */
+function icoGeo(r) {
+  let gg = _ico.get(r);
+  if (!gg) {
+    gg = new THREE.IcosahedronGeometry(r, 0);
+    const P = gg.attributes.position, N = gg.attributes.normal;
+    for (let i = 0; i < P.count; i++) { _v.set(P.getX(i), P.getY(i), P.getZ(i)).normalize(); N.setXYZ(i, _v.x, _v.y, _v.z); }
+    gg.userData.shared = true; _ico.set(r, gg);
+  }
+  return gg;
+}
 export { icoGeo };
 
 // ---------------------------------------------------------------------------------------------------------------
