@@ -14,6 +14,8 @@ import { box, cone, cyl, sphere, torus } from '../../core/geo.js';
 import { mat, beam, clothify, texGlow, texMat } from './kit.js';
 import { mulberry32 } from '../../core/util.js';
 import { modelGable, modelHip, chimney } from './city-roofs.js';
+import { addBay, bayRange, startBays, BAY } from './city-bays.js';
+import { hash01 } from './city-geo.js';
 
 export const H = BELL.y;
 export const WH = 24; // rampart walk height above the street
@@ -275,12 +277,56 @@ function section(g, w, d, y0, n, FH, ti, dz = 0) {
     bw = Math.max(1, Math.round(w / 1.6)),
     bd = Math.max(1, Math.round(d / 1.6));
   b(g, 0, y, dz, w, hgt, d, bodyMat[ti]);
+  _faces?.push({ w, d, y0, n, ti, dz, bw, bd });
   facadeQuad(g, fm, w, hgt, 0, y, dz + d / 2 + 0.02, 0, bw, n);
   facadeQuad(g, fm, w, hgt, 0, y, dz - d / 2 - 0.02, Math.PI, bw, n);
   facadeQuad(g, fm, d, hgt, w / 2 + 0.02, y, dz, Math.PI / 2, bd, n);
   facadeQuad(g, fm, d, hgt, -w / 2 - 0.02, y, dz, -Math.PI / 2, bd, n);
 }
 
+// ---- modelled window bays (builders/city-bays.js) over the painted ones, near the camera ----
+let _faces = null; // the sections of the town house being built (their faces get bays)
+/**
+ * Register a town house's bays: every painted window of its sections, in world space, with this house's style (shutter
+ * colour, how many flower boxes / curtains / balconettes). `skip` lists front rectangles that something else covers
+ * (balcony doors, the oriel): [y0, y1, x0, x1] in the house frame.
+ */
+function registerBays(faces, skip, x, z, base, yaw, seed) {
+  const c = Math.cos(yaw),
+    s = Math.sin(yaw);
+  const allShut = hash01(seed, 31) < 0.35,
+    boxP = [0.06, 0.25, 0.5][Math.floor(hash01(seed, 37) * 3)],
+    railP = hash01(seed, 41) < 0.3 ? 0.3 : 0,
+    curP = 0.2 + 0.45 * hash01(seed, 43),
+    shut = seed % 7,
+    cur = Math.floor(hash01(seed, 47) * 5),
+    bloom = Math.floor(hash01(seed, 53) * 6);
+  let k = 0;
+  for (const f of faces)
+    for (const [ry, ox, oz, W, nb] of [[0, 0, f.dz + f.d / 2 + 0.02, f.w, f.bw], [Math.PI, 0, f.dz - f.d / 2 - 0.02, f.w, f.bw], [Math.PI / 2, f.w / 2 + 0.02, f.dz, f.d, f.bd], [-Math.PI / 2, -f.w / 2 - 0.02, f.dz, f.d, f.bd]]) {
+      const xc = Math.cos(ry),
+        xs = -Math.sin(ry),
+        Wb = W / nb;
+      for (let m = 0; m < f.n; m++)
+        for (let j = 0; j < nb; j++, k++) {
+          const xb = -W / 2 + (j + 0.5) * Wb,
+            hy = f.y0 + m * 3.15;
+          if (!ry && skip.some(([y0, y1, x0, x1]) => hy + 1.6 > y0 && hy + 1.6 < y1 && xb + Wb * 0.36 > x0 && xb - Wb * 0.36 < x1)) continue;
+          // the painted cell under this bay (facadeTex: 2 bays x 2 storeys): shutters, arch, flower box
+          const q = j % 2,
+            r = m % 2 ? 0 : 1;
+          let fl = (q + r) % 2 ? BAY.ARCH : BAY.SHUT;
+          if (allShut) fl |= BAY.SHUT;
+          if (fl & BAY.SHUT && hash01(seed + k, 7) < 0.07) fl |= BAY.CLOSED;
+          if (hash01(k, seed) < boxP) fl |= BAY.BOX;
+          else if (!(fl & BAY.ARCH) && hash01(seed, k * 1.3) < railP) fl |= BAY.RAIL;
+          if (!(fl & BAY.CLOSED) && hash01(k * 0.7, seed + 3) < curP) fl |= BAY.CURTAIN;
+          const hx = ox + xc * xb,
+            hz = oz + xs * xb;
+          addBay(BELL.x + x + hx * c + hz * s, base + hy, BELL.z + z - hx * s + hz * c, yaw + ry, Wb / 1.6, fl, f.ti, shut, cur, bloom + (k % 3), hash01(seed, k + 0.5));
+        }
+    }
+}
 /** Plastered block with painted windows for other builders (the inn's upper floors): w x d, n storeys of 3.15 m from y0. */
 export function paintedBlock(g, w, d, y0, n, tint = 0) {
   section(g, w, d, y0, n, 3.15, tint % 4);
@@ -315,6 +361,8 @@ export function townhouse(site, o) {
     s = Math.sin(yaw);
   const W = (lx, lz) => [x + lx * c + lz * s, z - lx * s + lz * c];
   const life = o.life;
+  _faces = bayRange() ? [] : null;
+  const covered = [];
   // shop floor in dressed stone
   b(g, 0, 0.25, 0, w + 0.3, 0.5, d + 0.3, foot);
   b(g, 0, GF / 2, 0, w + 0.1, GF, d + 0.1, sill);
@@ -381,9 +429,23 @@ export function townhouse(site, o) {
         for (const sx of [-1, 1]) g.add(beam(bx + sx * bw * 0.38, y - 1.0, front + 0.02, bx + sx * bw * 0.38, y - 0.1, front + bd * 0.85, 0.12, 0.12, wood));
       }
       b(g, bx, y + 1.15, front + 0.04, 1.0, 2.1, 0.06, doorM);
+      covered.push([y, y + 3.15, bx - 0.55, bx + 0.55]);
       if ((seed + k) % 2 === 0) {
         b(g, bx + bw / 2 - 0.05, y + 0.75, front + bd - 0.05, 0.12, 1.5, 0.12, wood);
         g.add(sphere(0.24, orb, bx + bw / 2 - 0.05, y + 1.7, front + bd - 0.05, 9, 7));
+      }
+      if (_faces && !lite) {
+        // turned balustrades along the rails (city-bays.js, near the camera only): front run and both sides
+        for (const [lx, lz, ry, len] of [[bx, front + bd - 0.05, 0, bw - 0.1], [bx - bw / 2 + 0.05, front + bd / 2, -Math.PI / 2, bd - 0.1], [bx + bw / 2 - 0.05, front + bd / 2, Math.PI / 2, bd - 0.1]]) {
+          const np = Math.max(1, Math.round(len)),
+            ux = Math.cos(ry),
+            uz = -Math.sin(ry);
+          for (let i = 0; i < np; i++) {
+            const t = ((i + 0.5) / np - 0.5) * len,
+              [px, pz] = W(lx + ux * t, lz + uz * t);
+            addBay(BELL.x + px, base + y + 0.08, BELL.z + pz, yaw + ry, len / np, BAY.PANEL, seed % 3, 0, 0, 0, 0);
+          }
+        }
       }
       const [px, pz] = W(bx, front + bd / 2);
       site.platBox(px, pz, bw / 2, bd / 2, yaw, base + y + 0.08, 0.3);
@@ -397,6 +459,7 @@ export function townhouse(site, o) {
       ow = Math.min(2.4, w * 0.45),
       ox = doorX * 0.2;
     b(g, ox, y0 + FH, d / 2 + 0.45, ow, FH * 2, 0.9, bodyMat[ti]);
+    covered.push([y0 - 0.2, y0 + FH * 2 + 0.2, ox - ow / 2 - 0.2, ox + ow / 2 + 0.2]);
     facadeQuad(g, facadeMat(ti), ow, FH * 2, ox, y0 + FH, d / 2 + 0.92, 0, 1, 2);
     prism(g, ow + 0.3, 0.9, 1.2, roofM, ox, y0 + FH * 2, d / 2 + 0.45);
     b(g, ox, y0 - 0.08, d / 2 + 0.45, ow + 0.2, 0.2, 1.1, trim);
@@ -440,6 +503,8 @@ export function townhouse(site, o) {
     chimney(g, cx, cz, top, tip, seed);
   }
   site.add(g, x, base, z, yaw);
+  if (_faces) registerBays(_faces, covered, x, z, base, yaw, seed);
+  _faces = null;
   site.footprint(x, z, yaw, w / 2 + 0.3, d / 2 + 0.3, base + h, seed);
   site.colBox(x, z, w / 2, d / 2, yaw, base, base + h);
   if (st > k1) {
@@ -1189,6 +1254,7 @@ export async function layoutHouses(ctx, site, taken) {
     n++;
   }
   await ctx.step('mages:core');
+  startBays(ctx);
   return n;
 }
 
