@@ -6,9 +6,9 @@
 // Footprint, colliders, roof landing pads and the eave record are exactly those of bellcrown.js house() (the story's
 // door anchors stand where they stood).
 import * as THREE from 'three';
-import { mat, bevelBox } from './kit.js';
+import { mat } from './kit.js';
 import { mulberry32 } from '../../core/util.js';
-import { cbox, cbeam, slab, homeWindow, homeDoor, tiledRoof, chimney, homeDetail, icoGeo } from './home-parts.js';
+import { cbox, cbeam, slab, stone, homeWindow, homeDoor, tiledRoof, chimney, homeDetail, icoGeo } from './home-parts.js';
 
 const ROOF = [0xd39e43, 0xbe532f, 0x5a6a7b, 0xd0723a, 0xa8472d, 0x9a5938, 0xc99456];
 const WALL = [0xeee1c5, 0xe7c5a4, 0xd6b398, 0xe2c7a5];
@@ -28,11 +28,11 @@ function palette(seed, rnd, style) {
     roof, body: mat.plaster(body), timber, trim, stoneL, stoneD,
     win: {
       surround: style === 'plain' ? stoneL : trim, head: style === 'plain' ? stoneL : timber, sill: stoneL,
-      sash: mat.paint(rnd() < 0.5 ? 0xf1e8d6 : 0xe6d6b8), glass: mat.paint(0x7c9cab, { spec: 0.35, specPower: 60, detail: 0.2 }),
+      sash: mat.paint(rnd() < 0.5 ? 0xf1e8d6 : 0xe6d6b8), glass: mat.paint(0x7c9cab),
       shutter, iron: mat.paint(0x3b3836), box: mat.wood(0x8a6446), soil: mat.stone(0x6d5546),
       leaf: mat.paint(0x6f9a58), bloom: [[0xe8737c, 0xf6f1ec], [0xf2c54f, 0xe87a5a], [0xd889c8, 0xf6f1ec], [0xef8f6a, 0xf2d36b]][Math.floor(rnd() * 4)].map((c) => mat.paint(c)),
     },
-    door: { frame: style === 'plain' ? stoneL : timber, leaf: mat.wood(DOOR[Math.floor(rnd() * DOOR.length)], { detail: 0.6 }), iron: mat.paint(0x3b3836), step: stoneD, glass: mat.paint(0x7c9cab), hood: tileMat(tone(roof, 0.9)) },
+    door: { frame: style === 'plain' ? stoneL : timber, leaf: mat.wood(DOOR[Math.floor(rnd() * DOOR.length)], { detail: 0.5 }), iron: mat.paint(0x3b3836), step: stoneD, glass: mat.paint(0x7c9cab), hood: tileMat(tone(roof, 0.9)) },
     roofP: {
       deck: tileMat(tone(roof, 0.6, 0.04)), tiles: [tileMat(roof), tileMat(tone(roof, 1.07, 0.02)), tileMat(tone(roof, 0.92, -0.02))],
       ridge: tileMat(tone(roof, 0.86)), mortar: mat.stone(0xd9cfbd), fascia: mat.wood(0x7a5642), rafter: mat.wood(0x6a4a3a), barge: mat.wood(0x8a6248),
@@ -64,7 +64,7 @@ function plinth(g, P, w, d, gap, lv, rnd) {
   }
   function place(ax, c, m, l, yy, hh) {
     const hgt = hh - 0.025, dep = p + 0.02 + rnd() * 0.025;
-    const st = ax === 'x' ? bevelBox(l, hgt, dep, P.stoneD, m, yy + hh / 2, c, 0.035) : bevelBox(dep, hgt, l, P.stoneD, c, yy + hh / 2, m, 0.035);
+    const st = ax === 'x' ? stone(l, hgt, dep, P.stoneD, m, yy + hh / 2, c, 0.035) : stone(dep, hgt, l, P.stoneD, c, yy + hh / 2, m, 0.035);
     g.add(st);
   }
   // water table: a weathered cap stone over the plinth

@@ -16,6 +16,8 @@ export function homeDetail() {
   return q.mobile || q.name === 'low' ? 0 : q.name === 'med' ? 1 : 2;
 }
 function mesh(geo, m) { const o = new THREE.Mesh(geo, m); o.castShadow = true; o.receiveShadow = true; return o; }
+/** kit bevelBox (worn top arrises) above the phone tier, a plain box on it. */
+export function stone(w, h, d, m, x, y, z, b = 0.03) { return homeDetail() === 0 ? slab(w, h, d, m, x, y, z) : bevelBox(w, h, d, m, x, y, z, b); }
 
 // ---------------------------------------------------------------------------------------------------------------
 // Chamfered box: every edge cut by b (6 faces + 12 bevels + 8 corners = 44 triangles, flat normals), so arrises
@@ -57,9 +59,9 @@ export function chamferGeo(w, h, d, b = 0.02) {
   _cg.set(key, g);
   return g;
 }
-/** Chamfered box centred on (x, y, z); b <= 0 gives a plain box (the phone tier's small parts). */
+/** Chamfered box centred on (x, y, z); b <= 0, and every box on phones / low, gives a plain box (12 triangles). */
 export function cbox(w, h, d, m, x = 0, y = 0, z = 0, b = 0.02) {
-  if (b <= 0) return slab(w, h, d, m, x, y, z);
+  if (b <= 0 || homeDetail() === 0) return slab(w, h, d, m, x, y, z);
   const o = mesh(chamferGeo(w, h, d, b), m);
   o.position.set(x, y, z);
   return o;
@@ -73,11 +75,12 @@ export function cbeam(x0, y0, z0, x1, y1, z1, w, h, m, b = 0.018, up = null) {
   _dir.set(x1 - x0, y1 - y0, z1 - z0);
   const len = _dir.length();
   _dir.multiplyScalar(1 / len);
+  if (b <= 0 || homeDetail() === 0) b = 0;
   _up.copy(up || _ya.set(0, 1, 0));
   if (Math.abs(_up.dot(_dir)) > 0.98) _up.set(1, 0, 0);
   _xa.crossVectors(_up, _dir).normalize();
   _ya.crossVectors(_dir, _xa);
-  const o = mesh(chamferGeo(w, h, len, b), m);
+  const o = b ? mesh(chamferGeo(w, h, len, b), m) : slab(w, h, len, m);
   o.quaternion.setFromRotationMatrix(_mb.makeBasis(_xa, _ya, _dir));
   o.position.set((x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2);
   return o;
@@ -142,7 +145,7 @@ export function homeWindow(g, P, x, y, z0, w, h, o = {}) {
   g.add(cbox(w + sur * 2 + 0.1, sur + 0.04, dep + 0.04, o.inner ? fm : P.head || fm, x, y + h / 2 + sur / 2 + 0.01, z0 + (dep + 0.04) / 2, 0.025));
   if (o.keystone && !o.inner) g.add(cbox(0.2, sur + 0.12, dep + 0.08, P.head || fm, x, y + h / 2 + sur / 2 + 0.03, z0 + (dep + 0.08) / 2, 0.025));
   const sillD = o.inner ? dep + 0.1 : dep + 0.17;
-  g.add(bevelBox(w + sur * 2 + 0.16, 0.085, sillD, P.sill, x, y - h / 2 - 0.0425, z0 + sillD / 2, 0.025));
+  g.add(stone(w + sur * 2 + 0.16, 0.085, sillD, P.sill, x, y - h / 2 - 0.0425, z0 + sillD / 2, 0.025));
   if (lv > 0 && !o.inner) for (const s of [-1, 1]) g.add(cbox(0.1, 0.13, 0.12, P.sill, x + s * (w / 2 + sur - 0.02), y - h / 2 - 0.15, z0 + 0.06, 0.015));
   if (o.inner) g.add(cbox(w + sur * 2, 0.16, 0.035, fm, x, y - h / 2 - 0.17, z0 + 0.018, 0.01)); // apron under the stool
   // glass on the wall face, then the casement: frame, mullion, transom and (high tier) glazing bars
@@ -165,7 +168,7 @@ export function homeWindow(g, P, x, y, z0, w, h, o = {}) {
     const sw = w / 2 + 0.03;
     for (const s of [-1, 1]) shutter(g, P, x + s * (w / 2 + sur + 0.03 + sw / 2), y, z0 + 0.03, sw, h + 0.04, s, o.louvre, lv);
   }
-  if (o.box && !o.inner) flowerBox(g, P, x, y - h / 2 + 0.11, z0 + dep + 0.04, w + 0.18, lv, rnd);
+  if (o.box && !o.inner) flowerBox(g, P, x, y - h / 2 + 0.005, z0 + dep + 0.04, w + 0.18, lv, rnd);   // sits on the sill
 }
 /** One shutter leaf, opened back flat against the wall; `side` = -1 left of the window, +1 right. */
 function shutter(g, P, x, y, z, sw, sh, side, louvre, lv) {
@@ -228,7 +231,7 @@ export { icoGeo };
  */
 export function homeDoor(g, P, x, z0, dw, dh, o = {}) {
   const lv = o.lv ?? homeDetail(), rnd = o.rnd || Math.random, fd = 0.22, k = lv ? 1 : 0;
-  g.add(bevelBox(dw + 0.55, 0.1, 0.36, P.step, x, 0.05, z0 + 0.18, 0.025));
+  g.add(stone(dw + 0.55, 0.1, 0.36, P.step, x, 0.05, z0 + 0.18, 0.025));
   for (const s of [-1, 1]) g.add(cbox(0.2, dh + 0.04, fd, P.frame, x + s * (dw / 2 + 0.1), (dh + 0.04) / 2, z0 + fd / 2, 0.025));
   g.add(cbox(dw + 0.64, 0.26, fd + 0.05, P.frame, x, dh + 0.15, z0 + (fd + 0.05) / 2, 0.03));
   if (o.keystone) g.add(cbox(0.24, 0.36, fd + 0.09, P.frame, x, dh + 0.2, z0 + (fd + 0.09) / 2, 0.03));
@@ -296,7 +299,7 @@ export function tiledRoof(g, P, hw, hd, y0, rise, o = {}) {
     // rafter tails under the eave, from the wall face out
     if (o.wall != null) {
       const vw = (o.wall / hw) * L, ext = (o.wallD ?? hd - 0.5) - 0.2;
-      const step = lv >= 1 ? 0.62 : 0.95;
+      const step = lv >= 1 ? 0.62 : 1.5;
       const n = Math.max(2, Math.round((ext * 2) / step));
       for (let i = 0; i <= n; i++) {
         const u = -ext + (2 * ext * i) / n;
@@ -312,14 +315,14 @@ export function tiledRoof(g, P, hw, hd, y0, rise, o = {}) {
 }
 /** Barrel tiles: columns of half-round caps down the slope, course by course, each nose standing a little proud. */
 function rolls(f, P, D, L, lv, rnd) {
-  const pitch = 0.3, cols = Math.max(2, Math.round(D / pitch)), pc = D / cols;
+  const pitch = lv ? 0.3 : 0.38, cols = Math.max(2, Math.round(D / pitch)), pc = D / cols;
   const course = lv >= 2 ? 0.42 : lv >= 1 ? 0.84 : 0;
   const tiles = P.tiles;
   for (let j = 0; j < cols; j++) {
     const u = -D / 2 + (j + 0.5) * pc;
     if (!course) {
       // phones: one roll per column, the courses suggested by the deck tone only
-      const o = mesh(arcGeo(0.105, 0.115, L + 0.03, 0, Math.PI, 4), tiles[j % tiles.length]);
+      const o = mesh(arcGeo(0.12, 0.13, L + 0.03, 0, Math.PI, 3), tiles[j % tiles.length]);
       o.position.set(u, 0.0, 0);
       f.add(o);
       continue;
@@ -354,7 +357,7 @@ function slates(f, P, D, L, lv, rnd) {
 }
 /** Ridge: overlapping round ridge tiles over a mortar bed, end caps at both gables. */
 function ridgeRoll(g, P, ridgeY, hd, ang, lv) {
-  const r = 0.17, len = 0.46, n = Math.max(2, Math.round((hd * 2 + 0.1) / len)), step = (hd * 2 + 0.1) / n;
+  const r = 0.17, len = lv ? 0.46 : 1.6, n = Math.max(2, Math.round((hd * 2 + 0.1) / len)), step = (hd * 2 + 0.1) / n;
   const seg = lv >= 2 ? 8 : 6;
   for (let i = 0; i < n; i++) {
     const o = mesh(arcGeo(r, r + 0.012, step + 0.05, -0.35, Math.PI + 0.35, seg, i === n - 1), P.ridge);
@@ -380,7 +383,7 @@ export function chimney(g, P, x, z, y0, top, o = {}) {
   g.add(cbox(w + 0.12, 0.12, d + 0.12, P.stack, x, top - 0.34, z, 0.02));
   g.add(cbox(w + 0.22, 0.1, d + 0.22, P.cap, x, top - 0.2, z, 0.02));
   g.add(cbox(w + 0.06, 0.16, d + 0.06, P.stack, x, top - 0.07, z, 0.02));
-  const pots = o.pots ?? 1;
+  const pots = lv ? o.pots ?? 1 : 1;
   for (let i = 0; i < pots; i++) {
     const px = x + (pots > 1 ? (i - 0.5) * w * 0.5 : 0);
     const pot = mesh(potGeo(), P.pot);
