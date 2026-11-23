@@ -1222,7 +1222,7 @@ function placeVisuals(dt) {
   if (P.state === 'broom' && P.broom.holder.visible) {
     // a little below and behind the tail lantern, so the light pools on the ground more than on her
     L.position.set(0, BROOM.SEAT - 0.9, -1.9);
-    L.intensity = 1.5 + 6.5 * night;
+    L.intensity = 1.5 * (P.broom.glow || 0) + 6.5 * night;   // by day it glows only while boosting
     L.distance = 22;
   } else {
     L.position.set(0.35, 2.9, -1.1);

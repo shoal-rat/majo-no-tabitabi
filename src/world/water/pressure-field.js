@@ -20,14 +20,20 @@ export class PressureField {
     this.prev = new Float32Array(len);
     this.froth = new Float32Array(len);
     this.wet = new Uint8Array(len);
-    this.pixels = new Uint8Array(len * 4);
+    // Layer 0: height, slopes and breaking froth of the pressure waves. Layer 1: the foam the
+    // broom left along its track, copied from the shared wake map over a wider, coarser window
+    // (one array texture: the water shader has no texture unit to spare for a second map).
+    this.pixels = new Uint8Array(len * 8);
     this.layers = [this.h, this.prev, this.froth, this.wet]; // h/prev swap each step; the set stays the same
-    this.texture = new THREE.DataTexture(this.pixels, this.n, this.n);
+    this.texture = new THREE.DataArrayTexture(this.pixels, this.n, this.n, 2);
     this.texture.minFilter = this.texture.magFilter = THREE.LinearFilter;
     this.texture.generateMipmaps = false;
     this.texture.needsUpdate = true;
-    this.texture.name = 'water:pressure height, slope and breaking foam';
+    this.texture.name = 'water:pressure height, slope and breaking foam; trail foam';
     this.mapping = new THREE.Vector4(); // first node x,z; inverse world span; half a texel
+    this.foamCell = [2.2, 1.9, 1.6][tier];
+    this.foamMapping = new THREE.Vector4(); // same layout for the trail-foam layer; z = 0 when empty
+    this.foamInk = false;
     this.x0 = this.z0 = NaN;
     this.carry = this.remaining = this.ticks = 0;
     this.aftReach = 10;
@@ -177,6 +183,44 @@ export class PressureField {
       p[o+2] = Math.round(128 + Math.max(-127, Math.min(127, (h[k+n]-h[k-n])*grad)));
       p[o+3] = Math.round(this.froth[k]*255);
     }
+    this.texture.addLayerUpdate(0);
+    this.texture.needsUpdate = true;
+  }
+
+  // Copy the trail foam (alpha of the shared wake map: a toroidal window, `bounds` = origin x, z,
+  // span, texel) into layer 1 around (x, z). Called a few times a second while foam is out.
+  paintFoam(image, bounds, x, z) {
+    const n = this.n, fc = this.foamCell, base = n * n * 4, p = this.pixels;
+    if (!image || !(bounds.z > 0)) {
+      if (this.foamInk) {
+        for (let o = base + 3; o < p.length; o += 4) p[o] = 0;
+        this.foamInk = false; this.texture.addLayerUpdate(1); this.texture.needsUpdate = true;
+      }
+      this.foamMapping.z = 0;
+      return;
+    }
+    const cell = bounds.w, N = Math.round(bounds.z / cell), data = image;
+    const fx0 = Math.round(x / fc) - (n >> 1), fz0 = Math.round(z / fc) - (n >> 1);
+    const lo = cell, hiX = bounds.z - cell;
+    let ink = false;
+    for (let j = 0, o = base + 3; j < n; j++) {
+      const wz = (fz0 + j + .5) * fc, lz = wz - bounds.y;
+      const v = wz / cell - .5, iv = Math.floor(v), fv = v - iv;
+      const r0 = (((iv % N) + N) % N) * N, r1 = ((((iv + 1) % N) + N) % N) * N;
+      for (let i = 0; i < n; i++, o += 4) {
+        const wx = (fx0 + i + .5) * fc, lx = wx - bounds.x;
+        if (lx < lo || lz < lo || lx > hiX || lz > hiX) { p[o] = 0; continue; }
+        const u = wx / cell - .5, iu = Math.floor(u), fu = u - iu;
+        const c0 = ((iu % N) + N) % N, c1 = (((iu + 1) % N) + N) % N;
+        const a = data[(r0 + c0) * 4 + 3], b = data[(r0 + c1) * 4 + 3];
+        const c = data[(r1 + c0) * 4 + 3], d = data[(r1 + c1) * 4 + 3];
+        const f = (a + (b - a) * fu) * (1 - fv) + (c + (d - c) * fu) * fv;
+        p[o] = f; if (f > 2) ink = true;
+      }
+    }
+    this.foamInk = ink;
+    this.foamMapping.set(fx0 * fc, fz0 * fc, ink ? 1 / (n * fc) : 0, .5 / n);
+    this.texture.addLayerUpdate(1);
     this.texture.needsUpdate = true;
   }
 

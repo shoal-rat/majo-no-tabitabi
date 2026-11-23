@@ -186,6 +186,9 @@ const sampleX = rider.pos.x-2*dx, sampleZ = rider.pos.z-.96-2*dz;
 assert.equal(lake.levelAt(sampleX,sampleZ),0);
 const contact = lake.flightWakeStats().strength;
 assert(contact>.5 && contact<=1);
+// The skimming brush throws a plume of soft spray sprites as well as the beads.
+const thrown = lake.flightWakeStats();
+assert(thrown.plumeEmitted>40 && thrown.plume>0);
 assert(lake.surfaceAt(sampleX,sampleZ)<-.20);
 const region = lake.uniforms.wPressureRegion.value, map = lake.uniforms.wPressureMap.value.image;
 const drainedCell = (Math.round((sampleZ-region.y)*region.z*map.width)*map.width+
@@ -198,4 +201,15 @@ assert.equal(lake.surfaceAt(sampleX,sampleZ),-Infinity);
 assert.equal(lake.flightWakeStats().strength,0);
 assert.equal(map.data[drainedCell],128);
 assert.equal(map.data[drainedCell+3],0);
-console.log('PASS pressure waves: displacement, two crests, bank load, fixed-step timing, moving window, free propagation, shoreline, spray and terrain changes.');
+// Layer 1 of the pressure texture carries the trail foam copied from the shared wake map
+// (alpha of a toroidal RGBA window): a coarser, wider window around the rider.
+const foamField = new PressureField(1,deep), N = 16, wakeImage = new Uint8Array(N*N*4);
+for (let z=4; z<12; z++) for (let x=5; x<10; x++) wakeImage[(z*N+x)*4+3] = 230;   // a foam strip, x = 5..10 m
+foamField.paintFoam(wakeImage,{x:0,y:0,z:N,w:1},8,8);
+const fm = foamField.foamMapping, fn = foamField.n, layer1 = fn*fn*4;
+const foamCell = (x,z) => foamField.pixels[layer1+(Math.floor((z-fm.y)*fm.z*fn)*fn+Math.floor((x-fm.x)*fm.z*fn))*4+3];
+assert(fm.z>0 && foamCell(7.6,8)>60 && foamCell(12,8)===0 && foamCell(7.6,30)===0);
+assert(foamField.pixels.slice(0,layer1).every((v,i)=>i%4===3 ? v===0 : true));
+foamField.paintFoam(null,{x:0,y:0,z:0,w:1},8,8);
+assert(fm.z===0 && foamField.pixels.slice(layer1).every(v=>v===0));
+console.log('PASS pressure waves: displacement, two crests, bank load, fixed-step timing, moving window, free propagation, shoreline, spray, plume, trail-foam layer and terrain changes.');

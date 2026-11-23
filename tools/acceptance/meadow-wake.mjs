@@ -18,10 +18,15 @@ assert.equal(field.at(3.5,.5,1).strip,0);
 lost=0;
 field.sweep(0,-3,{...section,time:2},grows,release);
 assert(lost<firstLoss*.62);
-assert(field.at(-1.5,.5,8).flat>0 && field.at(-1.5,.5,8).flat<left.flat*.25);
+// The laid channel stays readable for a while and rises again over 20-40 s.
+assert(field.at(-1.5,.5,8).flat>left.flat*.6);
+assert(field.at(-1.5,.5,30).flat<left.flat*.5);
+assert.equal(field.at(-1.5,.5,45).flat,0);
+// Stripped flowers regrow over one to two minutes.
 assert(field.at(-1.5,.5,8).strip>left.strip*.8);
 assert(field.at(-1.5,.5,38).strip<field.at(-1.5,.5,8).strip);
-assert.equal(field.at(-1.5,.5,100).strip,0);
+assert(field.at(-1.5,.5,100).strip<field.at(-1.5,.5,38).strip*.5);
+assert.equal(field.at(-1.5,.5,130).strip,0);
 field.refresh(0,0,2);
 const before=field.texture.image.data.slice();
 field.refresh(400,400,3);
@@ -34,6 +39,20 @@ assert(bank.at(-2.5,.5,1).strip>bank.at(2.5,.5,1).strip);
 const cruise=new MeadowWakeField();
 cruise.sweep(0,-3,{...section,drive:.38,speed:16},()=>true);
 assert(cruise.at(-1.5,.5,1).strip<left.strip*.5);
+// A faster pass lays a wider, deeper channel that takes longer to recover.
+const fast=new MeadowWakeField();
+fast.sweep(0,-3,section,()=>true);
+assert(cruise.at(-3.5,.5,1).flat<fast.at(-3.5,.5,1).flat*.7);
+assert(fast.at(-1.5,.5,25).flat/fast.at(-1.5,.5,1).flat>cruise.at(-1.5,.5,25).flat/cruise.at(-1.5,.5,1).flat+.1);
+// Over water the same pass leaves foam (freshness 1 → 0 over ~20-40 s) and strips nothing.
+const lake=new MeadowWakeField();
+lake.sweep(0,-3,{...section,wet:true,bare:true},()=>false,null,()=>true);
+assert(lake.at(0,.5,1).foam>.8 && lake.at(0,.5,1).strip===0 && lake.at(0,.5,1).flat===0);
+assert(lake.at(0,.5,10).foam<lake.at(0,.5,1).foam*.45 && lake.at(0,.5,10).foam>.25);
+assert.equal(lake.at(0,.5,60).foam,0);
+assert.equal(new MeadowWakeField().at(0,.5,1).foam,0);
+lake.refresh(0,0,1.1);
+assert(lake.bounds.z>0 && lake.texture.wrapS===1000);
 
 for(const far of [true,false]){
   const geo=flowerPatch(far), shapes=geo.getAttribute('aBlade2');

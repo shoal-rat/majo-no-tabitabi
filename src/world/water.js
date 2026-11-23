@@ -19,6 +19,7 @@ import { SUN_DIR, SUN_ANGULAR_RADIUS } from './veil.js';
 import { U } from '../render/atmo.js';
 import { waterDetailTexture, flowTexture } from './water/maps.js';
 import { FlightWake } from './water/flight-wake.js';
+import { plantWake, wakeFoam } from './flora/wake-field.js';
 import { DATA_HALF } from './terrain/textures.js';
 import { PlanarReflection } from './water/reflect.js';
 import { createLegacyWater } from './water/legacy.js';
@@ -107,7 +108,7 @@ export function createWater(G, { data, noise }) {
       .replace('#include <normal_fragment_maps>', '#include <normal_fragment_maps>\n' + FRAG_NORMAL)
       .replace('#include <envmap_fragment>', '#include <envmap_fragment>\n' + fragReflect(SUN_ANGULAR_RADIUS * 1.02));
   };
-  mat.customProgramCacheKey = () => 'mvWaterPressure6:' + WQ;
+  mat.customProgramCacheKey = () => 'mvWaterPressure7:' + WQ;
   hookMaterial(mat);
 
   const baseGrid = waterGeometry(WQ === 0 ? 96 : 128);
@@ -189,7 +190,7 @@ export function createWater(G, { data, noise }) {
     busy = false;
   }
 
-  let rip = 0, wk = 0, wadeT = 0, wakeT = 0;
+  let rip = 0, wk = 0, wadeT = 0, wakeT = 0, foamT = -Infinity;
   const water = {
     mesh, material: mat, uniforms, level: SEA_LEVEL, reflection: refl,
     /** Planar reflection pass on/off (false falls back to the sky layer). */
@@ -258,7 +259,16 @@ export function createWater(G, { data, noise }) {
         flightWake.update(dt, uniforms.wTime.value, depthVersion !== data.version);
         depthVersion = data.version;
       }
-      const hasPressure = flightWake.field.remaining > 0;
+      const t = G.time?.t ?? 0;
+      if (wakeFoam.until > t + 60) wakeFoam.until = -Infinity;   // the clock was reset
+      // the broom's foam trail: copied from the shared wake map a few times a second while it lasts
+      const foamy = wakeFoam.until > t;
+      if ((foamy || flightWake.field.foamInk) && (t - foamT > .25 || t < foamT)) {
+        foamT = t;
+        const P = G.player?.pos ?? c;
+        flightWake.field.paintFoam(foamy ? plantWake.gMeadowMemory.value?.image?.data : null, plantWake.gMeadowBounds.value, P.x, P.z);
+      }
+      const hasPressure = flightWake.field.remaining > 0 || flightWake.field.foamInk;
       const gridStep = hasPressure ? .5 : 4;
       mesh.position.x = Math.round(c.x/gridStep)*gridStep;
       mesh.position.z = Math.round(c.z/gridStep)*gridStep;
@@ -303,6 +313,7 @@ export function createWater(G, { data, noise }) {
   const flightWake = new FlightWake(G, water, WQ, depthForWave);
   uniforms.wPressureMap = { value: flightWake.field.texture };
   uniforms.wPressureRegion = { value: flightWake.field.mapping };
+  uniforms.wFoamRegion = { value: flightWake.field.foamMapping };
   water.flightWakeStats = () => flightWake.stats();
   water.impact = (pos, power) => flightWake.impact(pos, power);
   // anything landing in the water makes rings

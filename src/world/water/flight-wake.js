@@ -4,6 +4,7 @@ import * as THREE from 'three';
 import { flowAt } from './maps.js';
 import { wakeDrive, wakeTurn } from '../broom-wake.js';
 import { PressureField } from './pressure-field.js';
+import { WakeSpray } from './wake-spray.js';
 
 const smooth = THREE.MathUtils.smoothstep;
 const UP = new THREE.Vector3(0, 1, 0);
@@ -20,6 +21,7 @@ export class FlightWake {
     this.mesh.name = 'water:skimming droplets';
     this.mesh.count = 0; this.mesh.frustumCulled = false; this.mesh.renderOrder = -6;
     this.mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage); G.scene.add(this.mesh);
+    this.plume = new WakeSpray(G, tier);
     this.stamp = new THREE.Object3D(); this.tip = new THREE.Vector3(); this.unit = new THREE.Vector3();
     this.current = new THREE.Vector2();
     this.air = new THREE.Vector3();
@@ -62,6 +64,7 @@ export class FlightWake {
       this.stamp.updateMatrix(); this.mesh.setMatrixAt(count++,this.stamp.matrix);
     }
     this.mesh.count = count; this.mesh.visible = count>0;
+    this.plume.update(dt, this.G.player?.broom?.airTrail, this.G.time?.t ?? 0);
     if (count) {
       this.mesh.instanceMatrix.needsUpdate=true;
       this.mesh.material.color.setHex((this.G.env?.veil??0)>.62?0x8cbacb:0xe3f4ff);
@@ -114,6 +117,8 @@ export class FlightWake {
           const src=this.source; // reused every frame (no per-frame object)
           src.x=tip.x; src.z=tip.z; src.dx=dx; src.dz=dz; src.speed=speed; src.drive=drive; src.turn=turn;
           const spray=speedK*(1-smooth(this.clearance,.30,1.36))*shore;
+          // The plume grows faster than the beads: a dive or a boost throws a tall sheet.
+          this.plume.spray(dt,tip,surface,dx,dz,vx,vz,spray*(.55+.65*speedK),turn);
           this.accum+=dt*(26+102*speedK)*spray*this.density;
           while(this.accum>=1) {
             this.accum--;
@@ -139,6 +144,6 @@ export class FlightWake {
     let crest=0, trough=0;
     if(this.field.remaining) for(const h of this.field.h) { crest=Math.max(crest,h); trough=Math.min(trough,h); }
     return {clearance:Number.isFinite(this.clearance)?+this.clearance.toFixed(3):null,strength:+this.strength.toFixed(3),
-      crest:+crest.toFixed(3),trough:+trough.toFixed(3),droplets:this.mesh.count,emitted:this.total,returned:this.landings,rings:this.rings,impacts:this.impacts};
+      crest:+crest.toFixed(3),trough:+trough.toFixed(3),droplets:this.mesh.count,plume:this.plume.live,plumeEmitted:this.plume.emitted,emitted:this.total,returned:this.landings,rings:this.rings,impacts:this.impacts};
   }
 }

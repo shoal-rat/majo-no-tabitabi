@@ -282,8 +282,9 @@ vec2 gBend(vec2 root, float hA, out float gustK, out float flatK, vec3 wake) {
     bend += tq / max(td, 0.01) * tk * 1.1;
     flatK = max(flatK, tk * 0.5);
   }
-  bend+=wake.xy*1.3;
-  flatK=max(flatK,wake.z);
+  // the broom's wake: a channel combed outward and laid over, rising again over 20-40 s
+  bend+=wake.xy*1.55;
+  flatK=max(flatK,wake.z*.94);
   // blasts: an outward shock ring, then a lingering flattened disc
   for (int i = 0; i < ${MAXB}; i++) {
     vec4 b = gBlast[i];
@@ -458,8 +459,13 @@ vec3 gPos; vec3 gNrm; float gKill = 0.0;
   vGCol = mix(vGCol, vGCol * 1.2 + vec3(0.022, 0.026, 0.016), gSheen * t * 0.7 * (1.0 - .65 * nearGrass));
   // far: the blade becomes a soft stroke of the ground colour, a little lighter toward its tip (never darker than the soil)
   vGCol = mix(vGCol, col * ${GRASS_TOP} * mix(0.98, 1.12, t) * (1.0 + 0.12 * gSheen), far * 0.9 * (1.0 - g.cropK));
-  // A laid-over swath catches the light on the side facing the broom.
-  vGCol *= 1.+memory.z*(.22*t-.18+.16*dot(memory.xy,vec2(.8,.6)));
+  // A laid-over swath shows the deeper green under the tips (darker and greener the
+  // harder the pass), and like a mown stripe it reads lighter where the blades lie away
+  // from the viewer and darker where they lie toward it.
+  vec2 laidDir = memory.xy / max(length(memory.xy), .05);
+  float awayK = dot(laidDir, normalize(root - gCam.xz + vec2(1e-3)));
+  vec3 laidCol = vGCol * vec3(.66,.84,.62) * (1.0 + .13 * awayK) * (.92 + .16 * t);
+  vGCol = mix(vGCol, laidCol, smoothstep(.04, .7, memory.z));
   vGCol = mix(vGCol, ${lin(0xe8f4ff)}, smoothstep(0.0, 0.6, g.sc.b) * 0.8);
   float pulse = 0.65 + 0.35 * sin(gTime * 0.9 + root.x * 0.05 + root.y * 0.04);
   vec3 veinC = mix(${lin(0x3de0c0)}, ${lin(0x9c7cff)}, smoothstep(0.3, 0.7, g.n.x));

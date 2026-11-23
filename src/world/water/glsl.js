@@ -30,9 +30,13 @@ float wCalmAt(vec2 p) {
 `;
 
 export const VERT_PARS = /* glsl */`
-uniform sampler2D wData, wPressureMap;
-uniform vec4 wPressureRegion;
+uniform sampler2D wData;
+// layer 0: pressure waves (height, slopes, froth); layer 1: the broom's foam trail (a = freshness,
+// copied from flora/wake-field.js). Read per vertex; the fine grid is kept while foam is out.
+uniform highp sampler2DArray wPressureMap;
+uniform vec4 wPressureRegion, wFoamRegion;
 varying vec4 vPressure;
+varying float vTrailFoam;
 uniform float wTime;
 uniform vec4 wLake, wMoat, wTrial;
 varying vec3 vWW;
@@ -47,8 +51,14 @@ export const VERT_MAIN = /* glsl */`
   vPressure = vec4(0.);
   vec2 uvP = (wq.xz-wPressureRegion.xy)*wPressureRegion.z+wPressureRegion.w;
   if(wPressureRegion.z>0. && all(greaterThanEqual(uvP,vec2(wPressureRegion.w))) && all(lessThanEqual(uvP,vec2(1.-wPressureRegion.w)))) {
-    vec4 field = texture2D(wPressureMap,uvP);
+    vec4 field = texture(wPressureMap,vec3(uvP,0.));
     vPressure = vec4((field.rgb*(255./127.)-128./127.)*1.5, field.a);
+  }
+  vTrailFoam = 0.0;
+  vec2 uvF = (wq.xz-wFoamRegion.xy)*wFoamRegion.z;
+  if (wFoamRegion.z > 0. && all(greaterThan(uvF,vec2(0.))) && all(lessThan(uvF,vec2(1.)))) {
+    float rim = min(min(uvF.x,uvF.y),1.-max(uvF.x,uvF.y));
+    vTrailFoam = textureLod(wPressureMap,vec3(uvF,1.),0.).a * smoothstep(wFoamRegion.w,6.*wFoamRegion.w,rim);
   }
   transformed.y += wSwell(wq.xz, wTime, wg) * wsea + vPressure.x;
   vWW = wq; vWW.y += transformed.y - position.y;
@@ -71,6 +81,7 @@ uniform mat4 wReflMat, wViewProj, wInvViewProj;
 uniform vec4 wRipples[${MAX_RIPPLES}];
 uniform vec4 wWakes[${MAX_WAKES}];
 varying vec4 vPressure;
+varying float vTrailFoam;
 uniform sampler2D wRefrTex, wRefrDepth;
 uniform float wRefrK;
 uniform vec2 wScreenInv, wNearFar;
@@ -221,6 +232,23 @@ if (pressureMask > .001) {
   // breaking crest. The rest of the shoulder keeps its glassy water colour.
   flightFoam = lip * smoothstep(.045,.32,vPressure.w+.18*lip) * breakage *
     (.37*filament+.19*smoothstep(.70,.92,grain));
+}
+// The foam the broom leaves along its track: fresh churn, then lace, then flecks.
+float wTrailFoamA = 0.0;
+if (vTrailFoam > 0.012 && wDist < 260.0) {
+  float fresh = vTrailFoam;
+  vec2 fuv = wP.xz * 0.9 + vec2(0.05 * wt, -0.04 * wt);
+  float lump = wWakeNoise(fuv * 0.55);
+  float lace = wWakeNoise(fuv * 1.25 + 3.1);
+  float web = 1.0 - smoothstep(0.07, 0.25, abs(lace - 0.5));
+  float churn = smoothstep(0.36, 0.74, fresh + 0.28 * (lump - 0.5));
+  float laceK = smoothstep(0.06, 0.42, fresh) * (0.85 * web + 0.4 * smoothstep(0.58, 0.82, lump));
+  float fleck = smoothstep(0.02, 0.12, fresh) * smoothstep(0.78, 0.9, wWakeNoise(fuv * 2.9 - 1.7));
+  float trail = clamp(max(churn, max(laceK, fleck)), 0.0, 1.0);
+  // far off the lace would shimmer below a pixel: it settles into its mean cover instead
+  trail = mix(trail, smoothstep(0.04, 0.5, fresh) * 0.8, smoothstep(18.0, 70.0, wDist));
+  wTrailFoamA = trail * (1.0 - smoothstep(130.0, 260.0, wDist));
+  flightFoam = max(flightFoam, wTrailFoamA);
 }
 vec3 wNrm = normalize(vec3(-wG.x, 1.0, -wG.y));
 
@@ -394,6 +422,8 @@ export function fragReflect(ringR) {
     X += wFoamC * wFoamA * wNight * 0.14;
   }
 #endif
+  // the trail's foam is churned white water: it holds its own against a bright sky in the mirror
+  X += wFoamC * wTrailFoamA * 0.42 * (1.0 - 0.8 * wNight);
 #if WQ > 0
   if (wRefrK > 0.5) {
     // refraction (round 2): the bed comes from the opaque scene captured before the water drew, bent by the wave

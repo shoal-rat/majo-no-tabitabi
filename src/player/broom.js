@@ -68,6 +68,7 @@ export function createBroom(P, S) {
       G.audio?.sfx('broom_summon', { pos: _v });
       G.cam?.fovKick?.(0.3);
       B.sparkle = G.fx?.emitter?.('broom_sparkle', { pos: B.lanternWorld(new THREE.Vector3()), rate: 0.15, scale: 0.6 }) || null;
+      B.glow = 0;
       S.rig.play('sit_broom', { fade: 0.18 });
       G.events.emit('player:mount', {});
       return true;
@@ -187,12 +188,16 @@ export function createBroom(P, S) {
       // trail + sparkle
       B.lanternWorld(_v);
       const sp = Math.abs(B.speed);
-      if (sp > 8 && !B.trail) B.trail = G.fx?.trail?.({ color: 0xffd9a2, color2: 0xffc78e, width: 0.10, life: 0.20, style: 'glow', intensity: .7 }) || null;
+      // The gold light belongs to the boost: it fades in over ~0.15 s when the boost starts and
+      // out over ~0.4 s after it ends. Normal flight carries no light; the wake shows the speed.
+      B.glow = clamp((B.glow || 0) + (B.boosting ? dt / .15 : -dt / .4), 0, 1);
+      const glow = B.glow * B.glow * (3 - 2 * B.glow);
+      if (glow > .01 && sp > 6 && !B.trail) B.trail = G.fx?.trail?.({ color: 0xffd9a2, color2: 0xffc78e, width: 0.08, life: 0.2, style: 'glow', intensity: .6 }) || null;
       if (B.trail) {
-        if (sp < 6) { B.trail.stop?.(); B.trail = null; }
-        else { B.trail.setWidth?.((.06 + .10*drive)*(1-.83*B.skim)); B.trail.push(_v); }
+        if (sp < 6 || glow <= .01) { B.trail.stop?.(); B.trail = null; }
+        else { B.trail.intensity = .6 * glow; B.trail.setWidth?.((.04 + .08*drive)*(1-.6*B.skim)*(.35+.65*glow)); B.trail.push(_v); }
       }
-      if (B.sparkle) { B.sparkle.pos.copy(_v); B.sparkle.rate = 0.12 + sp / 40; }
+      if (B.sparkle) { B.sparkle.pos.copy(_v); B.sparkle.rate = .03 + (.12 + sp / 40) * glow; }
       // speed lines: fine streaks born ahead and to the sides rush past the lens while boosting
       B.lineT = (B.lineT || 0) - dt;
       if (B.boosting && sp > 18 && B.skim < .25 && B.lineT <= 0 && G.fx?.burst) {

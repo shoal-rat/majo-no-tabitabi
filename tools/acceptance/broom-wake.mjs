@@ -42,6 +42,13 @@ assert(sample(-1,.25,30).length() < port.length());
 assert(flow.sections[(flow.next-1+flow.sections.length)%flow.sections.length].bare === false);
 layTrail(28,0,true);
 assert(flow.sections[(flow.next-1+flow.sections.length)%flow.sections.length].bare);
+assert(flow.sections[(flow.next-1+flow.sections.length)%flow.sections.length].wet);
+// A particle's last nearest section (hint) finds the same air as a full search of the trail;
+// shedding is unsteady but bounded.
+layTrail(28);
+const full = sample(-1,.25,54), slot = flow.hit;
+assert(slot >= 0 && flow.sample(point.set(-1,.25,54),2,wind,slot).distanceTo(full) < 1e-9);
+assert(flow.sections.slice(0,flow.count).every(s=>s.gust>.85 && s.gust<1.15) && !flow.sections[0].wet);
 
 function flyFor(rate,rise,boosting=true) {
   const b = {speed:16,gust:0,acceleration:0,heading:0,course:0,bank:0,

@@ -340,3 +340,36 @@ non-billboard crowns (conifers, bamboo sprays, willow strands), which still use 
   blue/white past the wilds, violet/pink west) used by the GPU flower sprays and (one line) by the terrain's painted
   distant flowers, so both agree.
 - `G.flora.plan`, `G.flora.countryside` (planted counts) for tools.
+
+## As built (broom wake rework, 2026-11-23)
+The meadow wake was rebuilt after Petalwake (MIT, Jacob Miller 2026; notice in `world/flora/wake-field.js`): a wide
+laid channel behind a low broom, petals and grass bits torn off and swirled up, a track that stays and recovers.
+
+- `flora/wake-field.js` — `MeadowWakeField(size = wakeFieldSize(q))`. Storage = sparse 8×8-texel world tiles from a
+  fixed pool (`tiles`: 320 mobile/low, 640 med/high), so a track survives the player leaving and coming back for up to
+  `WAKE_LIFE` = 125 s. GPU copy = rolling window around the player, addressed toroidally (texel = world texel mod n,
+  `RepeatWrapping`): 128² at 1.5 m (mobile/low), 256² at 1 m (med/high). Moving the window re-encodes only entering
+  tiles; stamped tiles upload at ≤ 30 Hz; recovering tiles re-encode every 0.25 s. No allocation after construction.
+  - texel: r, g = blade lean (signed) · b = laid over · a = petals stripped (land) or foam freshness (water).
+  - `sweep(fromX, fromZ, section, survey, release, water)` stamps the ground between two air-trail sections. Force =
+    drive × closeness (`1 - smoothstep(.55, 4.8, clearance)`) × unsteady `gust`. Channel core half-width
+    1.45 + 3.3·force m, bell + broad skirt across the track, thrown to the outside of a turn (`shift`, stronger outer
+    side). Stamps max-blend (no feathered seams). Wet sections lay foam: a churned core with a wandering edge plus
+    torn bands where the vortices sweep the surface. `release(x, z, side, pressure, petalLoss, lateral)` per meadow texel.
+  - recovery: `laidLeft(age, dur)` dur 18–40 s (deeper for a faster pass) · `stripLeft(age, dur)` dur 70–120 s ·
+    `foamLeft(age)` exp(-age / 9 s), gone after 45 s. A second pass takes only the petals still there.
+  - `at(x, z, t)` → `{x, z, flat, strip, foam}` (tools/tests) · `refresh(x, z, t)` keeps the window current.
+  - `plantWake` uniforms: `gMeadowMemory` (texture), `gMeadowBounds` = vec4(window x0, z0, span m (0 = empty), texel m);
+    `plantWakeAt(root)` in `plantWakeGLSL` hides the toroidal addressing. `wakeFoam.until` = game time until which foam
+    may show (the water keeps its fine grid and copies the foam meanwhile).
+- `flora/slipstream.js` — flakes on one instanced mesh (petal 5×5 grid, 32 tris; grass bits = the same mesh thin and
+  long). Capacity 300 / 380 / 640 / 1000 (mobile / low / med / high), emission rate ×0.55 / 0.6 / 0.8 / 1. Emission per
+  stamped texel ∝ √pressure (a low cruise sheds a clear stream, a boost fills the air): petals from the stripped share ×
+  bloom cover (colour = the meadow's regional petal colour), grass bits from the raked grass. Flight: seeded weight /
+  grip / flutter, air-trail sampling with a per-flake section hint, an air pocket that drags fresh flakes along with the
+  rider for ~0.5 s, an initial roll up and out; flakes skitter where the wake still rakes the ground, otherwise settle
+  flat for ~2 s. Petals carry a small self-light (`petalGlow`) so they stay coloured in shade.
+- `flora/grass.js` — `gBend`: wake lean ×1.55, laid ×0.94. Laid blades take a darker, greener tone (×(.66,.84,.62)) with
+  a ±13% sheen by lean vs view direction; the channel reads darker the harder the pass.
+- Known: the far terrain paint does not show the channel (it ends where blades end, ~60–90 m); flower strip is limited
+  to meadow the survey accepts (no roads, farms, slopes, riverbanks), so the channel thins at those edges.
