@@ -22896,5 +22896,240 @@
    }
   },
   "notes": "Sculpted hilltop cairn (landmarks cairn): stacked field stones, chinking, a pointed top stone; 2.1 m like the old stack. Vertex colours on every LOD. Stone -> carved-stone family, Moss -> ivy."
+ },
+ "sculpt_lm_well_a": {
+  "file": "models/sculpt/lm_well_a.glb",
+  "type": "model",
+  "license": "CC0 (original work)",
+  "author": "sculpted for this project",
+  "source": "tools/sculpt/assets/lm_well_a.mjs (node tools/sculpt/assets/landmarks_lib.mjs)",
+  "scale": 1,
+  "size": [
+   2.518,
+   3.035,
+   2.196
+  ],
+  "tris": 16878,
+  "lods": [
+   16878,
+   2200,
+   974
+  ],
+  "materials": [
+   "Stone",
+   "Wood",
+   "Iron",
+   "Water",
+   "Rope",
+   "Moss"
+  ],
+  "mats": {
+   "Stone": {
+    "surface": "stone",
+    "look": {}
+   },
+   "Wood": {
+    "surface": "wood",
+    "look": {}
+   },
+   "Iron": {
+    "surface": "metal",
+    "look": {}
+   },
+   "Water": {
+    "surface": "none",
+    "look": {}
+   },
+   "Rope": {
+    "surface": "cloth",
+    "look": {}
+   },
+   "Moss": {
+    "surface": "none",
+    "look": {}
+   }
+  },
+  "notes": "Sculpted field well (landmarks well; LM_VAR=b the farmsteads' low wellhead). Vertex colours on every LOD. Stone -> carved-stone family, Wood -> wood, Iron -> iron, Water / Rope -> cream (paint), Moss -> ivy."
+ },
+ "sculpt_lm_well_b": {
+  "file": "models/sculpt/lm_well_b.glb",
+  "type": "model",
+  "license": "CC0 (original work)",
+  "author": "sculpted for this project",
+  "source": "tools/sculpt/assets/lm_well_b.mjs (node tools/sculpt/assets/landmarks_lib.mjs)",
+  "scale": 1,
+  "size": [
+   2.345,
+   1.423,
+   2.191
+  ],
+  "tris": 5218,
+  "lods": [
+   5218,
+   2006,
+   1406
+  ],
+  "materials": [
+   "Stone",
+   "Wood",
+   "Iron",
+   "Water",
+   "Rope",
+   "Moss"
+  ],
+  "mats": {
+   "Stone": {
+    "surface": "stone",
+    "look": {}
+   },
+   "Wood": {
+    "surface": "wood",
+    "look": {}
+   },
+   "Iron": {
+    "surface": "metal",
+    "look": {}
+   },
+   "Water": {
+    "surface": "none",
+    "look": {}
+   },
+   "Rope": {
+    "surface": "cloth",
+    "look": {}
+   },
+   "Moss": {
+    "surface": "none",
+    "look": {}
+   }
+  },
+  "notes": "Sculpted field well (landmarks well; LM_VAR=b the farmsteads' low wellhead). Vertex colours on every LOD. Stone -> carved-stone family, Wood -> wood, Iron -> iron, Water / Rope -> cream (paint), Moss -> ivy."
+ },
+ "sculpt_lm_bench": {
+  "file": "models/sculpt/lm_bench.glb",
+  "type": "model",
+  "license": "CC0 (original work)",
+  "author": "sculpted for this project",
+  "source": "tools/sculpt/assets/lm_bench.mjs (node tools/sculpt/assets/landmarks_lib.mjs)",
+  "scale": 1,
+  "size": [
+   1.901,
+   1.028,
+   0.583
+  ],
+  "tris": 3000,
+  "lods": [
+   3000,
+   1000,
+   320
+  ],
+  "materials": [
+   "Wood",
+   "Iron",
+   "Moss"
+  ],
+  "mats": {
+   "Wood": {
+    "surface": "wood",
+    "look": {}
+   },
+   "Iron": {
+    "surface": "metal",
+    "look": {}
+   },
+   "Moss": {
+    "surface": "none",
+    "look": {}
+   }
+  },
+  "notes": "Sculpted country bench (landmarks bench, flower valley, hermit cottage). Vertex colours on every LOD. Wood -> wood family, Moss -> ivy."
+ },
+ "sculpt_lm_hive_skep": {
+  "file": "models/sculpt/lm_hive_skep.glb",
+  "type": "model",
+  "license": "CC0 (original work)",
+  "author": "sculpted for this project",
+  "source": "tools/sculpt/assets/lm_hive_skep.mjs (node tools/sculpt/assets/landmarks_lib.mjs)",
+  "scale": 1,
+  "size": [
+   0.698,
+   1.125,
+   0.698
+  ],
+  "tris": 6248,
+  "lods": [
+   6248,
+   1000,
+   320
+  ],
+  "materials": [
+   "Straw",
+   "Wood",
+   "Paint",
+   "Moss"
+  ],
+  "mats": {
+   "Straw": {
+    "surface": "thatch",
+    "look": {}
+   },
+   "Wood": {
+    "surface": "wood",
+    "look": {}
+   },
+   "Paint": {
+    "surface": "paint",
+    "look": {}
+   },
+   "Moss": {
+    "surface": "none",
+    "look": {}
+   }
+  },
+  "notes": "Sculpted bee hive skep (landmarks apiary). Vertex colours on every LOD. Straw -> straw (thatch, no map), Wood -> wood, Paint -> cream (paint), Moss -> ivy."
+ },
+ "sculpt_lm_hive_box": {
+  "file": "models/sculpt/lm_hive_box.glb",
+  "type": "model",
+  "license": "CC0 (original work)",
+  "author": "sculpted for this project",
+  "source": "tools/sculpt/assets/lm_hive_box.mjs (node tools/sculpt/assets/landmarks_lib.mjs)",
+  "scale": 1,
+  "size": [
+   0.68,
+   1.021,
+   0.726
+  ],
+  "tris": 3200,
+  "lods": [
+   3200,
+   1000,
+   320
+  ],
+  "materials": [
+   "Straw",
+   "Wood",
+   "Paint",
+   "Moss"
+  ],
+  "mats": {
+   "Straw": {
+    "surface": "thatch",
+    "look": {}
+   },
+   "Wood": {
+    "surface": "wood",
+    "look": {}
+   },
+   "Paint": {
+    "surface": "paint",
+    "look": {}
+   },
+   "Moss": {
+    "surface": "none",
+    "look": {}
+   }
+  },
+  "notes": "Sculpted bee hive box (landmarks apiary). Vertex colours on every LOD. Straw -> straw (thatch, no map), Wood -> wood, Paint -> cream (paint), Moss -> ivy."
  }
 }

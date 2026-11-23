@@ -1,0 +1,46 @@
+{
+ "sculpt_lm_hive_box": {
+  "file": "models/sculpt/lm_hive_box.glb",
+  "type": "model",
+  "license": "CC0 (original work)",
+  "author": "sculpted for this project",
+  "source": "tools/sculpt/assets/lm_hive_box.mjs (node tools/sculpt/assets/landmarks_lib.mjs)",
+  "scale": 1,
+  "size": [
+   0.68,
+   1.021,
+   0.726
+  ],
+  "tris": 3200,
+  "lods": [
+   3200,
+   1000,
+   320
+  ],
+  "materials": [
+   "Straw",
+   "Wood",
+   "Paint",
+   "Moss"
+  ],
+  "mats": {
+   "Straw": {
+    "surface": "thatch",
+    "look": {}
+   },
+   "Wood": {
+    "surface": "wood",
+    "look": {}
+   },
+   "Paint": {
+    "surface": "paint",
+    "look": {}
+   },
+   "Moss": {
+    "surface": "none",
+    "look": {}
+   }
+  },
+  "notes": "Sculpted bee hive box (landmarks apiary). Vertex colours on every LOD. Straw -> straw (thatch, no map), Wood -> wood, Paint -> cream (paint), Moss -> ivy."
+ }
+}

@@ -477,17 +477,24 @@ function boathouse(site, r) {
   const gy = house(site, { x: 0, z: 0, w: 5, d: 7, wallH: 2.6, rise: 2.2, walls: WD.old, roof: RF.slate, chimney: false, seed: 31 });
   const boat = G.assets?.model?.('bld_boat_rowing');
   if (boat) { boat.position.set(4.5, site.h(4.5, 6) + 0.1, 6); boat.rotation.y = 1.2; site.add(boat); }
-  for (let k = 0; k < 3; k++) { const x = -4 + k * 2.2, z = 6; site.add(cyl(0.07, 0.08, 2.2, WD.dark, x, site.h(x, z) + 1.1, z, 5)); }
+  for (let k = 0; k < 3; k++) { const x = -4 + k * 2.2, z = 6; site.add(cyl(0.07, 0.08, 2.2, WD.dark, x, site.h(x, z) + 1.1, z, 5)); if (lmTier() < 2) site.add(cyl(0.1, 0.1, 0.06, WD.wood, x, site.h(x, z) + 2.22, z, 6)); }
+  // a net hung to dry between the posts: the mesh, a head rope and a row of cork floats
   B(site, 4.6, 1.4, 0.04, mat.cloth(0x6f7f74), -1.8, site.h(-1.8, 6) + 1.2, 6);
+  if (lmTier() < 2) {
+    site.add(rod(-4, site.h(-4, 6) + 2.0, 6, 0.4, site.h(0.4, 6) + 2.0, 6, 0.025, M.rope(), 4));
+    for (let k = 0; k < 9; k++) { const x = -3.9 + k * 0.52; site.add(sphere(0.07, cream, x, site.h(-1.8, 6) + 0.52, 6.02, 6, 4)).scale.set(1.4, 1, 1); }
+  }
 }
 function apiary(site, r) {
   for (let k = 0; k < 7; k++) {
     const a = k / 7 * 2.8 - 1.4, x = Math.sin(a) * 5, z = Math.cos(a) * 5 - 2, y = site.h(x, z);
+    // sculpted hives (lm_hive: straw skeps under hackles, painted box hives), entrances to the garden's middle
+    if (put(site, k % 2 ? 'sculpt_lm_hive_skep' : 'sculpt_lm_hive_box', x, y, z, a + Math.PI + (r() - 0.5) * 0.3)) continue;
     if (k % 2) { site.add(cone(0.42, 0.75, straw, x, y + 0.78, z, 9)); site.add(cyl(0.44, 0.44, 0.35, straw, x, y + 0.3, z, 9)); }
     else { B(site, 0.6, 0.65, 0.55, cream, x, y + 0.42, z, a); B(site, 0.75, 0.08, 0.7, RF.slate, x, y + 0.8, z, a); }
     B(site, 0.6, 0.12, 0.6, WD.old, x, y + 0.06, z, a);
   }
-  B(site, 1.8, 0.45, 0.5, WD.old, 0, site.h(0, 3) + 0.45, 3, 0.1);
+  put(site, 'sculpt_lm_bench', 0, site.h(0, 3), 3, Math.PI + 0.1, 0, 0, 0.95, 1, 1) || B(site, 1.8, 0.45, 0.5, WD.old, 0, site.h(0, 3) + 0.45, 3, 0.1);
 }
 // ---------------------------------------------------------------- small
 function swing(site, ctx, r) {
@@ -525,12 +532,15 @@ function wayShrine(site, r) {
 }
 function bench(site, r) {
   const y = site.h(0, 0);
+  if (put(site, 'sculpt_lm_bench', 0, y, 0)) return;   // carpenter's bench (lm_bench), front +z as before
   B(site, 1.9, 0.07, 0.42, WD.light, 0, y + 0.46, 0);
   B(site, 1.9, 0.32, 0.06, WD.light, 0, y + 0.78, -0.2, 0, -0.18);
   for (const s of [-1, 1]) B(site, 0.08, 0.46, 0.4, WD.dark, s * 0.8, y + 0.23, 0);
 }
 function well(site, r) {
   const y = site.h(0, 0) - 0.1;
+  // rubble wellhead, posts, windlass and shingled roof (lm_well a); same collider
+  if (put(site, 'sculpt_lm_well_a', 0, y + 0.1, 0)) { site.colCyl(0, 0, 1.05, y - 1, y + 1); return; }
   site.add(cyl(1.0, 1.05, 0.95, ST.grey, 0, y + 0.47, 0, 14));
   site.add(cyl(0.78, 0.78, 0.97, glass, 0, y + 0.5, 0, 14));
   for (const s of [-1, 1]) site.add(box(0.14, 2.0, 0.14, WD.dark, s * 0.95, y + 1.4, 0));

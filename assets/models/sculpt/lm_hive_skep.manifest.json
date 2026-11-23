@@ -1,0 +1,46 @@
+{
+ "sculpt_lm_hive_skep": {
+  "file": "models/sculpt/lm_hive_skep.glb",
+  "type": "model",
+  "license": "CC0 (original work)",
+  "author": "sculpted for this project",
+  "source": "tools/sculpt/assets/lm_hive_skep.mjs (node tools/sculpt/assets/landmarks_lib.mjs)",
+  "scale": 1,
+  "size": [
+   0.698,
+   1.125,
+   0.698
+  ],
+  "tris": 6248,
+  "lods": [
+   6248,
+   1000,
+   320
+  ],
+  "materials": [
+   "Straw",
+   "Wood",
+   "Paint",
+   "Moss"
+  ],
+  "mats": {
+   "Straw": {
+    "surface": "thatch",
+    "look": {}
+   },
+   "Wood": {
+    "surface": "wood",
+    "look": {}
+   },
+   "Paint": {
+    "surface": "paint",
+    "look": {}
+   },
+   "Moss": {
+    "surface": "none",
+    "look": {}
+   }
+  },
+  "notes": "Sculpted bee hive skep (landmarks apiary). Vertex colours on every LOD. Straw -> straw (thatch, no map), Wood -> wood, Paint -> cream (paint), Moss -> ivy."
+ }
+}

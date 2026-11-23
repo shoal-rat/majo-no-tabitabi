@@ -1,0 +1,56 @@
+{
+ "sculpt_lm_well_b": {
+  "file": "models/sculpt/lm_well_b.glb",
+  "type": "model",
+  "license": "CC0 (original work)",
+  "author": "sculpted for this project",
+  "source": "tools/sculpt/assets/lm_well_b.mjs (node tools/sculpt/assets/landmarks_lib.mjs)",
+  "scale": 1,
+  "size": [
+   2.345,
+   1.423,
+   2.191
+  ],
+  "tris": 5218,
+  "lods": [
+   5218,
+   2006,
+   1406
+  ],
+  "materials": [
+   "Stone",
+   "Wood",
+   "Iron",
+   "Water",
+   "Rope",
+   "Moss"
+  ],
+  "mats": {
+   "Stone": {
+    "surface": "stone",
+    "look": {}
+   },
+   "Wood": {
+    "surface": "wood",
+    "look": {}
+   },
+   "Iron": {
+    "surface": "metal",
+    "look": {}
+   },
+   "Water": {
+    "surface": "none",
+    "look": {}
+   },
+   "Rope": {
+    "surface": "cloth",
+    "look": {}
+   },
+   "Moss": {
+    "surface": "none",
+    "look": {}
+   }
+  },
+  "notes": "Sculpted field well (landmarks well; LM_VAR=b the farmsteads' low wellhead). Vertex colours on every LOD. Stone -> carved-stone family, Wood -> wood, Iron -> iron, Water / Rope -> cream (paint), Moss -> ivy."
+ }
+}

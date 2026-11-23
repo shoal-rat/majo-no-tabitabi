@@ -1,0 +1,41 @@
+{
+ "sculpt_lm_bench": {
+  "file": "models/sculpt/lm_bench.glb",
+  "type": "model",
+  "license": "CC0 (original work)",
+  "author": "sculpted for this project",
+  "source": "tools/sculpt/assets/lm_bench.mjs (node tools/sculpt/assets/landmarks_lib.mjs)",
+  "scale": 1,
+  "size": [
+   1.901,
+   1.028,
+   0.583
+  ],
+  "tris": 3000,
+  "lods": [
+   3000,
+   1000,
+   320
+  ],
+  "materials": [
+   "Wood",
+   "Iron",
+   "Moss"
+  ],
+  "mats": {
+   "Wood": {
+    "surface": "wood",
+    "look": {}
+   },
+   "Iron": {
+    "surface": "metal",
+    "look": {}
+   },
+   "Moss": {
+    "surface": "none",
+    "look": {}
+   }
+  },
+  "notes": "Sculpted country bench (landmarks bench, flower valley, hermit cottage). Vertex colours on every LOD. Wood -> wood family, Moss -> ivy."
+ }
+}
