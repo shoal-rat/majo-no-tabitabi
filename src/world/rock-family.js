@@ -42,20 +42,11 @@ export const rockParts = (shape, lod) => familyParts(rockId(shape), lod);
 export function familyParts(id, lod) {
   const k = id + ':' + lod;
   if (_parts.has(k)) return _parts.get(k);
-  const raw = G.assets?.raw?.(id);
+  const by = pieces(id, lod);
   let out = null;
-  if (raw) {
-    raw.scene.updateMatrixWorld(true);
+  if (by) {
     const lists = { stone: [], moss: [] };
-    raw.scene.traverse((o) => {
-      if (!o.isMesh) return;
-      let lodOf = -1;
-      for (let p = o; p && lodOf < 0; p = p.parent) { const m = /_LOD(\d)$/.exec(p.name || ''); if (m) lodOf = +m[1]; }
-      if (lodOf !== lod) return;
-      const g = o.geometry.clone();
-      g.applyMatrix4(o.matrixWorld);
-      (/^Moss/.test(o.material?.name || '') ? lists.moss : lists.stone).push(g);
-    });
+    for (const [name, g] of Object.entries(by)) (/^Moss/.test(name) ? lists.moss : lists.stone).push(g);
     const merge = (l) => {
       if (!l.length) return null;
       if (l.length === 1) return l[0];
@@ -77,6 +68,32 @@ export function familyParts(id, lod) {
     }
   }
   _parts.set(k, out);
+  return out;
+}
+const _pieces = new Map();
+/**
+ * Every primitive of LOD `lod` of a facet-kit GLB in the root frame, keyed by material name (`Rock_rock`, `Moss_none`,
+ * `MillTimber_wood` ...): { name: BufferGeometry (position, normal, linear color, index) }. Shared: never edit. null when
+ * the asset is missing.
+ */
+export function pieces(id, lod) {
+  const k = id + ':' + lod;
+  if (_pieces.has(k)) return _pieces.get(k);
+  const raw = G.assets?.raw?.(id);
+  let out = null;
+  if (raw) {
+    raw.scene.updateMatrixWorld(true);
+    raw.scene.traverse((o) => {
+      if (!o.isMesh) return;
+      let lodOf = -1;
+      for (let p = o; p && lodOf < 0; p = p.parent) { const m = /_LOD(\d)$/.exec(p.name || ''); if (m) lodOf = +m[1]; }
+      if (lodOf !== lod) return;
+      const g = o.geometry.clone();
+      g.applyMatrix4(o.matrixWorld);
+      (out ||= {})[o.material?.name || 'stone'] = g;
+    });
+  }
+  _pieces.set(k, out);
   return out;
 }
 

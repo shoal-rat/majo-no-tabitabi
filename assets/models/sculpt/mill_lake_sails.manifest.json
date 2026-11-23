@@ -1,0 +1,63 @@
+{
+ "sculpt_mill_lake_sails": {
+  "file": "models/sculpt/mill_lake_sails.glb",
+  "type": "model",
+  "license": "CC0 (original work)",
+  "author": "sculpted for this project",
+  "source": "tools/sculpt/assets/mill_lake.mjs (facet kit, rock_facet.mjs)",
+  "scale": 1,
+  "size": [
+   12,
+   12,
+   0.62
+  ],
+  "tris": 2164,
+  "lods": [
+   2164,
+   844
+  ],
+  "materials": [
+   "MillStone_stone",
+   "MillTimber_wood",
+   "MillSlate_paint",
+   "MillCloth_cloth",
+   "MillIron_metal"
+  ],
+  "mats": {
+   "MillStone_stone": {
+    "surface": "stone",
+    "look": {
+     "detail": 0.3,
+     "bump": 0.35
+    }
+   },
+   "MillTimber_wood": {
+    "surface": "wood",
+    "look": {
+     "detail": 0.4
+    }
+   },
+   "MillSlate_paint": {
+    "surface": "paint",
+    "look": {
+     "detail": 0.2,
+     "spec": 0.08,
+     "specPower": 40
+    }
+   },
+   "MillCloth_cloth": {
+    "surface": "cloth",
+    "look": {
+     "trans": 0.25
+    }
+   },
+   "MillIron_metal": {
+    "surface": "metal",
+    "look": {
+     "spec": 0.3
+    }
+   }
+  },
+  "notes": "The lake mill's sails (they turn about local z; origin = hub): canister, four whips with lattice and canvas (one furled). Vertex colour only. LOD tris 2164 / 844."
+ }
+}

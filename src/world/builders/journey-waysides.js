@@ -2,9 +2,10 @@ import * as THREE from 'three';
 import { G } from '../../core/game.js';
 import { box, cyl, cone, torus } from '../../core/geo.js';
 import { mulberry32 } from '../../core/util.js';
-import { Site, mat, beam } from './kit.js';
+import { Site, mat, beam, sculptVcMat } from './kit.js';
+import { toon } from '../../core/mats.js';
 import { WAYSIDES } from '../../data/waysides.js';
-import { siteRock, rockLod, familyParts, siteRockMats } from '../rock-family.js';
+import { siteRock, rockLod, familyParts, siteRockMats, pieces } from '../rock-family.js';
 
 const timber=mat.wood(0x755741), dark=mat.wood(0x4a4036), canvas=mat.cloth(0xdfcfa2);
 const slate=mat.tile(0x6b7580), limestone=mat.stone(0xb4ac93), shale=mat.stone(0x8d9084);
@@ -25,8 +26,33 @@ function stone(site,shape,x,y,z,w,h,d,material,angle=0,lod=rockLod(false)) {
   site.add(g,x,y,z,angle);
   return g;
 }
+// The sculpted tower mill (tools/sculpt/assets/mill_lake.mjs, G.sculpt type 'mill'): coursed limestone, timber frames,
+// a flared fish-scale slate cap with its windshaft housing and tail pole; the sails turn about the hub. Same collider and
+// roof platform as the old box tower. Every part in vertex colours on white copies of the site's surface materials.
+const MILL_HUB=[0,9.15,4.0];
+function millMats() {
+  const vc=(m)=>sculptVcMat(m);
+  return {
+    MillStone_stone:vc(toon(0xa59c90,{surface:'stone',look:{detail:.3,bump:.35}})), MillTimber_wood:vc(toon(0x755741,{surface:'wood',look:{detail:.4}})),
+    MillSlate_paint:vc(toon(0x6b7580,{surface:'paint',look:{detail:.2,spec:.08,specPower:40}})), MillCloth_cloth:vc(toon(0xdfcfa2,{surface:'cloth',look:{trans:.25}})),
+    MillIron_metal:vc(toon(0x3c3d44,{surface:'metal',look:{spec:.3}})),
+  };
+}
+function sculptedMill(site,ctx,y) {
+  if(!G.sculpt?.on?.('mill')) return false;
+  const q=G.quality||{}, lod=q.mobile||q.name==='low'?1:0, body=pieces('sculpt_mill_lake',lod), sail=pieces('sculpt_mill_lake_sails',lod);
+  if(!body||!sail) return false;
+  const M=millMats(), y0=y-.2;
+  for(const [name,geo] of Object.entries(body)) { const m=new THREE.Mesh(geo,M[name]||M.MillStone_stone); m.castShadow=true; m.receiveShadow=true; site.add(m,0,y0,0); }
+  const sails=new THREE.Group();
+  for(const [name,geo] of Object.entries(sail)) { const m=new THREE.Mesh(geo,M[name]||M.MillTimber_wood); m.castShadow=true; m.receiveShadow=true; sails.add(m); }
+  site.addDynamic(sails,MILL_HUB[0],y0+MILL_HUB[1],MILL_HUB[2]);
+  ctx.tick((dt)=>{if(G.state?.flags?.journey_mill) sails.rotation.z+=dt*.34*(G.journeyWeather?.state.wind||1);});
+  return true;
+}
 function mill(site,ctx) {
   const y=site.h(0,0);
+  if(sculptedMill(site,ctx,y)) { site.colCyl(0,0,3.1,y-.7,y+8.65); site.platDisc(0,0,2.25,y+8.4,.6); return; }
   site.add(cyl(2.45,3.15,8.7,limestone,0,y+4.05,0,12));
   site.add(cyl(2.57,2.62,.34,dark,0,y+8.25,0,12));
   site.add(cone(3.0,3.45,slate,0,y+9.98,0,12));

@@ -1,0 +1,63 @@
+{
+ "sculpt_mill_lake": {
+  "file": "models/sculpt/mill_lake.glb",
+  "type": "model",
+  "license": "CC0 (original work)",
+  "author": "sculpted for this project",
+  "source": "tools/sculpt/assets/mill_lake.mjs (facet kit, rock_facet.mjs)",
+  "scale": 1,
+  "size": [
+   6.468,
+   13.303,
+   9.861
+  ],
+  "tris": 14578,
+  "lods": [
+   14578,
+   2841
+  ],
+  "materials": [
+   "MillStone_stone",
+   "MillTimber_wood",
+   "MillSlate_paint",
+   "MillCloth_cloth",
+   "MillIron_metal"
+  ],
+  "mats": {
+   "MillStone_stone": {
+    "surface": "stone",
+    "look": {
+     "detail": 0.3,
+     "bump": 0.35
+    }
+   },
+   "MillTimber_wood": {
+    "surface": "wood",
+    "look": {
+     "detail": 0.4
+    }
+   },
+   "MillSlate_paint": {
+    "surface": "paint",
+    "look": {
+     "detail": 0.2,
+     "spec": 0.08,
+     "specPower": 40
+    }
+   },
+   "MillCloth_cloth": {
+    "surface": "cloth",
+    "look": {
+     "trans": 0.25
+    }
+   },
+   "MillIron_metal": {
+    "surface": "metal",
+    "look": {
+     "spec": 0.3
+    }
+   }
+  },
+  "notes": "The lake tower mill (static): coursed limestone blocks on the batter, footing, cornice, door / windows with timber frames, timber curb, flared fish-scale slate roof, windshaft housing, tail pole and winding wheel. Vertex colour only (linear). Hub of the sails at [0, 9.15, 4]. LOD tris 14578 / 2841."
+ }
+}
