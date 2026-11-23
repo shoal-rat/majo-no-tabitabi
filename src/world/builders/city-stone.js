@@ -3,6 +3,7 @@
 // capped merlons, cruciform arrow slits in stone surrounds, pointed lancets, spires laid in courses, and banners that
 // hang in real folds. Everything is plain geometry in the site's own materials, merged by the site bake.
 import * as THREE from 'three';
+import { G } from '../../core/game.js';
 import { clothify } from './kit.js';
 import { GeoBuilder, frontRing, fixWinding } from './city-geo.js';
 
@@ -117,6 +118,11 @@ export function lancet(stone, dark, x, y, w, h, frame = 0.22, mullion = true) {
  * hard-edged so every course's lip throws a line. Foot at y.
  */
 export function coursedSpire(b, r, h, c, y = 0, seg = 16, flare = 0.25) {
+  if (G.quality?.name === 'low') {
+    // phones and the low tier: coarser courses, fewer sides
+    c *= 1.7;
+    seg = Math.max(8, Math.round(seg * 0.6));
+  }
   const n = Math.max(4, Math.round(h / c)), prof = [];
   const rad = (t) => r * (1 - t) + (t < 0.12 ? flare * (1 - t / 0.12) ** 2 : 0);
   for (let i = 0; i < n; i++) {
