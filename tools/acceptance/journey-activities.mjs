@@ -1,6 +1,7 @@
 // The open country's discovery loop (src/gameplay/wilds*.js): one landmark puzzle of every kind solved by real spell
 // casts (G.spells.cast, the same path the heroine's casts take), stray stars picked up by touch, a cairn lookout, one
-// ring course flown on the broom by a steering bot, the save → reload round trip, and the map / journal pages.
+// ring course flown on the broom by a steering bot, the save → reload round trip, the map / journal pages, and the six
+// 残页试炼 page trials (seal → guardian → page → charged form).
 // Private throwaway browser, virtual clock (tools/trailer/clock.js). Output: MV_JOURNEY_QA or .tmp/journey-activities.
 import fs from 'node:fs/promises';
 import path from 'node:path';
@@ -196,6 +197,138 @@ try {
   await page.screenshot(path.join(output, 'journal-region.png'));
   result.pages = { journal, rows };
   if (!journal.tab || rows.length < 8) throw new Error('journal page missing ' + JSON.stringify(result.pages));
+  // ---- part 3: 残页试炼, the six tier-2 page trials (src/gameplay/wilds-pages.js) -----------------------------------------
+  // The seal answers each element's SMALL form (real casts), but only for a named witch; the guardian wakes with a ward of
+  // the site's element; wind's guardian is fought with real spells (ice breaks the wind ward, fire burns the pages); the
+  // page then teaches level 2 with the learn ceremony. Also: leaving the arena puts the guardian back to sleep, a page
+  // whose form she knows pays stardust, a page left lying survives a save round trip. One screenshot per site + guardian.
+  await page.evaluate('__game.ui.closeMenu();true');
+  await step(6);
+  const trial = (body) => page.evaluate(`(async()=>{
+    const G=__game,P=G.player,T=__T,clock=__rigClock,PG=G.wilds.pages;
+    const tick=async(n=1)=>{for(let i=0;i<n;i++)await clock.step(50);};
+    const sec=(s)=>tick(Math.round(s*20));
+    const fail=(m,o)=>{throw Error(m+' '+JSON.stringify(o||{}));};
+    const cast=(id,form,point,o)=>{const q=P.pos.clone().setY(P.pos.y+1.25);return G.spells.cast(id,form,{caster:P,point:point.clone(),dir:point.clone().sub(q).normalize(),...o});};
+    const front=(s,d=8)=>{const dx=Math.sin(s.def.face),dz=Math.cos(s.def.face);return [s.center.x+dx*d,s.center.z+dz*d,dx,dz];};
+    const go=async(s,d=8)=>{const [x,z]=front(s,d);T.teleport(x,z);P.yaw=s.def.face+Math.PI;P.hp=P.maxHp;P.mana=P.maxMana;await tick(10);};
+    const view=(s,tx,ty,tz)=>{const [x,z,dx,dz]=front(s,11);const h=G.world.heightAt(s.center.x,s.center.z);T.viewCam(x+dz*4,h+4.6,z-dx*4,tx??s.center.x,ty??h+1.4,tz??s.center.z);};
+    const answer=(s)=>{const el=s.def.el;
+      if(s.def.mech==='candles'){for(const c of s.candles)cast('fire','small',c.pos.clone());}
+      else if(s.def.mech==='rod')cast('thunder','small',s.rodTop.clone().setY(s.rodTop.y-3));
+      else if(s.def.mech==='lectern')cast('earth','small',s.base.clone());
+      else cast(el,'small',s.mechPos.clone());};
+    const fire=async(s)=>{answer(s);if(s.def.mech==='candles')for(let k=0;k<5&&!s.candles.every((c)=>c.lit);k++){await sec(0.7);for(const c of s.candles)if(!c.lit)cast('fire','small',c.pos.clone());}};
+    const waitGuardian=async(id)=>{for(let k=0;k<120&&!PG.guardian(id);k++)await tick(2);return PG.guardian(id);};
+    const dismiss=async()=>{for(let k=0;k<30&&G.mode!=='play';k++){T.key(k%2?'Enter':'KeyE',true);await tick(1);T.key(k%2?'Enter':'KeyE',false);await tick(5);}};
+    ${body}
+  })()`, { timeout: 600000 });
+  const shotTo = (name) => page.screenshot(path.join(output, name + '.png'));
+  const pagesOut = {};
+  // tier-1 kit only, an apprentice: the seal stays asleep
+  pagesOut.asleep = await trial(`
+    for(const el of ['wind','water','fire','ice','thunder','earth'])G.state.spells[el]=1;
+    delete G.state.flags.majo_named;
+    const s=PG.get('pg_wind');await go(s);await sec(1);
+    const seen=PG.state('pg_wind');
+    cast('wind','small',s.mechPos.clone());await sec(3);
+    if(PG.state('pg_wind')!=='seen'||PG.phase('pg_wind')!=='idle'||PG.guardian('pg_wind'))fail('seal answered an apprentice',{st:PG.state('pg_wind'),ph:PG.phase('pg_wind')});
+    G.state.flags.majo_named=true;
+    return {seen,st:PG.state('pg_wind')};`);
+  if (pagesOut.asleep.seen !== 'seen') throw new Error('wind site not sighted ' + JSON.stringify(pagesOut.asleep));
+  const order = ['pg_wind', 'pg_thunder', 'pg_fire', 'pg_earth', 'pg_water', 'pg_ice'];
+  for (const id of order) {
+    // the site, then the small form at its mechanism, then the guardian's entrance
+    await page.evaluate(`(async()=>{const G=__game,PG=G.wilds.pages,s=PG.get('${id}'),T=__T,P=G.player;
+      const dx=Math.sin(s.def.face),dz=Math.cos(s.def.face);T.teleport(s.center.x+dx*8,s.center.z+dz*8);P.yaw=s.def.face+Math.PI;
+      for(let i=0;i<30;i++)await __rigClock.step(50);
+      const h=G.world.heightAt(s.center.x,s.center.z);T.viewCam(s.center.x+dx*11+dz*4,h+4.6,s.center.z+dz*11-dx*4,s.center.x,h+1.4,s.center.z);return true;})()`);
+    await step(4);
+    await shotTo('page-site-' + id.slice(3));
+    const r = await trial(`
+      const s=PG.get('${id}'),id='${id}',el=s.def.el;await go(s);
+      if(PG.state(id)!=='seen')fail('site not sighted',{id,st:PG.state(id)});
+      if('${id}'==='pg_ice')G.state.spells.ice=2;   // a page whose form she already knows
+      await fire(s);
+      const g=await waitGuardian(id);
+      if(PG.state(id)!=='open'||!g)fail('seal did not wake the guardian',{id,st:PG.state(id),ph:PG.phase(id)});
+      if(!g.elite||g.named!==id||g.ward?.el!==el)fail('guardian not an elite with a '+el+' ward',{id,type:g.type,ward:g.ward?.el,elite:g.elite});
+      await sec(0.4);view(s,g.pos.x,g.pos.y+1.3,g.pos.z);
+      return {id,type:g.type,hp:g.maxHp,ward:g.ward.el,wardMax:g.ward.max,affixes:g.affixes};`);
+    await step(3);
+    await shotTo('page-guardian-' + id.slice(3));
+    await page.evaluate('__T.cam();true');
+    pagesOut[id] = r;
+    if (id === 'pg_wind') {
+      // fought with real spells: ice breaks the wind ward (the counter), fire burns the pages
+      pagesOut.fight = await trial(`
+        const s=PG.get('pg_wind'),id='pg_wind';let g=PG.guardian(id),broke=null;
+        const off=G.events.on?.('enemy:ward',(e)=>{if(e.enemy===g&&e.state==='break')broke=broke||{el:e.el,t:clock.now?.()};});
+        const hp0=g.hp;let ice=0,fires=0;
+        for(let k=0;k<30&&g.ward&&g.ward.hp>0&&!g.dead;k++){P.hp=P.maxHp;P.mana=P.maxMana;cast('ice','small',g.centerOut(new G.THREE.Vector3()),{target:g});ice++;await sec(0.7);}
+        const wardBroken=!g.ward||g.ward.hp<=0;
+        for(let k=0;k<40&&!g.dead;k++){P.hp=P.maxHp;P.mana=P.maxMana;cast('fire','small',g.centerOut(new G.THREE.Vector3()),{target:g});fires++;await sec(0.6);}
+        const realKill=g.dead;
+        if(!g.dead)G.combat.damage(g,99999,{force:true,element:'fire',source:P});
+        await sec(1);
+        if(!wardBroken)fail('ice did not break the wind ward',{ice,ward:g.ward&&g.ward.hp});
+        return {ice,fires,wardBroken,realKill,hp0};`);
+      if (!pagesOut.fight.realKill) console.log('note: wind guardian finished by force after ' + pagesOut.fight.fires + ' fireballs');
+    } else if (id === 'pg_thunder') {
+      // she flies off: the guardian sinks back into its seal; back in the arena, it wakes again
+      pagesOut.recede = await trial(`
+        const s=PG.get('pg_thunder'),id='pg_thunder';
+        T.teleport(s.center.x+90,s.center.z+40);await sec(1.5);
+        const gone=!PG.guardian(id)&&PG.phase(id)==='idle'&&PG.state(id)==='open';
+        await go(s,6);const g=await waitGuardian(id);
+        if(!gone||!g)fail('guardian did not recede / wake again',{gone,again:!!g});
+        G.combat.damage(g,99999,{force:true,element:'earth',source:P});await sec(1);
+        return {gone,again:!!g};`);
+    } else {
+      await trial(`const g=PG.guardian('${id}');G.combat.damage(g,99999,{force:true,element:'sun',source:P});await sec(1);return true;`);
+    }
+    if (id === 'pg_earth') {
+      // a page left lying is still there after a save round trip
+      pagesOut.save = await trial(`
+        const id='pg_earth',s=PG.get(id);await sec(2);
+        if(PG.state(id)!=='won'||!s.page.visible)fail('page did not drop',{st:PG.state(id)});
+        T.teleport(s.center.x+60,s.center.z);await sec(1);
+        G.save.disabled=false;if(!G.save.write(true))fail('save write failed');
+        G.save.reset();G.wilds.start();
+        const reset=PG.state(id);
+        if(!G.save.load())fail('save load failed');G.wilds.start();
+        const st=PG.state(id),visible=s.page.visible,lv={...G.state.spells};
+        G.save.erase();G.save.disabled=true;
+        if(st!=='won'||!visible||reset)fail('save round trip lost the page',{st,visible,reset});
+        return {st,visible,wind:lv.wind,thunder:lv.thunder};`);
+      if (pagesOut.save.wind !== 2 || pagesOut.save.thunder !== 2) throw new Error('levels lost in save round trip ' + JSON.stringify(pagesOut.save));
+    }
+    const got = await trial(`
+      const id='${id}',s=PG.get(id),el=s.def.el;await sec(2.2);
+      if(PG.state(id)!=='won')fail('page did not drop',{id,st:PG.state(id)});
+      const lv0=G.spells.level(el),dust0=G.state.inventory.stardust;let ceremony=null;
+      const learn=G.ui.learnSpell;G.ui.learnSpell=(o)=>{ceremony={id:o.id,name:o.name};return learn(o);};
+      const pp=s.page.position;T.teleport(pp.x+0.4,pp.z+0.4,pp.y-0.9);await sec(1.5);
+      G.ui.learnSpell=learn;
+      const st=PG.state(id),lv=G.spells.level(el),menu=G.mode;
+      await dismiss();await sec(2.5);
+      return {st,lv0,lv,ceremony,menu,mode:G.mode,dust:G.state.inventory.stardust-dust0};`);
+    pagesOut[id].page = got;
+    if (got.st !== 'read' || got.lv !== 2) throw new Error('page did not teach level 2 ' + JSON.stringify({ id, got }));
+    if (id === 'pg_ice' ? (got.ceremony || got.dust < 160) : (!got.ceremony || got.lv0 !== 1 || got.menu !== 'menu')) throw new Error('page reward wrong ' + JSON.stringify({ id, got }));
+    if (got.mode !== 'play') throw new Error('learn ceremony did not close ' + JSON.stringify(got));
+    if (id === 'pg_fire') { await step(2); await shotTo('page-ceremony-fire'); }
+  }
+  // the map shows six pins in the elements' colours, the journal one note per site
+  pagesOut.journal = await page.evaluate(`(()=>{const G=__game;const m=G.wilds.markers().filter((x)=>['wind','thunder','fire','earth','water','ice'].includes(x.icon));
+    const notes=G.ui.providers.lore().filter((n)=>n.id.startsWith('pg_'));return {pins:m.length,notes:notes.length,read:G.wilds.pages.counts()};})()`);
+  if (pagesOut.journal.pins !== 6 || pagesOut.journal.notes !== 6 || pagesOut.journal.read.read !== 6) throw new Error('page trial pins / notes ' + JSON.stringify(pagesOut.journal));
+  await page.evaluate(`(()=>{__T.teleport(-200,-300);__game.ui.openMenu('map');return true;})()`);
+  await step(30);
+  await shotTo('page-map');
+  await page.evaluate('__game.ui.closeMenu();true');
+  result.pageTrials = pagesOut;
+  result.errors = result.errors.concat(await page.evaluate('__T.errors()'));
   await fs.writeFile(path.join(output, 'activities.json'), JSON.stringify(result, null, 2) + '\n');
   console.log(JSON.stringify(result, null, 1));
   if (result.errors.length || consoleErrors.length) throw new Error('Game or renderer reported errors');

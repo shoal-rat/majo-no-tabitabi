@@ -300,3 +300,39 @@ save → reload twice mid-errand (letter + ford half done; hat in flight → in 
 - The hat ignores colliders (it may pass through a tree crown); the carter walks a straight line (no avoidance).
 - Story steps use their own tracker again only when the errand target is farther than 700 m.
 
+
+## Page trials round: 「残页试炼」, where the charged forms are won (2026-11-23)
+Files: `src/gameplay/wilds-pages.js` (sites, mechanisms, guardian, page, providers), data `PAGE_SITES` / `PAGE_SIGHT` /
+`PAGE_LEAVE` / `PAGE_DUST` in `src/data/wilds.js`, words `gameplay.wilds.pages.*` and `prompt.pageStone` / `prompt.pageTake`,
+guardian plates `combat.enemy.pg_*` + `combat.elite.pg_*` (`src/locales/zh-CN/combat.js`). Created by `G.wilds.init()`
+(`createWildPages`), `start()` / `update(dt, playing)` / `markers(out)` through `G.wilds`; journal notes through the story's
+lore provider (`G.wilds.pages.notes()`), places on the 「旅途见闻」 page through `journal().regions[].places`.
+
+**Loop per site** (one per discovery region, east → west: wind, thunder, fire, earth, water, ice)
+- Marker stone (sigil in the element colour, pulsing while asleep) + one far glint per unread site (one `Points` draw).
+  Within `PAGE_SIGHT` (85 m) → `'seen'`: toast, map pin (icon = element, element colour; place colour once read), journal note.
+- Mechanism reactors answer that element from the player's team only (`info.team === 'player'`); any form works, the
+  small one is enough: `harp` (wood, wind hit), `rod` (metal, 10.5 m tall capsule, thunder hit), `candles` (five 'lantern'
+  reactors, all lit — any fire lights a candle), `lectern` (stone, earth hit), `bud` (water hit; solid collider so beads burst
+  on it), `spring` (material water, ice hit). Not named (`majo_named` unset) → sigil flicker + `toast.asleep`, nothing opens.
+- Named → `'open'` (saved), the mechanism's own reaction (strings sing, a bolt runs rod → seal, candles flare, the lectern
+  rises, the bud blooms over a filling basin, the spring freezes), then the wake: `G.fx.circle` on the ground at local
+  (−6.5, −3.5), an `aura_sun` emitter growing for 1.7 s (1.0 s on a re-wake), then the spawn: `G.combat.spawn('pg_<el>',
+  pos, { def: TYPES[base], aggro, persistent, hpMul, element, wardEl })`, `e.named = id`, `makeElite(e, affixes)`, visual
+  scale ×1.15, `summon` burst, `starburst`, flash, `duel.shake('heavy')`, `duel.impact`, `duel.slowmo(0.35)`,
+  `duel.angle`, banner (title + name, `pages.<id>.guardian`), the trick toast after 2.6 s, a ring of 18 glyph posts at
+  `arena` m. Every guardian carries a ward of the site's element ('warded' affix with `wardEl`, or the type's own ward).
+- Fight: the guardian blinks back to its spot if it strays past `arena + 14` m; she leaves `PAGE_LEAVE` (60 m), dies, or
+  the game goes to the title → it is despawned (`toast.recede`), state stays `'open'`; back within `arena − 6` m (or a look
+  at the stone) wakes it again. Killing it (combat's own elite kill: plate title, `combat.eliteDown`, a dango + 30 stardust)
+  → `'won'`, the page flutters from the body to the stone; touching it (2.3 m, from the broom too) or the stone's prompt →
+  `'read'`: `G.spells.learn(el, 2)` → ceremony (ui/reactions.js adds the "hold {cast} to charge" toast), or `PAGE_DUST` (160)
+  if level 2 is known already. Events `'wilds:pageWon' { id, el }`, `'wilds:page' { id, el, knew }`.
+
+**API** `G.wilds.pages`: `sites`, `get(id)`, `state(id)`, `phase(id)` (`idle`|`waking`|`fight`|`page`), `guardian(id)`,
+`counts()` → `{ read, of }`, `notes()`, `places(region)`, `markers(out)`; tests: `sight(id, o)`, `answer(id)` (as if the
+element hit the mechanism), `read(id, { silent })`. Site record fields used by tests: `center`, `markerPos`, `mechPos`,
+`rodTop`, `base`, `candles[].pos`, `page`.
+
+**State** `G.state.wilds.pages` (defaultState; `wstate()` fills old saves): `{ pg_<el>: 'seen'|'open'|'won'|'read' }`.
+The wake, the fight and the mechanisms' mid-states (a half-lit candle ring) are physical and not saved.

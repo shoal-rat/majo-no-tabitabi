@@ -352,6 +352,8 @@ window.playTwo = async function (part) {
     await tick(10);
     if (part === 'first' && S.current()?.id !== 'book') throw Error('new game step ' + S.current()?.id);
     if (part === 'last' && S.current()?.id !== 'lodge') throw Error('continue step ' + S.current()?.id);
+    // a named save loads with the small forms it had: nothing is raised to the charged forms on load any more
+    if (part === 'last' && Object.values(G.state.spells).some((n) => n > 1)) throw Error('load raised spells ' + JSON.stringify(G.state.spells));
     let count = 0;
     while (S.current() && ++count < 42) {
       const step = S.current(),
@@ -382,6 +384,13 @@ window.playTwo = async function (part) {
       }
       if (step.action) {
         await talk(id);
+        if (id === 'invest') {
+          // spell-tiers: Fran teaches small forms only. Thunder and earth at level 1; nothing charged
+          // (tier 2 comes from the page trials, src/gameplay/wilds-pages.js)
+          const sp = { ...G.state.spells };
+          if (['wind', 'water', 'fire', 'ice', 'thunder', 'earth'].some((e) => sp[e] !== 1)) throw Error('invest grant ' + JSON.stringify(sp));
+          notes.push({ investSpells: sp });
+        }
       } else if (id === 'storm') {
         const p = get('franTrial');
         await walk(p, 1.9);

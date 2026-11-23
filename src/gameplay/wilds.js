@@ -6,6 +6,7 @@
 //   * landmark discovery: first visit → a toast (a banner for the large ones), a map pin, a line in the journal page.
 //   * lookouts: cairns (add a stone) and high perches mark the stars in sight on the map.
 //   * puzzles (wilds-puzzles.js) and ring courses (wilds-rings.js) at the landmarks.
+//   * 残页试炼 (wilds-pages.js): six sealed sites where the charged (tier-2) form of each element is won from a guardian.
 // State: G.state.wilds (defaults in core/save.js defaultState; ensure() fills old saves). Called from gameplay.js.
 import * as THREE from 'three';
 import { G } from '../core/game.js';
@@ -18,10 +19,11 @@ import { poolOf } from '../world/landforms/pools.js';
 import { makeInstanced, sfx, toast } from './common.js';
 import { createWildPuzzles } from './wilds-puzzles.js';
 import { createWildRings } from './wilds-rings.js';
+import { createWildPages } from './wilds-pages.js';
 
 const tt = (k, p) => t('gameplay.wilds.' + k, p);
 const lmName = (id) => (has('gameplay.wilds.lm.' + id) ? tt('lm.' + id) : id);
-const STATE_KEYS = ['lm', 'stars', 'sighted', 'puzzles', 'rings', 'cairns', 'perches', 'seen'];
+const STATE_KEYS = ['lm', 'stars', 'sighted', 'puzzles', 'rings', 'cairns', 'perches', 'seen', 'pages'];
 
 /** G.state.wilds, filled with defaults (old saves). */
 export function wstate() {
@@ -110,7 +112,7 @@ export function createWilds() {
   const stars = [];            // { id, lm|null, pos, region, slot, phase, got }
   const lms = [];              // { l, region, scale }
   let inst = null, points = null, pAttr = null, onAttr = null;
-  let PZ = null, RC = null;
+  let PZ = null, RC = null, PG = null;
   let scanT = 0, perchT = 0, ready = false, time = 0;
   const _p = new THREE.Vector3();
 
@@ -264,7 +266,7 @@ export function createWilds() {
     const out = [];
     for (const e of lms) if (w.lm[e.l.id]) out.push({ x: e.l.x, z: e.l.z, icon: 'pin', label: e.scale === 'small' ? '' : lmName(e.l.id), kind: 'place', color: '#9b8a6a' });
     for (const s of stars) if (w.sighted[s.id] && !w.stars[s.id]) out.push({ x: s.pos.x, z: s.pos.z, icon: 'star', label: '', kind: 'collectible', color: '#b9c8ff' });
-    try { PZ?.markers(out); RC?.markers(out); } catch (e) { G.reportError('wilds:markers', e); }
+    try { PZ?.markers(out); RC?.markers(out); PG?.markers(out); } catch (e) { G.reportError('wilds:markers', e); }
     return out;
   }
   /** The journal page (ui/wilds-page.js): stars + revealed note lines, one entry per region, the ring courses. */
@@ -273,6 +275,7 @@ export function createWilds() {
     const regions = WILD_REGIONS.map((id) => ({ id, name: tt('region.' + id), desc: tt('regionDesc.' + id), found: 0, of: 0, stars: 0, starsOf: 0, chests: 0, chestsOf: 0, places: [] }));
     const byId = Object.fromEntries(regions.map((r) => [r.id, r]));
     for (const e of lms) { const r = byId[e.region]; r.of++; if (w.lm[e.l.id]) { r.found++; r.places.push({ id: e.l.id, name: lmName(e.l.id), scale: e.scale }); } }
+    if (PG) for (const r of regions) r.places.push(...PG.places(r.id));
     for (const s of stars) { const r = byId[s.region]; r.starsOf++; if (w.stars[s.id]) r.stars++; }
     for (const p of PUZZLES) { const l = LANDMARK_BY_ID[p.lm]; if (!l) continue; const r = byId[regionOf(l.x, l.z)]; r.chestsOf++; if (w.puzzles[p.id] === 'open') r.chests++; }
     const lines = [];
@@ -295,8 +298,10 @@ export function createWilds() {
       addCairns();
       PZ = createWildPuzzles({ resolveAt, grant, wstate, lmName, tt });
       RC = createWildRings({ resolveAt, wstate, lmName, tt });
+      PG = createWildPages({ wstate, tt });
       try { PZ.init(); } catch (e) { G.reportError('wilds:puzzles', e); }
       try { RC.init(); } catch (e) { G.reportError('wilds:rings', e); }
+      try { PG.init(); } catch (e) { G.reportError('wilds:pages', e); }
       ready = true;
     },
     start() {
@@ -304,6 +309,7 @@ export function createWilds() {
       for (const s of stars) showStar(s, !w.stars[s.id]);
       try { PZ?.start(); } catch (e) { G.reportError('wilds:puzzles', e); }
       try { RC?.start(); } catch (e) { G.reportError('wilds:rings', e); }
+      try { PG?.start(); } catch (e) { G.reportError('wilds:pages', e); }
       api.markersDirty = true;
     },
     update(dt) {
@@ -341,6 +347,7 @@ export function createWilds() {
       }
       try { PZ?.update(dt, playing); } catch (e) { G.reportError('wilds:puzzles', e); }
       try { RC?.update(dt, playing); } catch (e) { G.reportError('wilds:rings', e); }
+      try { PG?.update(dt, playing); } catch (e) { G.reportError('wilds:pages', e); }
     },
     markers,
     journal,
@@ -356,6 +363,8 @@ export function createWilds() {
     sightFrom: (pos, reach, o) => sightFrom(pos, reach, o),
     get puzzles() { return PZ; },
     get rings() { return RC; },
+    /** 残页试炼: the six tier-2 page trials (wilds-pages.js). */
+    get pages() { return PG; },
     resolveAt,
   }));
   return api;

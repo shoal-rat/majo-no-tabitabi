@@ -153,3 +153,39 @@ export const RINGS = [
   },
 ];
 export const RING_PAY = { gold: 100, silver: 60, bronze: 35 };
+
+/**
+ * 残页试炼 (page trials, spell-tiers round 2026-11-23): where the charged (tier-2) form of each element is learned.
+ * Fran teaches only the small forms; a witch who wrote the charged chapter long ago tore it out page by page and left one
+ * page where each element is strongest, sealed and guarded. One site per discovery region, east to west along the road.
+ * A site is a weathered marker stone (the element's sigil) beside a mechanism that answers only that element's small form
+ * (BotW-style chemistry: wind sings through the harp, lightning goes to the rod, fire lights the candles, a rock pillar
+ * lifts the sunken lectern, water wakes the bud, ice stops the spring). That breaks the seal and wakes the guardian, an
+ * elite whose ward only the countering element breaks; beating it drops the page → G.spells.learn(el, 2) and the ceremony.
+ * Seals answer only a named witch (flag majo_named), so every guardian meets the full tier-1 kit.
+ * Fields: x / z world metres (survey: flat within 14 m, few trees, outside every guard / landmark / camp), face = yaw of
+ * the marker (radians, 0 = +z), mech = mechanism kind (src/gameplay/wilds-pages.js), arena = fight radius (m).
+ * guardian: base = combat TYPES id the guardian is built on (its own kit), hpMul, affixes (src/combat/wards.js AFFIXES),
+ * ward = element of the 'warded' shell (types with a ward of their own ignore it), element = caster element.
+ * Words: gameplay.wilds.pages.* (site names, hints, page lines), combat.enemy.<id> / combat.elite.<id> (plates).
+ */
+export const PAGE_SITES = [
+  { id: 'pg_wind', el: 'wind', x: 2310, z: 358, face: 1.9, mech: 'harp', arena: 22,
+    guardian: { base: 'paper', hpMul: 16, affixes: ['warded'], ward: 'wind' } },
+  { id: 'pg_thunder', el: 'thunder', x: 1300, z: 350, face: 3.0, mech: 'rod', arena: 20,
+    guardian: { base: 'caster', element: 'thunder', hpMul: 2.6, affixes: ['warded', 'blink'], ward: 'thunder' } },
+  { id: 'pg_fire', el: 'fire', x: 175, z: -555, face: 3.4, mech: 'candles', arena: 22,
+    guardian: { base: 'embersnake', hpMul: 2.2, affixes: ['volatile'] } },
+  { id: 'pg_earth', el: 'earth', x: -1225, z: -700, face: 0.6, mech: 'lectern', arena: 20,
+    guardian: { base: 'golem', hpMul: 1.6, affixes: ['warded'], ward: 'earth' } },
+  { id: 'pg_water', el: 'water', x: -565, z: 120, face: 5.2, mech: 'bud', arena: 22,
+    guardian: { base: 'blob', hpMul: 5, affixes: ['warded', 'leech'], ward: 'water' } },
+  { id: 'pg_ice', el: 'ice', x: -1700, z: -820, face: 4.1, mech: 'spring', arena: 22,
+    guardian: { base: 'froststag', hpMul: 2, affixes: ['frenzy'] } },
+];
+/** First sighting (map pin, journal hint) within this many metres of the marker. */
+export const PAGE_SIGHT = 85;
+/** The guardian sinks back into its seal when she is this far from the arena centre (or falls); it wakes again on return. */
+export const PAGE_LEAVE = 60;
+/** A page whose form she already knows (an older save, ?allspells) pays this much stardust instead. */
+export const PAGE_DUST = 160;

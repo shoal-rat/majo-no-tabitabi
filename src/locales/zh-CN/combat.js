@@ -13,6 +13,8 @@ export default {
   enemy: {
     paper: '流浪书页', blob: '泥沼团', blob_small: '小泥团', wolf: '荒原狼', moth: '啄星蝠', wisp: '迷路的灯火', golem: '隘口石卫',
     caster: '拦路魔法使', nest: '荆棘巢', froststag: '霜角鹿', embersnake: '余烬蛇', raider: '黑帚强盗', thief: '扒手魔女',
+    // the page trials' guardians (src/gameplay/wilds-pages.js)
+    pg_wind: '卷页守灵', pg_thunder: '引雷幻影', pg_fire: '烛焰蛇', pg_earth: '沉碑石卫', pg_water: '睡莲泥灵', pg_ice: '止泉霜鹿',
   },
   /** one line per foe for the travel notes (first meeting) */
   lore: {
@@ -30,6 +32,7 @@ export default {
   },
   elite: {
     greymane: '「灰鬃」', mossback: '「苔背」', whitecrown: '「白冠」', crowfeather: '「鸦羽」', redthroat: '「赤喉」',
+    pg_wind: '「风琴」', pg_thunder: '「引雷」', pg_fire: '「烛林」', pg_earth: '「沉碑」', pg_water: '「睡莲」', pg_ice: '「止泉」',
   },
   eliteSub: {
     greymane: '荒原狼群的头领 · 它一嚎，狼群就围上来',

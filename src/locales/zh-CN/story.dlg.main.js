@@ -4,6 +4,14 @@ const me = (s, a) => words('elaina', s, a),
   saya = (s, a) => words('saya', s, a),
   mom = (s, a) => words('mother', s, a),
   narr = (s) => words('narrator', s);
+// Fran's last lesson closes both endings of the naming: thunder and earth in their small forms, and where the charged
+// forms are (the page trials, src/gameplay/wilds-pages.js)
+const lesson = [
+  fran('最后一课：雷和岩。我只教你最小的一式——一道落雷，一根石柱。'),
+  me('那蓄满力的大魔法呢？您在空地上用过的那些。'),
+  fran('那些啊，从来不是老师教会的。很久以前，有位魔女把那一章从魔导书里撕了下来，一页一页留在了路上：风最大的崖，打雷的丘，干掉的泉边。'),
+  fran('看见刻着元素纹章的旧石碑，就用你会的那一式去敲门。书页认得出，谁是走了远路来的魔女。', 'nod'),
+];
 export default {
   book: [
     narr('妮可在地图边缘画了一座小桥，旁边写的却是桥头卖汤的人。小小的伊蕾娜翻回去，又读了一遍。'),
@@ -42,6 +50,7 @@ export default {
     fran('这一回，是你先找到了我的空当。以后，见习生的称呼可别再答应了。'),
     me('那么，我要以什么名字在旅行记上签名呢？'),
     fran('让我看看……你的头发映着晨光，像一捧温柔的灰。从今天起，你就是灰之魔女。', 'nod'),
+    ...lesson,
   ],
   investHeld: [
     fran(
@@ -49,6 +58,7 @@ export default {
     ),
     me('老师，我能把今天也写进旅行记吗？'),
     fran('带上这枚胸针，从今天起，以灰之魔女的名字来写吧。', 'nod'),
+    ...lesson,
   ],
   promise: [
     mom('遇上危险，先让自己平安离开。胸口那枚东西也不会让你比别人更特别。'),

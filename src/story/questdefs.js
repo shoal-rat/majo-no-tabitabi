@@ -37,8 +37,9 @@ export function makeQuests(S) {
           anchor: 'franTrial',
           check: (c) => !!c.vars.franResult && !!G.state.flags.majo_trial_lake && !S.finale.active,
         },
-        // 元素交织: Fran's last lesson — thunder, and the charged (big) form of every element she knows
-        talk('invest', 'fran', 'franTrial', { grant: { spells: { earth: 2, thunder: 2, wind: 2, water: 2, fire: 2, ice: 2 }, flags: ['majo_named', 'majo_brooch'] } }),
+        // Fran's last lesson: the small forms of thunder and earth. The charged (tier-2) forms are not hers to give:
+        // a witch finds them on the road, one page per element (src/gameplay/wilds-pages.js, 残页试炼)
+        talk('invest', 'fran', 'franTrial', { grant: { spells: { earth: 1, thunder: 1 }, flags: ['majo_named', 'majo_brooch'] } }),
         talk('promise', 'mother', 'farewell', {
           done: () => G.ui?.banner?.(t('story.ui.next'), t('story.ui.road')),
         }),

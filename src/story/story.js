@@ -237,7 +237,9 @@ export const storySystem = {
       }
       G.state.story.trialLakeEdition = 1;
     }
-    if (G.state.flags.majo_named) for (const id of ['earth', 'thunder', 'wind', 'water', 'fire', 'ice']) G.state.spells[id] = Math.max(2, G.state.spells[id] || 0);   // the invest grant, for saves made before it grew
+    // the invest grant (thunder and earth, small forms) for saves named before Fran taught them. Levels are never
+    // lowered: a save that already holds charged forms keeps them; new ones come from the page trials.
+    if (G.state.flags.majo_named) for (const id of ['earth', 'thunder']) G.state.spells[id] = Math.max(1, G.state.spells[id] || 0);
     if (!G.state.quests.apprentice) G.quests.start('apprentice', { silent: true });
     if (G.quests.isDone('apprentice') && !G.state.quests.mages) G.quests.start('mages', { silent: true });
     if (G.ui?.providers) {
@@ -251,7 +253,7 @@ export const storySystem = {
             title: t('story.notes.' + id + '.title'),
             text: t('story.notes.' + id + '.text'),
           }))
-          .concat(G.travelNotes?.journal() || []);
+          .concat(G.travelNotes?.journal() || [], G.wilds?.pages?.notes?.() || []);
     }
     G.quests.restoreAll();
     applyWorld();

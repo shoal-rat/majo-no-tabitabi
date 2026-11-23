@@ -16,7 +16,8 @@ export function defaultState() {
     upgrades: { hp: 0, mana: 0, broom: 0, charm: 0 },
     /** counters: stardust(星屑) dango(团子) moontear(月之泪) + any ingredient / key item ids */
     inventory: { stardust: 0, dango: 2, moontear: 0 },
-    /** 灵诀 levels: element id -> 0 (unknown) | 1 (small form) | 2 (big form). ids: fire water ice wind thunder earth sun moon */
+    /** 灵诀 levels: element id -> 0 (unknown) | 1 (small form) | 2 (big form). ids: fire water ice wind thunder earth sun moon.
+     *  The story teaches level 1 (Fran); level 2 of each element is won at its page trial (src/gameplay/wilds-pages.js). */
     spells: {},
     selectedSpell: null,
     /** non-elemental abilities learned: broom, wings, guard, shikigami, kinkan -> true (dodge and charm are innate) */
@@ -45,8 +46,9 @@ export function defaultState() {
     outfit: 'apprentice',
     /** open-country discoveries (src/gameplay/wilds.js): landmark id -> 1 found; star id -> 1 picked up / sighted on the
      *  map; puzzle id -> 'solved' | 'open'; ring course id -> { best, medal }; cairns / perches used; puzzles seen;
-     *  steps = star rewards paid (every STAR_STEP stars) */
-    wilds: { lm: {}, stars: {}, sighted: {}, puzzles: {}, rings: {}, cairns: {}, perches: {}, seen: {}, steps: 0 },
+     *  steps = star rewards paid (every STAR_STEP stars); pages = 残页试炼 (tier-2 page trials, wilds-pages.js):
+     *  site id -> 'seen' | 'open' (seal broken) | 'won' (guardian beaten, page waiting) | 'read' (charged form learned) */
+    wilds: { lm: {}, stars: {}, sighted: {}, puzzles: {}, rings: {}, cairns: {}, perches: {}, seen: {}, steps: 0, pages: {} },
     /** roadside errands (src/gameplay/errands.js): errand id -> { s: 'active' | 'done', step, v }; keepsake id -> 1;
      *  traveller id -> 1 once she has met them (map pins, journal) */
     errands: { list: {}, keep: {}, seen: {} },

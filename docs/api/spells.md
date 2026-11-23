@@ -140,3 +140,16 @@ Exports from the modules:
 - Camera (player/camera.js, struggle only): frames both casters side-on from back and up (D = max(8.5, 0.62·span + 4.5),
   height 0.3·D), chooses the side whose spot both casters and the centre can see (physics rays), pulls in if a wall is near,
   and kicks out ~0.9 m when the struggle breaks.
+
+## Spell tiers (spell-tiers round, 2026-11-23)
+- Two tiers per element: level 1 = the small form (tap {cast}), level 2 = the charged form (hold {cast} for 0.9 s). The
+  story only ever teaches level 1: book → wind; `honest` → water, fire, ice; `invest` → thunder, earth
+  (`src/story/questdefs.js`). The old `invest` grant of level 2 for all six and the on-load raise in `story.js start()` are
+  gone; `start()` now only backfills thunder / earth level 1 for named saves. No save ever loses a level.
+- Level 2 comes from the six page trials (「残页试炼」, `src/gameplay/wilds-pages.js`, docs/api/gameplay.md "Page trials
+  round"): beating a site's guardian drops a page → `learn(el, 2)` with the ceremony (the big form's name and text, since
+  `before >= 1`). Seals answer only after `majo_named`, so guardians always face the full tier-1 kit.
+- Tests and probes: `?allspells=1` / `learnAll()` still give every level 2; scripts that need one charged form call
+  `G.spells.learn(id, 2, { silent: true })` (journey-flight does for earth).
+- Balance assumption for combat: everything up to the end of episode 2 must be beatable with the six small forms; a player
+  who explores may have some charged forms early, but nothing may require one.
