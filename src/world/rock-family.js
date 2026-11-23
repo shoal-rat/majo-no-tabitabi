@@ -37,10 +37,12 @@ const _parts = new Map();
  * The stone and moss geometry of one LOD of a shape, in the GLB frame (foot centre at the origin, ~1 m). Shared: never
  * edit. { stone, moss (may be null), box } or null when the asset is missing.
  */
-export function rockParts(shape, lod) {
-  const k = shape + ':' + lod;
+export const rockParts = (shape, lod) => familyParts(rockId(shape), lod);
+/** the same split for any facet-kit GLB (stone primitives vs `Moss_*` primitives), by asset id */
+export function familyParts(id, lod) {
+  const k = id + ':' + lod;
   if (_parts.has(k)) return _parts.get(k);
-  const raw = G.assets?.raw?.(rockId(shape));
+  const raw = G.assets?.raw?.(id);
   let out = null;
   if (raw) {
     raw.scene.updateMatrixWorld(true);

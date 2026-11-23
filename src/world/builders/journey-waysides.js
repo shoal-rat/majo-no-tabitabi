@@ -4,7 +4,7 @@ import { box, cyl, cone, torus } from '../../core/geo.js';
 import { mulberry32 } from '../../core/util.js';
 import { Site, mat, beam } from './kit.js';
 import { WAYSIDES } from '../../data/waysides.js';
-import { siteRock, rockLod } from '../rock-family.js';
+import { siteRock, rockLod, familyParts, siteRockMats } from '../rock-family.js';
 
 const timber=mat.wood(0x755741), dark=mat.wood(0x4a4036), canvas=mat.cloth(0xdfcfa2);
 const slate=mat.tile(0x6b7580), limestone=mat.stone(0xb4ac93), shale=mat.stone(0x8d9084);
@@ -50,12 +50,34 @@ function mill(site,ctx) {
   site.addDynamic(sails,0,y+6.8,2.94);
   ctx.tick((dt)=>{if(G.state?.flags?.journey_mill) sails.rotation.z+=dt*.34*(G.journeyWeather?.state.wind||1);});
 }
+/** A dry-stone wall along a site-local polyline [[x, z], ...]: the sculpted 2.4 m segment (wall_drystone, the same as the
+ *  field walls) cut to whole segments, each pitched with the ground. false when the wall asset is off / missing. */
+function wallRun(site,pts) {
+  if(!G.sculpt?.on?.('drywall')) return false;
+  const q=G.quality||{}, P=familyParts('sculpt_wall_drystone',q.mobile||q.name==='low'?1:0);
+  if(!P) return false;
+  const M=siteRockMats(), cum=[0];
+  for(let i=1;i<pts.length;i++) cum.push(cum[i-1]+Math.hypot(pts[i][0]-pts[i-1][0],pts[i][1]-pts[i-1][1]));
+  const at=(d)=>{let i=1;while(i<pts.length-1&&cum[i]<d)i++;const t=(d-cum[i-1])/Math.max(1e-6,cum[i]-cum[i-1]);return [pts[i-1][0]+(pts[i][0]-pts[i-1][0])*t,pts[i-1][1]+(pts[i][1]-pts[i-1][1])*t];};
+  const total=cum[cum.length-1], n=Math.max(1,Math.round(total/2.4)), step=total/n;
+  for(let k=0;k<n;k++) {
+    const a=at(k*step), b=at((k+1)*step), mx=(a[0]+b[0])/2, mz=(a[1]+b[1])/2, chord=Math.hypot(b[0]-a[0],b[1]-a[1]);
+    const g=new THREE.Group();
+    for(const [geo,m] of [[P.stone,M.stone],[P.moss,M.moss]]) if(geo){const mesh=new THREE.Mesh(geo,m);mesh.castShadow=!!(m===M.stone);mesh.receiveShadow=true;g.add(mesh);}
+    g.scale.set(chord/2.4,1,1);
+    site.add(g,mx,site.h(mx,mz)-.1,mz,Math.atan2(-(b[1]-a[1]),b[0]-a[0]));
+    g.rotation.z=Math.atan2(site.h(b[0],b[1])-site.h(a[0],a[1]),chord);
+  }
+  return true;
+}
 function fold(site,random,wide) {
-  const radius=wide?12:9;
+  const radius=wide?12:9, arc=[];
+  for(let i=0;i<44;i++) { const a=.34+i*(Math.PI*2-.7)/43; arc.push([Math.sin(a)*radius,Math.cos(a)*6.4]); }
+  const laid=wallRun(site,arc);
   for(let i=0;i<44;i++) {
     const a=.34+i*(Math.PI*2-.7)/43, x=Math.sin(a)*radius, z=Math.cos(a)*6.4;
     const base=site.h(x,z);
-    for(let row=0;row<3;row++) {
+    if(!laid) for(let row=0;row<3;row++) {
       const angle=a+(row%2)*.055;
       rock(site, Math.sin(angle)*radius,base+.14+row*.31, Math.cos(angle)*6.4,
         .85+random()*.25,.34+random()*.08,.49,random()<.72?limestone:shale,-a);

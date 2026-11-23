@@ -56,6 +56,8 @@ export const SCULPT_TYPES = {
   // the countryside rock family (round art-stone, world/rock-family.js): exact planes, bevels, beds / joints, moss cushions;
   // used by the flora rock species, the wayside stones and the trial clearing
   rockfam: ['sculpt_rock_field', 'sculpt_rock_split', 'sculpt_rock_ledge', 'sculpt_rock_shelf', 'sculpt_rock_crag', 'sculpt_rock_cobble'],
+  // dry-stone wall segment laid stone by stone (flora/countryside-species.js drywall, the waysides' sheepfolds)
+  drywall: ['sculpt_wall_drystone'],
   // retired by rockfam (no user left; kept for reference, never loaded by default): the distance-field rocks of 2026-11-17
   rocks: ['sculpt_rock_slab', 'sculpt_rock_outcrop', 'sculpt_rock_standing', 'sculpt_rock_rubble'],
   boulders: ['sculpt_rock_boulder_a', 'sculpt_rock_boulder_b'],
@@ -70,12 +72,12 @@ export const SCULPT_TYPES = {
   dango: ['sculpt_dango'], gohei: ['sculpt_prop_gohei'], broom: ['sculpt_prop_broom'], hip_lantern: ['sculpt_hip_lantern'],
   earth_column: ['sculpt_earth_column_a', 'sculpt_earth_column_b', 'sculpt_earth_column_c', 'sculpt_earth_rubble'],
 };
-export const SCULPT_DEFAULT = ['stone_lantern', 'komainu', 'kitsune', 'great_lantern', 'rockfam', 'pot', 'barrel', 'bucket', 'pumpkin',
+export const SCULPT_DEFAULT = ['stone_lantern', 'komainu', 'kitsune', 'great_lantern', 'rockfam', 'drywall', 'pot', 'barrel', 'bucket', 'pumpkin',
   'jar', 'cart', 'hen', 'gohei', 'broom', 'hip_lantern', 'earth_column'];
 // sculpt GLBs whose COLOR_0 was rewritten by the asset's own post step (dango.mjs post, gohei.mjs / hip_lantern.mjs --split /
 // --post: sRGB paint -> linear once) — measured single-encoded, so fixSculptColours must leave them alone
 // facet-kit GLBs (tools/sculpt/assets/rock_facet.mjs) write linear COLOR_0 once as well
-const SCULPT_VC_OK = new Set(['sculpt_dango', 'sculpt_prop_gohei', 'sculpt_hip_lantern', ...SCULPT_TYPES.rockfam]);
+const SCULPT_VC_OK = new Set(['sculpt_dango', 'sculpt_prop_gohei', 'sculpt_hip_lantern', ...SCULPT_TYPES.rockfam, ...SCULPT_TYPES.drywall]);
 function sculptSwitch(G) {
   const p = G.params?.sculpt;
   const types = new Set(p === '0' ? [] : p === 'all' ? Object.keys(SCULPT_TYPES) : !p || p === '1' ? SCULPT_DEFAULT : String(p).split(',').map((s) => s.trim()).filter((s) => SCULPT_TYPES[s]));

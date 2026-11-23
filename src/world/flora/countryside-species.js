@@ -7,13 +7,15 @@
 //   hedge     a dense two-metre bush, planted shoulder to shoulder along field edges
 //   oak       a broad landmark tree with a low wide crown; apple: a small orchard tree with red fruit; hawthorn: a wind-bent
 //             lone tree in blossom on the moor and the pass
-//   drywall   2.4 m of dry-stone wall (coursed stones, cope stones on edge), laid along local +x
+//   drywall   2.4 m of dry-stone wall laid along local +x: the sculpted wall (laidWall) or the old coursed boxes
 //   fence     3 m of post-and-rail fence along local +x; haybale: a round bale lying on its side
 import * as THREE from 'three';
 import { mulberry32 } from '../../core/util.js';
 import { TILE } from './atlas.js';
 import { foliageAtlas } from './atlas.js';
 import { EXTRA_RECIPES, PROC } from './procgen.js';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
+import { familyParts } from '../rock-family.js';
 
 const { GB, model, bush, broadTree, LEAF_LOOK, DS, lin } = PROC;
 
@@ -95,6 +97,22 @@ const box = (gb, cx, cy, cz, sx, sy, sz, ry, rz, col, faces = 0b111111, jit = nu
   }
 };
 const STONES = [0xb3ab95, 0xa49e8c, 0xc1b8a0, 0x9d9a8d, 0xaea38a, 0x98968a].map(lin);
+/**
+ * The laid wall (round art-stone, tools/sculpt/assets/wall_drystone.mjs, G.sculpt type 'drywall'): three offset courses of
+ * rounded through-stones, a leaning cope on edge, moss on the cope; segments continue the bond end to end. LOD by tier
+ * (phones / low: the domed-fan LOD, about the old wall's cost). Moss rides in the same part via aMix (no added draw).
+ */
+function laidWall(G) {
+  if (!G?.sculpt?.on?.('drywall')) return null;
+  const q = G.quality || {};
+  const P = familyParts('sculpt_wall_drystone', q.mobile || q.name === 'low' ? 1 : 0);
+  if (!P) return null;
+  const geos = [P.stone.clone(), P.moss?.clone()].filter(Boolean);
+  geos.forEach((g, j) => g.setAttribute('aMix', new THREE.BufferAttribute(new Float32Array(g.attributes.position.count).fill(j * 0.6), 1)));
+  const geo = geos.length > 1 ? mergeGeometries(geos, false) : geos[0];
+  geo.computeBoundingBox(); geo.computeBoundingSphere();
+  return model([{ geo, rule: { mode: 'mul' }, side: THREE.FrontSide, mat: { surface: 'rock', look: { rim: 0.2, wrap: 0.35 }, mix: [1, 1, 1, 1] } }]);
+}
 function drywall(seed) {
   const rnd = mulberry32(seed);
   const gb = new GB();
@@ -198,7 +216,7 @@ Object.assign(EXTRA_RECIPES, {
   ancient: (G, s) => broadTree({ H: 44, R: 23, shape: 'umbrella', clumps: 44, cards: 12, tile: TILE.broad, trunkR: 2.6, crownY: 0.5, clumpK: 0.34, lean: 0.03, bark: lin(0x58463a) }, s),
   apple: (G, s) => withFruit(broadTree({ H: 4.6, R: 2.5, shape: 'dome', clumps: 10, cards: 8, tile: TILE.broad, trunkR: 0.2, crownY: 0.6, bark: lin(0x5e4a3a) }, s), s, 26, 0.17, 0xc9473a, 4.6 * 0.68, 2.5, 4.6 * 0.3),
   hawthorn: (G, s) => broadTree({ H: 5.4, R: 3.1, shape: 'umbrella', clumps: 11, cards: 10, tile: TILE.blossom, trunkR: 0.22, crownY: 0.6, lean: 0.14, cardK: 1.2, bark: lin(0x5a4639) }, s),
-  drywall: (G, s) => drywall(s),
+  drywall: (G, s) => laidWall(G) || drywall(s),
   fence: (G, s) => fence(s),
   haybale: (G, s) => haybale(s),
 });

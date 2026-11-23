@@ -1,0 +1,42 @@
+{
+ "sculpt_wall_drystone": {
+  "file": "models/sculpt/wall_drystone.glb",
+  "type": "model",
+  "license": "CC0 (original work)",
+  "author": "sculpted for this project",
+  "source": "tools/sculpt/assets/wall_drystone.mjs (facet kit, rock_facet.mjs)",
+  "scale": 1,
+  "size": [
+   2.684,
+   1.032,
+   0.621
+  ],
+  "tris": 987,
+  "lods": [
+   987,
+   365,
+   256
+  ],
+  "materials": [
+   "Rock_rock",
+   "Moss_none"
+  ],
+  "mats": {
+   "Rock_rock": {
+    "surface": "rock",
+    "look": {
+     "rim": 0.2,
+     "wrap": 0.35
+    }
+   },
+   "Moss_none": {
+    "surface": "none",
+    "look": {
+     "rim": 0.3,
+     "wrap": 0.5
+    }
+   }
+  },
+  "notes": "2.4 m dry-stone wall segment: three offset courses of rounded through-stones (bevel ring + dome), leaning cope on edge, dark hearting, moss on the cope (Moss_none). Courses tile end to end. Vertex colour only (linear). LOD tris 987 / 365 / 256."
+ }
+}
