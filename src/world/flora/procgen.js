@@ -4,10 +4,11 @@
 // colliders, burning and felling keep working. Sizes follow the original asset's bounding box when it exists, so the
 // scatter scales and the collider radii stay as designed.
 import * as THREE from 'three';
-import { mergeVertices } from 'three/addons/utils/BufferGeometryUtils.js';
+import { mergeVertices, mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { mulberry32 } from '../../core/util.js';
 import { specimenTree } from './specimenTrees.js';
 import { foliageAtlas, tileUV, TILE } from './atlas.js';
+import { rockParts, rockLod, fitRock, NEUTRAL } from '../rock-family.js';
 
 const DS = THREE.DoubleSide;
 const lin = (hex) => { const c = new THREE.Color(hex); return [c.r, c.g, c.b]; };
@@ -927,75 +928,46 @@ const rk = (o) => ({ box, G }, s) => {
   let sy = box ? Math.max(0.2, box.max.y) * 0.8 : 1;
   if (!o.tall) sy = Math.min(sy, Math.max(sx, sz) * 0.95);
   const P = { sx, sy, sz, color: o.color || ROCK_C, ...o };
-  if (o.sculpt && G?.sculpt?.on?.(/boulder_[ab]$/.test(o.sculpt) ? 'boulders' : 'rocks')) { try { const m = sculptedRock(G, o.sculpt, P); if (m) return m; } catch (e) { G.reportError?.('flora:sculptRock', e); } }
+  if (o.facet && G?.sculpt?.on?.('rockfam')) { try { const m = facetRock(o.facet, P); if (m) return m; } catch (e) { G.reportError?.('flora:facetRock', e); } }
   return rock(P, s);
 };
 /**
- * Sculpted rock (install round 2026-11-17, .tmp/sculpt/rock_boulder_a/INSTALL.md): assets/models/sculpt/rock_*.glb LOD1
- * (800 triangles, vertex colours only: instanced like the procedural rock it replaces, about its cost). Fitted into the
- * procedural rock's box (width 0.886·sx / sz, top 0.693·sy over the foot) so colliders, scale and placement stay; the
- * foot sinks 6 % of the height. COLOR_0.rgb is a neutral stone value: times the species colour / lin(#9b9b9b) gives
- * the land's stone; COLOR_0.a is the moss-here mask -> aMix (moss species: widened, plus a softened top rule; snow
- * species keep their up-facing rule and take a little of the mask).
+ * Family rock (round art-stone 2026-11-24, world/rock-family.js): exact planes, bevelled edges, beds / joints as geometry,
+ * a moss cushion of its own. Fitted into the procedural rock's box (width 0.886·sx / sz, top 0.693·sy over the foot, foot
+ * sunk 6 %) so colliders, scale and placement stay. LOD by tier (rockLod: the clutter species lighter). Stone colour =
+ * neutral paint × species colour / NEUTRAL (then the instance's land tint); the moss vertices take aMix = 0.6 toward the
+ * mineral's neutral aCol0, so a dark land tint only half-muddies the green. One part: no added draw.
  */
-const NEUTRAL = lin(0x9b9b9b)[0];
-function sculptedRock(G, id, P) {
-  const raw = G.assets?.raw?.(id);
-  if (!raw) return null;
-  let src = null;
-  raw.scene.traverse((o) => { if (!src && o.isMesh && /_LOD1$/.test(o.name || o.parent?.name || '')) src = o; });
-  if (!src) raw.scene.traverse((o) => { if (o.isMesh && /_LOD1/.test((o.name || '') + (o.parent?.name || ''))) src = src || o; });
-  if (!src) return null;
-  raw.scene.updateMatrixWorld(true);
-  const g0 = src.geometry.clone();
-  g0.userData = {};
-  g0.applyMatrix4(src.matrixWorld);
-  const g = new THREE.BufferGeometry();
-  g.setAttribute('position', g0.attributes.position.clone());
-  g.setAttribute('normal', g0.attributes.normal.clone());
-  if (g0.index) g.setIndex(g0.index.clone());
-  g.computeBoundingBox();
-  const b = g.boundingBox, W = b.max.x - b.min.x, H = b.max.y - Math.max(0, b.min.y), D = b.max.z - b.min.z;
-  const top = 0.693 * P.sy, sink = 0.06;
-  const kx = (0.886 * P.sx) / W, kz = (0.886 * P.sz) / D, ky = top / (H * (1 - sink));
-  const mx = (b.max.x + b.min.x) / 2, mz = (b.max.z + b.min.z) / 2;
-  g.translate(-mx, 0, -mz);
-  g.scale(kx, ky, kz);
-  g.translate(0, -sink * H * ky, 0);
-  g.computeVertexNormals();
-  const ca = g0.attributes.color, n = g.attributes.position.count, nrm = g.attributes.normal, pos = g.attributes.position;
-  const col = new Float32Array(n * 3), mix = new Float32Array(n);
+function facetRock(shape, P) {
+  const parts = rockParts(shape, rockLod(!!P.clutter));
+  if (!parts) return null;
+  const fit = { W: 0.886 * P.sx, D: 0.886 * P.sz, H: 0.693 * P.sy };
+  const stone = fitRock(parts.stone, parts.box, fit), moss = parts.moss ? fitRock(parts.moss, parts.box, fit) : null;
   const k = [P.color[0] / NEUTRAL, P.color[1] / NEUTRAL, P.color[2] / NEUTRAL];
-  const snow = P.capCol && P.capCol[3] === 0;
-  for (let i = 0; i < n; i++) {
-    col[i * 3] = ca.getX(i) * k[0]; col[i * 3 + 1] = ca.getY(i) * k[1]; col[i * 3 + 2] = ca.getZ(i) * k[2];
-    if (!P.cap) continue;
-    const A = ca.itemSize > 3 ? ca.getW(i) : 0, ny = nrm.getY(i);
-    const yN = pos.getY(i) / Math.max(0.2, top);
-    const rule = sstep(P.cap[0], P.cap[1], ny + 0.25 * Math.sin(pos.getX(i) * 2.1 + pos.getZ(i) * 1.7) + 0.15 * (yN - 0.5));
-    mix[i] = snow ? Math.max(rule, A * 0.5) : Math.max(sstep(0.04, 0.3, A), rule * 0.55 * sstep(0.2, 0.6, A + 0.25));
-  }
-  g.setAttribute('color', new THREE.BufferAttribute(col, 3));
-  if (P.cap) g.setAttribute('aMix', new THREE.BufferAttribute(mix, 1));
+  const c = stone.attributes.color;
+  for (let i = 0; i < c.count; i++) c.setXYZ(i, c.getX(i) * k[0], c.getY(i) * k[1], c.getZ(i) * k[2]);
+  const geos = moss ? [stone, moss] : [stone];
+  geos.forEach((g, j) => g.setAttribute('aMix', new THREE.BufferAttribute(new Float32Array(g.attributes.position.count).fill(j * 0.6), 1)));
+  const g = geos.length > 1 ? mergeGeometries(geos, false) : stone;
   g.computeBoundingBox(); g.computeBoundingSphere();
-  g0.dispose();
   return model([{ geo: g, rule: { mode: 'mul' }, side: THREE.FrontSide,
-    mat: { surface: 'rock', look: { rim: 0.22, wrap: 0.3 }, mix: P.cap ? (P.capCol || [0, 0, 0, 1]) : null } }]);
+    mat: { surface: 'rock', look: { rim: 0.22, wrap: 0.3 }, mix: [1, 1, 1, 1] } }]);
 }
+// species -> family shape (the clutter species: small and numerous, a lighter LOD)
 const ROCKS = {
-  boulder2: rk({ planes: 8, color: WARM, sculpt: 'sculpt_rock_boulder_a' }),
-  boulder3: rk({ planes: 9, sculpt: 'sculpt_rock_boulder_b' }),
-  boulder4: rk({ planes: 10, strata: 5, sculpt: 'sculpt_rock_outcrop' }),
-  boulder5: rk({ planes: 11, strata: 6, sculpt: 'sculpt_rock_boulder_b' }),
-  boulder6: rk({ detail: 7, planes: 12, strata: 8, flatK: 0.4, sculpt: 'sculpt_rock_outcrop' }),
-  cliff1: rk({ tall: true, detail: 7, planes: 12, strata: 11, flatK: 0.25, color: lin(0x958c8e) }),
-  cliff2: rk({ tall: true, detail: 7, planes: 13, strata: 13, flatK: 0.25, color: lin(0x8e8a96) }),
-  moss1: rk({ planes: 9, cap: [0.25, 0.65], sculpt: 'sculpt_rock_boulder_a' }),
-  moss2: rk({ planes: 8, cap: [0.2, 0.6], color: WARM, sculpt: 'sculpt_rock_rubble' }),
-  snowRock1: rk({ planes: 10, cap: [0.3, 0.6], capCol: [0.95, 0.97, 1.0, 0], color: lin(0x8f8c98), sculpt: 'sculpt_rock_slab' }),
-  snowRock2: rk({ planes: 9, cap: [0.25, 0.55], capCol: [0.95, 0.97, 1.0, 0], color: lin(0x8f8c98), sculpt: 'sculpt_rock_boulder_b' }),
-  standing1: rk({ tall: true, planes: 10, strata: 4, flatK: 0.2, sculpt: 'sculpt_rock_standing' }),
-  standing3: rk({ tall: true, planes: 9, strata: 4, flatK: 0.2, sculpt: 'sculpt_rock_standing' }),
+  boulder2: rk({ planes: 8, color: WARM, facet: 'field', clutter: true }),
+  boulder3: rk({ planes: 9, facet: 'split' }),
+  boulder4: rk({ planes: 10, strata: 5, facet: 'ledge' }),
+  boulder5: rk({ planes: 11, strata: 6, facet: 'field' }),
+  boulder6: rk({ detail: 7, planes: 12, strata: 8, flatK: 0.4, facet: 'shelf' }),
+  cliff1: rk({ tall: true, detail: 7, planes: 12, strata: 11, flatK: 0.25, color: lin(0x958c8e), facet: 'crag' }),
+  cliff2: rk({ tall: true, detail: 7, planes: 13, strata: 13, flatK: 0.25, color: lin(0x8e8a96), facet: 'crag' }),
+  moss1: rk({ planes: 9, cap: [0.25, 0.65], facet: 'split' }),
+  moss2: rk({ planes: 8, cap: [0.2, 0.6], color: WARM, facet: 'cobble', clutter: true }),
+  snowRock1: rk({ planes: 10, cap: [0.3, 0.6], capCol: [0.95, 0.97, 1.0, 0], color: lin(0x8f8c98), facet: 'shelf' }),
+  snowRock2: rk({ planes: 9, cap: [0.25, 0.55], capCol: [0.95, 0.97, 1.0, 0], color: lin(0x8f8c98), facet: 'split' }),
+  standing1: rk({ tall: true, planes: 10, strata: 4, flatK: 0.2, facet: 'crag' }),
+  standing3: rk({ tall: true, planes: 9, strata: 4, flatK: 0.2, facet: 'crag' }),
 };
 
 /** Procedural model for a species key, or null (fall back to the asset). */

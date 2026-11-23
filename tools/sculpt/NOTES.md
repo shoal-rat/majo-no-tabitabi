@@ -129,3 +129,14 @@ Compiled by the lead from seven sculptors' reports and the art director's review
 - Keep logs and scratch files in `.tmp/sculpt/<name>/`, not in a shared scratch folder: someone else's clean-up deleted
   build logs mid-run.
 - One build at a time, `SCULPT_THREADS=2`.
+
+## Facet kit: stone from exact planes (round art-stone, 2026-11-24)
+
+- Big plain stone (boulders, wall stones, ashlar) is built as a mesh, not a field: `assets/rock_facet.mjs` clips a box by
+  half-spaces (exact convex pieces), chamfers every edge by the bisector plane and gives the chamfer's vertices the
+  normals of the faces they touch. Flat faces stay flat, the bevel strip shades like a rounded edge: crisp planes at a few
+  hundred triangles, no pillow look, no banding. Beds and joints are separate pieces (stepped back / split with a V gap).
+- Moss is its own cushion mesh (`mossCap`: polar heightfield over the pieces' top, rim tucked 6 mm into the stone, smooth
+  normals). In the flora batches it rides in the same part with aMix (`flora/procgen.js` facetRock): no added draw.
+- Vertex colour is written linear ONCE; such GLBs belong in `SCULPT_VC_OK` (`src/core/assets.js`).
+- Users: `assets/rock_family.mjs` (six rocks, `src/world/rock-family.js` loads / fits them for flora and kit sites).

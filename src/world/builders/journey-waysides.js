@@ -4,6 +4,7 @@ import { box, cyl, cone, torus } from '../../core/geo.js';
 import { mulberry32 } from '../../core/util.js';
 import { Site, mat, beam } from './kit.js';
 import { WAYSIDES } from '../../data/waysides.js';
+import { siteRock, rockLod } from '../rock-family.js';
 
 const timber=mat.wood(0x755741), dark=mat.wood(0x4a4036), canvas=mat.cloth(0xdfcfa2);
 const slate=mat.tile(0x6b7580), limestone=mat.stone(0xb4ac93), shale=mat.stone(0x8d9084);
@@ -15,6 +16,14 @@ function rock(site,x,y,z,w,h,d,material,angle=0) {
   stone.scale.set(w,h,d);
   site.add(stone,x,y,z,angle);
   return stone;
+}
+/** A family stone (world/rock-family.js) standing on (x, ground y, z): full size w x h x d, heading `angle`; the old blob
+ *  when the family is off (?sculpt=0). */
+function stone(site,shape,x,y,z,w,h,d,material,angle=0,lod=rockLod(false)) {
+  const g=siteRock(shape,{w,h,d,tint:material.color.toArray(),lod});
+  if(!g) return rock(site,x,y+h*.42,z,w*.54,h*.54,d*.54,material,angle);
+  site.add(g,x,y,z,angle);
+  return g;
 }
 function mill(site,ctx) {
   const y=site.h(0,0);
@@ -78,17 +87,20 @@ function cart(site) {
   for(let i=0;i<3;i++)site.add(cyl(.32,.42,.7,grain,(i-1)*.50,y+1.25,-.51+i*.38,9));
   site.colBox(0,0,1,1.6,0,y+.55,y+1.7);
 }
+// A spine of bedded stone breaking the turf: tilted slabs (the family's ledge / crag, leaning with the bedding) and
+// loose stones fallen below them. Same random sequence and colliders as before, so the layout is unchanged.
 function rockSpine(site,random,pass) {
   const count=pass?11:8;
   for(let i=0;i<count;i++){
     const x=(i-count/2)*1.76+random()*.5,z=Math.sin(i*.87)*2.4;
     const y=site.h(x,z),h=(pass?2.65:1.12)*(1+.65*Math.sin(i*1.9)+random()*.4);
-    const slab=rock(site,x,y+h*.46,z,1.16+random()*.60,h,1.37+random(),i%3===0?moss:shale,i*.51);
+    const w=1.16+random()*.60,d=1.37+random();
+    const slab=stone(site,i%3===0?'crag':pass?'ledge':'split',x,y-.08*h,z,w*1.75,h*1.35,d*1.55,i%3===0?moss:shale,i*.51);
     slab.rotation.z=.24+random()*.16;
     site.colCyl(x,z,1.24,y-.2,y+h*1.3);
     for(let k=0;k<3;k++){
       const tx=x+random()*3-1.5,tz=z+random()*4.8+1.6;
-      rock(site,tx,site.h(tx,tz)+.17,tz,.53,.31,.58,limestone,random()*6);
+      stone(site,k===1?'field':'cobble',tx,site.h(tx,tz)-.02,tz,1.0,.62,1.08,limestone,random()*6,Math.min(2,rockLod(false)+1));
     }
   }
 }

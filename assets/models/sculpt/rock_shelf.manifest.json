@@ -1,0 +1,42 @@
+{
+ "sculpt_rock_shelf": {
+  "file": "models/sculpt/rock_shelf.glb",
+  "type": "model",
+  "license": "CC0 (original work)",
+  "author": "sculpted for this project",
+  "source": "tools/sculpt/assets/rock_family.mjs (facet kit, rock_facet.mjs)",
+  "scale": 1,
+  "size": [
+   1.386,
+   0.544,
+   1.19
+  ],
+  "tris": 500,
+  "lods": [
+   500,
+   300,
+   87
+  ],
+  "materials": [
+   "Rock_rock",
+   "Moss_none"
+  ],
+  "mats": {
+   "Rock_rock": {
+    "surface": "rock",
+    "look": {
+     "rim": 0.22,
+     "wrap": 0.3
+    }
+   },
+   "Moss_none": {
+    "surface": "none",
+    "look": {
+     "rim": 0.3,
+     "wrap": 0.5
+    }
+   }
+  },
+  "notes": "Facet rock (shelf): exact planes with bevelled edges, beds / joints as geometry, moss cushion as its own primitive (Moss_none). Vertex colour only (COLOR_0 linear rgb, neutral stone ~#9b9b9b; moss its own green). LOD tris 500 / 300 / 87. Origin = foot centre, ~1 m unit; the game fits it into the species box (flora/procgen.js facetRock)."
+ }
+}
