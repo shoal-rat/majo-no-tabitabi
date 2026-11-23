@@ -3,11 +3,13 @@
 import * as THREE from 'three';
 import { G } from '../../core/game.js';
 import { box, cyl, cone, sphere, torus, bakeStatic } from '../../core/geo.js';
-import { Site, mat, beam, texMat, textTexture, bevelBox, shadeBaked, collapseFamilies } from './kit.js';
+import { Site, mat, beam, texMat, textTexture, bevelBox, shadeBaked, collapseFamilies, sculptVcMat } from './kit.js';
+import { SPECIES } from '../flora/species.js';
+import { buildModelParts } from '../flora/batches.js';
 import { cbox, homeWindow, tiledRoof, chimney, flowerBox, vine, homeDetail } from './home-parts.js';
 import { t } from '../../core/i18n.js';
 import { procTree } from './decor.js';
-import { glow } from '../../core/mats.js';
+import { glow, toon } from '../../core/mats.js';
 import { paintedBlock } from './mage-city.js';
 import { mulberry32 } from '../../core/util.js';
 
@@ -765,11 +767,28 @@ function swingTree(ctx) {
   site.colCyl(0, 0, 0.75, base, base + 7);
   return site;
 }
-// The storm trial's clearing (episode one): angular slate-blue boulders standing in the wet grass.
+// The storm trial's clearing (episode one): slate-blue boulders standing in the wet grass. They are the countryside's
+// own boulders (flora species boulder3-5: the procedural rocks, or their sculpted swaps when G.sculpt has them), so
+// they follow every re-sculpt of the land's stone; a cool slate tint keeps the clearing's colour.
+const TRIAL_KEYS = ['boulder4', 'boulder5', 'boulder3'];
+function trialRockModel(key) {
+  try {
+    const m = buildModelParts(G, { ...SPECIES[key], key });
+    const parts = m?.parts?.filter((p) => p.geo?.attributes?.position && p.geo.attributes.color);
+    if (!parts?.length) return null;
+    const box = new THREE.Box3();
+    for (const p of parts) { p.geo.computeBoundingBox(); box.union(p.geo.boundingBox); }
+    return { parts, box };
+  } catch (e) { G.reportError?.('structures:trialRock:' + key, e); return null; }
+}
 function trialRocks() {
   const site = new Site('trialRocks', 2100, -84),
     rand = mulberry32(1501),
-    mats = [0x4f5b6e, 0x5d6a7e, 0x465163].map((c) => mat.rock(c));
+    mats = [0x4f5b6e, 0x5d6a7e, 0x465163].map((c) => mat.rock(c)),
+    tints = [[0.86, 0.9, 1.0], [0.9, 0.93, 1.0], [0.83, 0.88, 0.98]],
+    // like the flora rock material: no painted detail on top of the stone's own planes and bands
+    rockM = sculptVcMat(toon(0xffffff, { surface: 'rock', look: { rim: 0.22, wrap: 0.3, detail: 0, bump: 0 } })),
+    models = new Map();
   let n = 0;
   for (let i = 0; i < 30 && n < 11; i++) {
     const a = rand() * Math.PI * 2,
@@ -779,11 +798,29 @@ function trialRocks() {
     if (G.world.roadDist(2100 + x, -84 + z) < 4.5) continue;
     const s = 1.2 + rand() * 1.6,
       gy = G.world.heightAt(2100 + x, -84 + z);
-    const geo = new THREE.DodecahedronGeometry(1, 0),
-      m = new THREE.Mesh(geo, mats[n % 3]);
-    m.scale.set(s * (1.1 + rand() * 0.6), s * (0.9 + rand() * 0.5), s * (0.8 + rand() * 0.4));
-    m.rotation.set(rand() * 0.5, rand() * 6, rand() * 0.4);
-    site.add(m, x, gy + s * 0.35, z, m.rotation.y);
+    const sx = 1.1 + rand() * 0.6, sy = 0.9 + rand() * 0.5, sz = 0.8 + rand() * 0.4, rx = rand() * 0.5, ry = rand() * 6, rz = rand() * 0.4;
+    const key = TRIAL_KEYS[n % 3];
+    if (!models.has(key)) models.set(key, trialRockModel(key));
+    const md = models.get(key);
+    if (md) {
+      // the old stone's bulk (width ~2·s·sx, top ~s·(0.35 + sy) over the grass), the model's own proportions
+      const size = md.box.getSize(new THREE.Vector3()), top = s * (0.35 + sy), wide = 2 * s * Math.max(sx, sz) * 0.85;
+      const k = (top / Math.max(0.2, md.box.max.y) + wide / Math.max(0.2, size.x, size.z)) / 2;
+      const g = new THREE.Group(), t = tints[n % 3];
+      for (const p of md.parts) {
+        const geo = p.geo.clone(), c = geo.attributes.color = geo.attributes.color.clone();
+        for (let j = 0; j < c.count; j++) c.setXYZ(j, c.getX(j) * t[0], c.getY(j) * t[1], c.getZ(j) * t[2]);
+        g.add(new THREE.Mesh(geo, rockM));
+      }
+      g.scale.set(k * (0.9 + 0.2 * (sx - 1.1) / 0.6), k * (0.92 + 0.16 * (sy - 0.9) / 0.5), k);
+      g.rotation.set((rx - 0.25) * 0.2, 0, (rz - 0.2) * 0.2);
+      site.add(g, x, gy - 0.1 * top, z, ry);
+    } else {
+      const m = new THREE.Mesh(new THREE.DodecahedronGeometry(1, 0), mats[n % 3]);
+      m.scale.set(s * sx, s * sy, s * sz);
+      m.rotation.set(rx, ry, rz);
+      site.add(m, x, gy + s * 0.35, z, ry);
+    }
     site.colCyl(x, z, s * 0.9, gy - 1, gy + s * 1.2);
     n++;
   }
