@@ -13,6 +13,7 @@ import { glow } from '../../core/mats.js';
 import { box, cone, cyl, sphere, torus } from '../../core/geo.js';
 import { mat, beam, clothify, texGlow, texMat } from './kit.js';
 import { mulberry32 } from '../../core/util.js';
+import { modelGable, modelHip, chimney } from './city-roofs.js';
 
 export const H = BELL.y;
 export const WH = 24; // rampart walk height above the street
@@ -103,15 +104,6 @@ function gableRoof(g, w, d, h, rise, roofM, bodyM, alongX, ov = 0.5) {
   if (alongX) r.rotation.y = Math.PI / 2;
   g.add(r);
   return r;
-}
-function hipRoof(g, w, d, h, rise, roofM, ov = 0.55) {
-  const r = new THREE.Group(),
-    c = cone(1, rise, roofM, 0, 0, 0, 4);
-  c.rotation.y = Math.PI / 4;
-  r.add(c);
-  r.scale.set((w / 2 + ov) * Math.SQRT2, 1, (d / 2 + ov) * Math.SQRT2);
-  r.position.y = h + rise / 2;
-  g.add(r);
 }
 /** Casement window on a face whose outer plane is z = zf (facing +z). opt: 1 shutters, 2 window box, 4 simple. */
 function win(g, x, y, zf, ww, wh, seed, opt) {
@@ -338,7 +330,9 @@ export function townhouse(site, o) {
     if (!lite) for (let k = 0; k < 4; k++) g.add(beam(-w / 2 + (w * (k + 0.5)) / 4, y1 - 0.75, d / 2 - 0.05, -w / 2 + (w * (k + 0.5)) / 4, y1 - 0.12, d / 2 + jet, 0.14, 0.14, wood));
   }
   const fz = d / 2 + (st > k1 ? jet : 0);
-  b(g, 0, h - 0.06, fz / 2 - d / 4 + 0.0, w + jet + 0.36, 0.24, d + jet + 0.36, trim);
+  // cornice band at the wall top (shallow under a pitched roof: the eave's soffit and fascia take over)
+  const cor = kind === 'flat' ? 0.36 : 0.12;
+  b(g, 0, h - 0.06, fz / 2 - d / 4 + 0.0, w + jet + cor, 0.24, d + jet + cor, trim);
   // street front: door, shop window or windows, door lantern
   const zf = d / 2 + 0.05,
     doorX = (seed % 2 ? 1 : -1) * (w / 2 - 1.0);
@@ -430,11 +424,12 @@ export function townhouse(site, o) {
     site.platBox(px, pz, (w + jet) / 2 - 0.3, (d + jet) / 2 - 0.3, yaw, base + top + 0.24, 0.4);
     life?.roofPads.push({ x: BELL.x + px, y: base + top + 0.24, z: BELL.z + pz, r: Math.min(w, d) / 2 - 0.4 });
     life?.balconies.push({ x: BELL.x + px, y: base + top + 0.24, z: BELL.z + pz, face: yaw, r: Math.min(w, d) / 2 - 0.4, w: w - 0.6, d: d - 0.6, kind: 'roof' });
-  } else if (kind === 'cone') hipRoof(g, w + jet, d + jet, top, rise, roofM);
-  else {
+  } else {
+    // modelled roofs (builders/city-roofs.js): courses, cover tiles, ridge, eaves, barge boards
     const rg = new THREE.Group();
     rg.position.z = jet / 2;
-    gableRoof(rg, w + jet, d + jet, top, rise, roofM, bodyMat[ti], kind === 'side');
+    if (kind === 'cone') modelHip(rg, w + jet, d + jet, top, rise, roofM, 0.55, seed);
+    else modelGable(rg, w + jet, d + jet, top, rise, roofM, bodyMat[ti], kind === 'side', 0.5, seed, -Math.sign(doorX) * (w / 2 - 0.12));
     g.add(rg);
   }
   if (kind !== 'flat' && (seed % 2 === 0 || st >= 6)) {
@@ -442,8 +437,7 @@ export function townhouse(site, o) {
       cx = (seed % 4 < 2 ? -1 : 1) * w * (along ? 0.3 : 0.24),
       cz = along ? -d * 0.22 : -d * 0.2;
     const tip = top + rise * (1 - (along ? Math.abs(cz) / (d / 2) : Math.abs(cx) / (w / 2))) + 1.5;
-    b(g, cx, (top + tip) / 2, cz, 0.72, tip - top, 0.72, brick);
-    b(g, cx, tip + 0.08, cz, 0.92, 0.16, 0.92, sill);
+    chimney(g, cx, cz, top, tip, seed);
   }
   site.add(g, x, base, z, yaw);
   site.footprint(x, z, yaw, w / 2 + 0.3, d / 2 + 0.3, base + h, seed);
