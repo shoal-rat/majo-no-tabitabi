@@ -172,6 +172,11 @@ export function createBroom(P, S) {
       const hgt = P.pos.y - floor;
       B.riseRate = damp(B.riseRate, clamp((P.pos.y-_w.y)/Math.max(dt,.001),-16,16),5,dt);
       B.skim = damp(B.skim, (1-smoothstep(.55,4.5,hgt))*smoothstep(6,16,Math.abs(B.speed)),6,dt);
+      // dive: skimming deep water at speed with {descend} held for a moment takes her into the water
+      if (overWater && inp.down && hgt < 0.5 && Math.abs(B.speed) >= 6 && B.appear >= 1 && W.isWater(P.pos.x, P.pos.z)) {
+        B.diveT = (B.diveT || 0) + dt;
+        if (B.diveT > 0.3) { B.diveT = 0; B.dismount('dive'); return 'dive'; }
+      } else B.diveT = 0;
       // auto dismount: settled onto ground / water at low speed
       const descending = inp.down || (!inp.up && B.vy < 0.5);
       if (hgt < 0.12 && Math.abs(B.speed) < 5 && descending && B.appear >= 1) {

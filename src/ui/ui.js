@@ -21,13 +21,14 @@ import { createReactions } from './reactions.js';   // 元素交织: reaction ca
 import { createTouch } from './touch.js';   // touch controls (phones / tablets): above the HUD, below every full-screen layer
 import { createFoes } from './foes.js';   // combat: foe plates (hp, ward, affixes, 破绽) and the combo meter
 import { createCoach } from './coach.js';   // the spar lessons' coach card (src/story/spar-lessons.js)
+import { createStaminaRing } from './stamina.js';   // 气力: the stamina petal ring by her shoulder
 import { episodes, countries, countryOfRegion, episodeById, episodeOfQuest, registerEpisodes } from '../data/episodes.js';   // the episode / country registry
 import { stampArt } from './stamps.js';   // a country's passport stamp (procedural SVG)
 
 let hud = null, stage = null, dialogue = null, wheel = null, title = null, menu = null, shop = null, cer = null, touch = null;
 const offs = [];
 let rx = null;
-let foes = null, coach = null;
+let foes = null, coach = null, stam = null;
 
 export const uiSystem = {
   name: 'ui',
@@ -41,6 +42,7 @@ export const uiSystem = {
     rx = createReactions(root);
     foes = createFoes(hud.root);
     coach = createCoach(hud.root);
+    stam = createStaminaRing(hud.root);
     stage = createStage(root, hud.root);
     const touchDeps = {};
     touch = createTouch(root, touchDeps);
@@ -150,7 +152,7 @@ export const uiSystem = {
     UI.mouse.moved = false;
   },
 
-  lateUpdate(dt, rdt) { hud.late(); rx?.late(); foes?.late(rdt); },
+  lateUpdate(dt, rdt) { hud.late(); rx?.late(); foes?.late(rdt); stam?.late(rdt); },
 };
 
 /** Menu hotkeys while nothing else holds the keyboard. */

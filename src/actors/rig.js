@@ -309,8 +309,9 @@ export function createActor(assetId, opts = {}) {
       return this;
     },
     _moveV: 0, _moveBack: false,
-    /** Hand IK: reach.R / reach.L = { w, target: Vector3 } or { w, fn(handWorldPos, out) -> Vector3|null } (e.g. closest point on a handle). */
-    reach: { R: null, L: null },
+    /** Hand IK: reach.R / reach.L = { w, target: Vector3 } or { w, fn(handWorldPos, out) -> Vector3|null } (e.g. closest point on a handle).
+     *  Foot reach: reach.FR / reach.FL = { w, target } (climbing). */
+    reach: { R: null, L: null, FR: null, FL: null },
     /** Weights of the secondary parts of a `multi` state (e.g. { glide_l: 0.4 }). */
     blendW: {},
     /** Lower-body yaw (rad) relative to the facing: legs run toward the movement while the chest keeps facing (strafe). */
@@ -604,6 +605,17 @@ export function createActor(assetId, opts = {}) {
         const hq = hand.getWorldQuaternion(_q4).clone();
         twoBoneTo(bones['arm' + side], bones['fore' + side], hand, _vR);
         if (r.keepRot) rotateBoneWorld(hand, _q3.copy(hq).multiply(hand.getWorldQuaternion(_q2).invert()));
+      }
+      // foot reach (climbing: feet on a wall face): reach.FR / reach.FL = { w, target } -> two-bone leg toward the target,
+      // knee toward the body's forward
+      for (const side of ['R', 'L']) {
+        const r = this.reach['F' + side];
+        if (!r || !(r.w > 0.01) || !r.target || !bones['thigh' + side] || !bones['knee' + side] || !bones['foot' + side]) continue;
+        model.updateMatrixWorld(true);
+        const foot = bones['foot' + side];
+        foot.getWorldPosition(_vR); _vR.lerp(r.target, clamp(r.w));
+        _vR2.set(0, 0, 1).applyQuaternion(model.getWorldQuaternion(_q4));
+        legTwoBone(bones['thigh' + side], bones['knee' + side], foot, _vR, _vR2);
       }
       travellerCloth?.reset();
       if (!G.params?.celoff) { this._eyes(dt); this._secondary(dt); this._contact(); }
