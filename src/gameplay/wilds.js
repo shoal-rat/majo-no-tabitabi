@@ -20,6 +20,7 @@ import { makeInstanced, sfx, toast } from './common.js';
 import { createWildPuzzles } from './wilds-puzzles.js';
 import { createWildRings } from './wilds-rings.js';
 import { createWildPages } from './wilds-pages.js';
+import { createPageLessons } from './page-lessons.js';   // the tier-2 lessons at the first page trial, the guardians' beam and volleys
 
 const tt = (k, p) => t('gameplay.wilds.' + k, p);
 const lmName = (id) => (has('gameplay.wilds.lm.' + id) ? tt('lm.' + id) : id);
@@ -112,7 +113,7 @@ export function createWilds() {
   const stars = [];            // { id, lm|null, pos, region, slot, phase, got }
   const lms = [];              // { l, region, scale }
   let inst = null, points = null, pAttr = null, onAttr = null;
-  let PZ = null, RC = null, PG = null;
+  let PZ = null, RC = null, PG = null, PL = null;
   let scanT = 0, perchT = 0, ready = false, time = 0;
   const _p = new THREE.Vector3();
 
@@ -299,6 +300,7 @@ export function createWilds() {
       PZ = createWildPuzzles({ resolveAt, grant, wstate, lmName, tt });
       RC = createWildRings({ resolveAt, wstate, lmName, tt });
       PG = createWildPages({ wstate, tt });
+      PL = createPageLessons();
       try { PZ.init(); } catch (e) { G.reportError('wilds:puzzles', e); }
       try { RC.init(); } catch (e) { G.reportError('wilds:rings', e); }
       try { PG.init(); } catch (e) { G.reportError('wilds:pages', e); }
@@ -348,6 +350,7 @@ export function createWilds() {
       try { PZ?.update(dt, playing); } catch (e) { G.reportError('wilds:puzzles', e); }
       try { RC?.update(dt, playing); } catch (e) { G.reportError('wilds:rings', e); }
       try { PG?.update(dt, playing); } catch (e) { G.reportError('wilds:pages', e); }
+      try { PL?.update(dt); } catch (e) { G.reportError('wilds:page-lessons', e); }
     },
     markers,
     journal,
@@ -365,6 +368,8 @@ export function createWilds() {
     get rings() { return RC; },
     /** 残页试炼: the six tier-2 page trials (wilds-pages.js). */
     get pages() { return PG; },
+    /** the tier-2 lessons (page-lessons.js): { state } */
+    get pageLessons() { return PL; },
     resolveAt,
   }));
   return api;

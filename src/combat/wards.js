@@ -2,7 +2,7 @@
 // staggers, elite affixes, and the small helpers the damage pipeline in combat.js calls.
 //
 //   ward    e.ward = { el, hp, max, regen, downT, mesh, mat }   — up: HP takes 15 % chip, the counter element hits the shell
-//           ×3 (secondary ×1.6, a matching reaction ×2), anything else ×0.25. Broken: stagger 2.4 s, exposed ×1.5 for 4 s,
+//           ×3 (secondary ×1.6, a matching reaction ×2, any fusion ×3), anything else ×0.25. Broken: stagger 2.4 s, exposed ×1.5 for 4 s,
 //           reforms after `regen` s. Events 'enemy:ward' { enemy, state: 'break'|'reform', el }.
 //   poise   e.poise / e.poiseMax — hits wear it down (heavy ×1.8, counter ×1.5, shatter ×2, a reaction ×1.6, weaving
 //           — an element other than the last one that struck it — ×1.5, the charm stream ×0.6); at 0 the foe staggers
@@ -102,6 +102,7 @@ export function wardHit(e, n, info) {
   if (el && c && el === c[0]) k = 3;
   else if (el && c && el === c[1]) k = 1.6;
   if (info.reaction && WARD_REACT[w.el]?.includes(info.reaction)) k = Math.max(k, 2);
+  if (info.fusion) k = Math.max(k, 3);   // a fusion (合咏, two of her spells made one) cracks any shell like its counter
   if (info.dot) k *= 0.5;
   const before = w.hp;
   w.hp = Math.max(0, w.hp - n * k);

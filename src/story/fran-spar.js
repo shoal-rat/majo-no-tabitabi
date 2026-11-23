@@ -22,12 +22,14 @@ import { createSparLessons } from './spar-lessons.js';
 // Two modes (MODES). story: the first bout of episode 1, gentle, and the lessons (spar-lessons.js) teach the combat
 // systems inside it. recall: the recollection from the trial ground once the journey is done — the re-challenge: a
 // fourth movement of combos, tighter openings that give less, more counter-casts and shields, her bolts at 0.8; it
-// lasts a few minutes for a good duellist (spar-pacing probe).
+// lasts a few minutes for a good duellist (spar-pacing probe). It also tests the tier-2 lessons (page-lessons.js): from
+// the third movement every fourth spell is a beam (catch it with the guard and win the 对波: a long opening), her bolts
+// reflect off a timed guard (弹反), and a fusion of two of the heroine's spells (合咏) throws her off her rhythm.
 const MODES = {
   story: { max: 105, phaseAt: [Infinity, 70, 30], castAt: [Infinity, 6, 12], hold: 20, budget: [13, 14, 16], bonus: 5, dmg: 0.6,
     counter: 0.45, ccd: 3.2, gcd: 4, rest: 6, open: 1, windup: 1, last: 2 },
   recall: { max: 480, phaseAt: [Infinity, 380, 240, 110], castAt: [Infinity, 5, 16, 30], hold: 90, budget: [10, 11, 12, 10], bonus: 3, dmg: 0.8,
-    counter: 0.65, ccd: 2.2, gcd: 2.6, rest: 3, open: 0.75, windup: 0.85, last: 3 },
+    counter: 0.65, ccd: 2.2, gcd: 2.6, rest: 3, open: 0.75, windup: 0.85, last: 3, beam: true, fusion: true },
 };
 const CYCLE = [['bolt'], ['fan', 'rain', 'bubbles', 'frost'], ['dive', 'volley', 'dive', 'rain'], [['fan', 'dive'], ['rain', 'volley', 'frost'], ['bubbles', 'dive', 'fan'], ['volley', 'rain']]];
 const ANSWERS = { fan: ['wind'], rain: ['wind', 'earth'], bubbles: ['fire', 'thunder'], frost: ['fire'], dive: ['wind'], volley: ['wind', 'ice'] };
@@ -215,6 +217,7 @@ export function createFranSpar(S) {
   }
   function hitFran(d, el, power, h) {
     const reflected = G.time.t - d.reflectT < 1.6;
+    if (h.fusion && d.M.fusion && d.stage !== 'opening' && !d.tumble) fused(d);
     const open = d.stage === 'opening' || reflected;
     lessons.onHit(open);
     // the answer to the spell she is gathering scatters it: a long opening
@@ -268,6 +271,25 @@ export function createFranSpar(S) {
     else G.hitstop?.(0.08);
     G.events.emit('spar:broken', { pattern: d.pattern });
     d.pattern = null;
+  }
+  /** she won the 对波 against Fran's beam: a long opening (the struggle's blast lands in it) */
+  function clashed(d) {
+    d.stage = 'opening';
+    d.wait = 3.2;
+    d.budget = d.M.budget[d.phase] + d.M.bonus + 4;
+    d.chain = null;
+    say('clashed');
+  }
+  /** a fusion of hers caught Fran: off her rhythm for a moment (the recollection) */
+  function fused(d) {
+    d.handle?.cancel?.();
+    d.handle = null;
+    circle.visible = false;
+    d.stage = 'opening';
+    d.wait = 2.2;
+    d.budget = d.M.budget[d.phase] + d.M.bonus;
+    d.chain = null;
+    say('fused');
   }
   function tumble(d) {
     d.tumble = true;
@@ -386,6 +408,15 @@ export function createFranSpar(S) {
         G.audio?.sfx?.('broom_boost', { pos: d.n.pos, vol: 0.7 });
       },
       fire: (d) => { d.dive = d.next; d.next = null; } },
+    beam: { windup: () => 1.3, open: () => 3,
+      tell: (d) => { aimAtPlayer(d, 0xffe9b0); G.fx?.burst?.('charge_done', wandTip(d, tmp), { color: 0xffe9b0, scale: 1.5 }); G.audio?.sfx?.('charge', { pos: d.n.pos, vol: 0.9 }); },
+      fire: (d) => {
+        const from = wandTip(d, new THREE.Vector3());
+        const dir = G.player.pos.clone().setY(G.player.pos.y + 1).sub(from).normalize();
+        let b = null;
+        try { b = G.spells?.cast('sun', 'big', { caster: d.n, team: 'enemy', origin: from, dir, target: G.player, power: 0.35, duration: 3.2, strength: 1.1 }) || null; } catch (e) { b = null; }
+        d.handle = { cancel: () => { try { b?.stop?.(); } catch (e) { /* */ } } };
+      } },
     volley: { windup: () => 0.8, open: () => 1.5,
       tell: (d) => { aimAtPlayer(d, 0xb89de3); },
       fire: (d) => { d.handle = volley(caster(d), G.player, { n: 6, fan: 0.85, gap: 0.06, el: 'sun', color: 0xb89de3, speed: 13, size: 0.32, damage: 9, power: 0.7, turn: 0.3, spell: 'fran_stardust' }); } },
@@ -398,6 +429,7 @@ export function createFranSpar(S) {
   }
   function nextPattern(d) {
     if (d.chain && d.chain.length) return d.chain.shift();
+    if (d.M.beam && d.phase >= 2 && (d.beamN = (d.beamN || 0) + 1) % 4 === 0) return 'beam';
     const list = CYCLE[d.phase];
     const id = list[d.step % list.length];
     d.step++;
@@ -508,7 +540,12 @@ export function createFranSpar(S) {
         PAT[d.pattern].fire(d);
         d.log.fired++;
         G.npcs.gesture('fran', 'cast_throw');
-        if (d.chain && d.chain.length) {
+        if (d.pattern === 'beam') {
+          // the beam runs ~3 s: no opening while it does (winning the struggle gives one, see clashed())
+          d.stage = 'rest';
+          d.budget = d.M.rest;
+          d.wait = 3.4;
+        } else if (d.chain && d.chain.length) {
           // a combo: straight on to the next spell, no opening in between
           d.stage = 'rest';
           d.budget = d.M.rest;
@@ -546,6 +583,9 @@ export function createFranSpar(S) {
   });
   G.events.on('player:dodge', () => {
     if (duel && duel.stage !== 'rest') duel.log.dodged++;
+  });
+  G.events.on('beam:struggle', (e) => {
+    if (duel && e.state === 'end' && e.winner === 'player' && duel.pattern === 'beam') clashed(duel);
   });
   G.events.on('player:damaged', (e) => {
     if (duel && e.from === duel.n) duel.log.taken += e.amount;

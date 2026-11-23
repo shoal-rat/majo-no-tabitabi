@@ -259,6 +259,31 @@ what each card asks; `slShots=1` saves each card): the beginner bout with all le
 ![The guard lesson on a computer](../images/spar-lesson-desktop.jpg)
 ![The answer lesson on a phone: the card sits between the stick and the buttons, which it names](../images/spar-lesson-phone.jpg)
 
+#### Tier-2 lessons (src/gameplay/page-lessons.js) — at whichever page trial she reaches first
+The owner's addendum: 对波 (beam clash), 弹反 (parry) and tier-2 element combos belong with tier-2 content, so they are
+taught at the first page trial, in the same style (coach card, the marker stone's writing as the speaker 「碑上的字迹」).
+
+| # | lesson | when | the task | check | timeout |
+|---|---|---|---|---|---|
+| 1 | clash 对波 | the guardian wakes | raise {guard} into its beam, mash {attack} | `beam:struggle` won (`beam:guard` starts it) | 35 s; the beam comes again every 12 s meanwhile |
+| 2 | parry 弹反 | after 1 | {guard} as one of its slow bolts arrives | `spell:clash` reflect, or a melee parry | 30 s |
+| 3 | charge 二阶 | the page is read | hold {cast} until the circle fills, release the new charged form | `spell:cast` form big of that element | 45 s |
+| 4 | fusion 合咏 | after 3 | an element-specific recipe (wind / water / earth / ice: cast into the lingering charged spell; fire: wind through a flying fireball; thunder: a pointer for later) | `element:combo` kind fusion | 60 s (thunder 10 s) |
+
+Every page guardian, lessons or not, opens with a beam 2.5 s after it wakes (`beamAttack` in attacks.js) and again at its
+second phase, and throws a slow volley of three bolts of its element every 10–13 s: both are met with the guard. The guard
+holds a beam (spells/beams.js): a hostile beam landing on her raised guard from the front is answered by a free beam of
+light from the guard, so the two clash and the struggle is decided by mashing {attack}; the loser's caster takes the blast.
+Wards crack ×3 to fusions (`info.fusion` now reaches `combat.damage`). {interact} skips; `flags.tier2_lessons` records it.
+The recollection tests all three: from its third movement every fourth spell is Fran's beam (win the clash: a long
+opening), her bolts reflect, and a fusion of the heroine's throws her off her rhythm (a short opening). With the beams
+the recollection takes a flawless duellist about 2 min.
+Probe: `node tools/play.mjs --name page-lessons --quality low --timeout 900 --script tools/journey/page-lessons.js
+--params "plShots=1"` (default site pg_fire): the four lessons in ~50–90 s.
+
+![The clash lesson at the fire page's guardian](../images/page-lesson-desktop.jpg)
+![The same lesson on a phone](../images/page-lesson-phone.jpg)
+
 ### Clearing trial (src/combat/trials.js) — `G.combat.trials`
 After quest `mages`, a chalk ring 9 m from Fran's spot (E: 「踏入试炼圈」, Step into the trial ring): five rounds of stardust phantoms (pages + mud, a pack,
 two mages, a warded stag under bats, rider + ember serpent + stone guard). Timed, best time + clears in the save; first clear 80

@@ -139,6 +139,23 @@ export default {
       page: '书页上写着：「冰枪刺的是一点。蓄满的寒气会在落点长成一座台子，水面上、空地上都站得住。」（冰台）',
       after: '泉水又流了起来，石槽下挂着几根还没化完的冰凌。',
     },
+    // 残页之课: the tier-2 lessons at the first page trial (src/gameplay/page-lessons.js), shown on the coach card
+    lesson: {
+      who: '碑上的字迹',
+      skip: '跳过指引',
+      clash: { line: '守页者会先吐出一道光。别躲，迎上去。', task: '光束袭来时按住 {guard} 迎住它，再连按 {attack} 把光推回去（对波）' },
+      parry: { line: '它的光弹飞得很慢，正好用来练手。', task: '光弹快碰到你的一瞬间按 {guard}，就能把它弹回去（弹反）' },
+      charge: { line: '这一页记着二阶的写法：把魔力蓄满再放出去。', task: '按住 {cast} 等魔法阵画满，松开放出「{name}」' },
+      fusion: {
+        line: '有的魔法会在场上停留一会儿。别的元素撞进去，就会合咏成新的魔法；合咏能轻松击碎护盾。',
+        wind: '放出「{name}」，再把火、雷、冰或水打进去',
+        water: '唤来「{name}」，再用雷、冰、火或风打进去',
+        earth: '立起「{name}」，再用雷劈它，石柱会把雷引向周围',
+        ice: '放出「{name}」，再用火烧它，蒸汽会炸开',
+        fire: '火球还在飞的时候，用风吹过它：风火',
+        thunder: '雷能接住别人的二阶魔法：学会风、水或土的二阶之后，把雷打进去试试',
+      },
+    },
     toast: {
       seen: '发现了刻着元素纹章的旧石碑：{name}',
       asleep: '纹章微微一亮，又暗了下去。封印还在沉睡，它等的是一位真正的魔女。',

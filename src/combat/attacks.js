@@ -131,6 +131,34 @@ export function darkOrb(caster, origin, target, o = {}) {
   return p;
 }
 
+/**
+ * A telegraphed beam (对波 bait): the foe gathers light for `windup` s (a glow at its head, a ring under her), then a
+ * beam tracks her for `dur` s. Raising the guard into it starts a beam struggle (spells/beams.js); losing the struggle
+ * blasts the caster. o: { windup = 1.4, dur = 3.2, power = 0.35, color, el, track = 0.8 }. Returns false if busy.
+ */
+export function beamAttack(e, o = {}) {
+  if (!e || e.dead || e.atk || !playerAlive() || !G.spells?.cast) return false;
+  const P = G.player, windup = o.windup ?? 1.4;
+  e.attack('beam', windup, (o.dur ?? 3.2) + 0.4, (en) => {
+    _v.set(en.pos.x, en.pos.y + en.height * 0.75, en.pos.z);
+    _d.set(P.pos.x - _v.x, P.pos.y + 1 - _v.y, P.pos.z - _v.z).normalize();
+    try {
+      en.data.beam = G.spells.cast('sun', 'big', { caster: en, team: 'enemy', origin: _v.clone(), dir: _d.clone(), target: P, power: o.power ?? 0.35,
+        duration: o.dur ?? 3.2, strength: 1, track: o.track ?? 0.8, el: o.el, color: o.color });
+    } catch (err) { G.reportError('combat:beam', err); }
+  }, {
+    tell: (en) => {
+      _v.set(en.pos.x, en.pos.y + en.height * 0.75, en.pos.z);
+      G.fx?.burst('charge_done', _v, { color: o.color ?? 0xffe9b0, scale: 1.3 });
+      warnAt(P.pos, 1.8, windup, o.color ?? 0xffe9b0);
+      G.audio?.sfx('charge', { pos: en.pos, vol: 0.9 });
+    },
+    during: (en) => en.face(P.pos.x, P.pos.z, 0.016, 6),
+    cancel: (en) => { try { en.data.beam?.stop?.(); } catch (err) { /* */ } en.data.beam = null; },
+  });
+  return true;
+}
+
 /** A shard / meteor falling from the sky onto pos after `delay` (with a ground warning). */
 export function skyFall(e, pos, o = {}) {
   const delay = o.delay ?? 1.1, radius = o.radius ?? 2.2;

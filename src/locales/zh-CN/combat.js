@@ -104,6 +104,9 @@ export default {
     reflected: '星尘弹回去了！',
     tumble: '芙兰被风掀下了扫帚！',
     finale: '芙兰的魔杖拖出一道星河——最后的乐章，她的咒语一个接一个！',
+    beam: '星河光束',
+    clashed: '光束被推回去了！',
+    fused: '合咏打乱了她的步调！',
   },
   rival: {
     himawari: '向日葵魔女', kokonoe: '九重', rikka: '六花', naru: '鸣', oboroyo: '胧夜',

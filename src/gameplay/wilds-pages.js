@@ -420,6 +420,7 @@ export function createWildPages({ wstate, tt }) {
     try { makeElite(e, g.affixes || []); } catch (err) { G.reportError('wilds:page:elite', err); }
     if (e.cr) e.cr.group.scale.multiplyScalar(1.15);
     s.guardian = e;
+    G.events.emit('wilds:guardian', { id: s.def.id, el: s.def.el, enemy: e });   // its beam and volleys, the tier-2 lessons (page-lessons.js)
     // the entrance: a burst of the element, a flash, a slow beat, a camera angle and the guardian's name
     const at = e.centerOut ? e.centerOut(_v) : _v.copy(e.pos);
     fxB('summon', at, { color: PAGE_COLOR[s.def.el], scale: 1.8 });

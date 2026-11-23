@@ -1,6 +1,9 @@
 // 天照 sustained beams and 对波 (beam struggle). A beam follows its caster (origin + dir, or the player's aim), burns
 // what it touches through apply('sun'), and drains mana per second for the player. When two hostile beams meet, both
 // lock onto a clash point that travels along the line between the casters according to each side's push.
+// The guard holds a beam too (2026-11): a hostile beam that lands on her raised guard, from in front, is met by a beam
+// of light the guard throws back (no mana, `free`) — the two clash and the struggle is hers to win by mashing {attack}.
+// That beam ends with the struggle or when she lowers the guard.
 import * as THREE from 'three';
 import { G } from '../core/game.js';
 import { clamp } from '../core/util.js';
@@ -45,7 +48,7 @@ export function createBeams(S) {
         caster: c.caster, team: c.team, power: c.power, origin: c.origin.clone(), dir: c.dir.clone().normalize(), to: new THREE.Vector3(),
         fixedOrigin: c.fixedOrigin ? c.origin.clone() : null, aimed: c.caster === G.player && !c.dir_locked,
         t: 0, tick: 0, alive: true, duration: c.caster === G.player ? Infinity : (c.duration ?? 4), strength: c.strength ?? 1,
-        fx: null, em: null, struggling: false, id: Math.random(),
+        fx: null, em: null, struggling: false, id: Math.random(), free: !!c.free,
         // non-player beams sweep toward their target at `track` rad-ish/s (fix2: a fixed flat beam missed on slopes)
         len: c.len ?? LEN, // reach (m); 无明's breath uses a longer one
         target: c.caster === G.player ? null : c.target || null, track: c.track ?? (c.caster === G.player ? 0 : 1.1),
@@ -86,7 +89,7 @@ export function createBeams(S) {
         b.t += dt;
         if (b.t > b.duration || (b.caster && b.caster.dead)) { api.stop(b); continue; }
         // player: mana per second
-        if (b.caster === G.player && G.player) {
+        if (b.caster === G.player && G.player && !b.free) {
           // fix2: a struggle is a contest of will, not of mana — no drain while struggling
           if (!b.struggling && !G.player.spendMana(BOOK.sun.big.perSec * dt)) { S.toast('noMana'); api.stop(b); continue; }
         }
@@ -136,6 +139,7 @@ export function createBeams(S) {
           }
         });
       }
+      guardCatch();
       findStruggles();
       if (struggle) updateStruggle(dt);
     },
@@ -158,6 +162,28 @@ export function createBeams(S) {
       if (best < s) break;
     }
     return best;
+  }
+
+  // ---- the guard meets a beam ----
+  let held = null;   // the guard's answering beam, while it lives
+  function guardCatch() {
+    const P = G.player;
+    if (held && (!held.alive || (!held.struggling && !(S.guards || []).some((g) => g.caster === P && g.alive)))) { if (held.alive) api.stop(held); held = null; }
+    if (held || struggle || !P || P.dead) return;
+    const g = (S.guards || []).find((x) => x.caster === P && x.alive);
+    if (!g) return;
+    for (let i = 0; i < list.length; i++) {
+      const b = list[i];
+      if (b.team === 'player' || !b.alive || b.struggling) continue;
+      _v.set(P.pos.x, P.pos.y + 1.1, P.pos.z);
+      if (b.to.distanceTo(_v) > 2.6) continue;
+      _d.subVectors(b.origin, _v); _d.y = 0;
+      if (_d.lengthSq() > 1e-4 && _d.normalize().dot(_w.set(g.fwd.x, 0, g.fwd.z)) < -0.1) continue;   // from behind
+      _d.subVectors(b.origin, g.center).normalize();
+      held = api.start({ caster: P, team: 'player', power: 1, origin: g.center, dir: _d, dir_locked: true, free: true });
+      G.events.emit('beam:guard', { beam: b });
+      return;
+    }
   }
 
   function findStruggles() {

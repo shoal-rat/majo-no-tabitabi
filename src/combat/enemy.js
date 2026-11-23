@@ -161,7 +161,7 @@ export class Enemy {
     if (def.mult && def.mult[element] != null) mult *= def.mult[element];
     const base = h.damage ?? 8 * power;
     if (!(base > 0)) return;
-    G.combat?.damage(this, base * mult, { element, power, source: h.source, mult, heavy: h.heavy, shatter: h.shatter, purify: h.purify, dir: h.dir, pos: h.pos, reaction: h.reaction });
+    G.combat?.damage(this, base * mult, { element, power, source: h.source, mult, heavy: h.heavy, shatter: h.shatter, purify: h.purify, dir: h.dir, pos: h.pos, reaction: h.reaction, fusion: h.fusion });
   }
 
   empower(power) {
