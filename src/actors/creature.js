@@ -341,6 +341,133 @@ export function makeJelly() {
   return g;
 }
 
+// 泥沼团 mud spirit (round art-creatures; the bog foe, combat/beasts.js TYPES.blob): a soft wet mound of bog mud — round
+// shoulders, a skirt that spreads into its own puddle, drips running down as real lumps, a little pond on its crown with
+// reeds and the spirit's warm amber heart glowing in it, big eyes set into the face as shapes, a small mouth. The baked
+// crust (fire) is the same mound in pale cracked clay. Sizes as the old mound (0.83 tall, 0.6 round); one draw for the
+// body, the crust is hidden until baked. Tessellation by tier (built once).
+let _mudGeo = null, _crustGeo = null, _mudMats = null, _reedGeo = null, _eyeParts = null;
+const MUD_DRIPS = [[0.4, 0.42, 0.05], [1.35, 0.5, 0.045], [2.2, 0.36, 0.05], [3.05, 0.47, 0.04], [3.9, 0.4, 0.05], [4.8, 0.52, 0.045], [5.6, 0.38, 0.04]];
+function mudProfile(y) {   // radius of the mound at height y (0 .. 0.83)
+  const t = clamp(y / 0.83, 0, 1);
+  const dome = Math.sqrt(Math.max(0, 1 - Math.pow(t, 2.2))) * (0.56 - 0.06 * t);
+  const skirt = 0.11 * Math.exp(-y * 26);   // the puddle skirt at the foot
+  return dome + skirt;
+}
+function mudGeometry(crust) {
+  const lo = !!G.quality?.mobile || G.quality?.name === 'low';
+  const NS = lo ? 30 : 46, NR = lo ? 18 : 30;
+  const P = [], C = [], I = [];
+  const top = new THREE.Color(0xa47b52), mid = new THREE.Color(0x7d5434), low = new THREE.Color(0x4b3020), wet = new THREE.Color(0x5a3a22), sheen = new THREE.Color(0xd9bc92);
+  const clay = new THREE.Color(0xe2c79c), clayDark = new THREE.Color(0x8a6a48), c = new THREE.Color();
+  for (let r = 0; r <= NR; r++) {
+    // rings bunch toward the foot (skirt) and the crown (pond rim)
+    const u = r / NR, y = 0.83 * (1 - Math.pow(1 - u, 1.35));
+    for (let k = 0; k <= NS; k++) {
+      const a = (k / NS) * TAU;
+      let R = mudProfile(y);
+      // drips: raised runnels down the sides ending in a round bead above the skirt
+      let drip = 0;
+      for (const [da, len, w] of MUD_DRIPS) {
+        const dA = Math.atan2(Math.sin(a - da), Math.cos(a - da)) * R;
+        const yEnd = 0.62 - len, yy = (y - yEnd) / len;
+        if (yy > -0.25 && yy < 1) { const bead = yy < 0.15 ? Math.exp(-Math.pow((yy - 0.02) / 0.12, 2)) * 1.6 : 1; drip = Math.max(drip, Math.exp(-Math.pow(dA / (w * (yy < 0.15 ? 1.3 : 1)), 2)) * bead * (1 - Math.max(0, yy - 0.7) / 0.3)); }
+      }
+      R += drip * 0.035;
+      // soft lumps (low frequency) and a wavy skirt edge
+      R += 0.012 * Math.sin(a * 3 + 1.3) * Math.sin(y * 9) + (y < 0.06 ? 0.02 * Math.sin(a * 5 + 0.7) * (1 - y / 0.06) : 0);
+      // the crown pond: a shallow dish on top
+      let yy = y;
+      if (y > 0.74) { const k2 = (y - 0.74) / 0.09; yy = y - 0.05 * Math.sin(Math.min(1, k2) * Math.PI * 0.5) * k2; }
+      const sq = crust ? 1.035 : 1;
+      P.push(Math.sin(a) * R * sq, yy * (crust ? 1.02 : 1), Math.cos(a) * R * sq);
+      if (!crust) {
+        c.copy(low).lerp(mid, smooth01(y / 0.3)).lerp(top, smooth01((y - 0.35) / 0.4));
+        c.lerp(wet, drip * 0.7);
+        // the wet sheen: a pale streak on the upper front shoulder
+        const sh = Math.exp(-Math.pow(Math.atan2(Math.sin(a - 0.5), Math.cos(a - 0.5)) / 0.35, 2)) * Math.exp(-Math.pow((y - 0.6) / 0.07, 2));
+        c.lerp(sheen, sh * 0.85);
+        if (y < 0.05) c.lerp(wet, 0.6);
+      } else {
+        // baked clay with dark cracks (cellular seams)
+        const cx = Math.sin(a) * 6, cz = Math.cos(a) * 6, cy = y * 7;
+        const n1 = vnoise(cx + 3, cy, cz), n2 = vnoise(cx * 2.1, cy * 2.1 + 5, cz * 2.1);
+        const crack = Math.max(smooth01(1 - Math.abs(n1 - 0.5) / 0.05), smooth01(1 - Math.abs(n2 - 0.5) / 0.035) * 0.8);
+        c.copy(clay).lerp(clayDark, crack * 0.9 + (1 - smooth01(y / 0.4)) * 0.25);
+      }
+      C.push(c.r, c.g, c.b);
+    }
+  }
+  for (let r = 0; r < NR; r++) for (let k = 0; k < NS; k++) {
+    const a = r * (NS + 1) + k, b = a + NS + 1;
+    I.push(a, a + 1, b, a + 1, b + 1, b);
+  }
+  // close the crown (pond floor)
+  const ci = P.length / 3; P.push(0, 0.83 - 0.05, 0); C.push(...(crust ? [clay.r, clay.g, clay.b] : [top.r, top.g, top.b]));
+  for (let k = 0; k < NS; k++) { const a = NR * (NS + 1) + k; I.push(a, a + 1, ci); }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(P, 3));
+  g.setAttribute('color', new THREE.Float32BufferAttribute(C, 3));
+  g.setIndex(I);
+  g.computeVertexNormals();
+  return g;
+}
+function smooth01(x) { const t = clamp(x, 0, 1); return t * t * (3 - 2 * t); }
+export function makeMudSpirit() {
+  if (!_mudGeo) {
+    _mudGeo = mudGeometry(false); _crustGeo = mudGeometry(true);
+    _mudMats = {
+      body: toon(0xffffff, { vertexColors: true, emissive: 0x1a1006 }),
+      crust: toon(0xffffff, { vertexColors: true, emissive: 0x3a2610 }),
+      pond: toon(0x3d6f6a, { emissive: 0x0e2422 }),
+      reed: toon(0x7d8f3c), pad: toon(0x5f8a3a),
+      heart: glow(0xffb347, 2.4),
+      white: toon(0xfff4dc, { emissive: 0x3a3020 }), pupil: toon(0x1a120c), glint: glow(0xffffff, 1.4), mouth: toon(0x2a1810),
+    };
+    // reeds: five tapered blades and two cattail heads standing in the pond
+    const parts = [], rng = (i) => ((Math.sin(i * 77.3) * 43758.5) % 1 + 1) % 1;
+    for (let i = 0; i < 5; i++) {
+      const h = 0.3 + rng(i) * 0.22, r = new THREE.ConeGeometry(0.02, h, 4);
+      r.translate(0, h / 2, 0); r.rotateZ((rng(i + 9) - 0.5) * 0.6); r.rotateX((rng(i + 19) - 0.5) * 0.5 - 0.15);
+      r.translate((rng(i + 29) - 0.5) * 0.2, 0.77, (rng(i + 39) - 0.5) * 0.14 - 0.08);
+      parts.push(r.toNonIndexed());
+    }
+    for (const [x, z, h] of [[0.05, -0.1, 0.42], [-0.07, -0.05, 0.36]]) {
+      const st = new THREE.CylinderGeometry(0.008, 0.01, h, 4); st.translate(x, 0.77 + h / 2, z); parts.push(st.toNonIndexed());
+      const hd = new THREE.CapsuleGeometry(0.022, 0.08, 2, 6); hd.translate(x, 0.77 + h + 0.02, z); parts.push(hd.toNonIndexed());
+    }
+    _reedGeo = BGU.mergeGeometries(parts.map((p) => { p.deleteAttribute('uv'); return p; }), false);
+    _eyeParts = { white: new THREE.SphereGeometry(1, 16, 12), disc: new THREE.CircleGeometry(1, 20) };
+  }
+  const g = new THREE.Group();
+  const body = new THREE.Mesh(_mudGeo, _mudMats.body); body.name = 'MudBody';
+  const crust = new THREE.Mesh(_crustGeo, _mudMats.crust); crust.name = 'MudCrust'; crust.visible = false;
+  const pond = new THREE.Mesh(_eyeParts.disc, _mudMats.pond); pond.name = 'MudPond';
+  pond.rotation.x = -Math.PI / 2; pond.position.y = 0.79; pond.scale.setScalar(0.19);
+  const pad = new THREE.Mesh(_eyeParts.disc, _mudMats.pad); pad.rotation.x = -Math.PI / 2; pad.position.set(0.07, 0.795, 0.06); pad.scale.set(0.07, 0.06, 1); pad.name = 'MudPad';
+  const heart = new THREE.Mesh(_eyeParts.white, _mudMats.heart); heart.name = 'Core'; heart.position.set(-0.03, 0.8, 0.05); heart.scale.set(0.045, 0.035, 0.045);
+  const reeds = new THREE.Mesh(_reedGeo, _mudMats.reed); reeds.name = 'MudReeds';
+  g.add(body, crust, pond, pad, heart, reeds);
+  // eyes: an almond of white set into the face, a big dark pupil, a catch-light; they blink (group named 'Eye')
+  for (const s of [-1, 1]) {
+    const eye = new THREE.Group(); eye.name = 'Eye';
+    const w = new THREE.Mesh(_eyeParts.white, _mudMats.white); w.scale.set(0.085, 0.1, 0.035);
+    const p = new THREE.Mesh(_eyeParts.white, _mudMats.pupil); p.scale.set(0.058, 0.074, 0.03); p.position.set(0.006 * s, -0.008, 0.012);
+    const gl = new THREE.Mesh(_eyeParts.white, _mudMats.glint); gl.scale.set(0.02, 0.02, 0.012); gl.position.set(-0.018 * s, 0.03, 0.036);
+    eye.add(w, p, gl);
+    eye.position.set(0.135 * s, 0.47, 0.43); eye.rotation.set(-0.12, 0.3 * s, 0);
+    g.add(eye);
+  }
+  // a small smile (half a torus, open upward), pressed into the face
+  if (!_eyeParts.smile) _eyeParts.smile = new THREE.TorusGeometry(0.04, 0.009, 6, 14, Math.PI);
+  const mouth = new THREE.Mesh(_eyeParts.smile, _mudMats.mouth); mouth.name = 'MudMouth';
+  mouth.position.set(0, 0.37, 0.488); mouth.rotation.set(-0.25, 0, Math.PI);
+  g.add(mouth);
+  g.userData.crust = crust;
+  g.userData.creature = { motion: 'jelly', style: 'slime', outline: false, h: 0.83, r: 0.6 };
+  return g;
+}
+
 // 纸魅 hitogata: a folded paper doll (形代) with an ink face; flutters in the vertex shader
 let _paperTex = null, _paperMat = null, _paperGeo = null;
 function paperTexture() {

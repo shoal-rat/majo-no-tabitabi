@@ -15,7 +15,8 @@ import { clamp, TAU } from '../core/util.js';
 import { moveToward, circle, fleeFrom, wander, anim, headPos, distP } from './types.js';
 import { warnAt, melee, shockwave, after, flatDir, inArc, hurtPlayer, playerAlive } from './attacks.js';
 import { addWard } from './wards.js';
-import { makePages, flapPages, makeMud, makeLostFlame, addFrostCrown } from './bodies.js';
+import { makePages, flapPages, makeLostFlame, addFrostCrown } from './bodies.js';
+import { makeMudSpirit } from '../actors/creature.js';
 import { bolt, volley, rockBarrage, EL_COL } from './patterns.js';
 import { toon } from '../core/mats.js';
 
@@ -210,7 +211,7 @@ export function installBeasts(TYPES) {
 
   // 泥沼团 — bog mud
   TYPES.blob = {
-    asset: null, primitive: makeMud, tint: null, material: 'flesh', hp: 240, radius: 0.62, height: 0.85, speed: 1.9, sight: 12, drops: { stardust: [2, 3], heart: 0.1 },
+    asset: null, primitive: makeMudSpirit, tint: null, material: 'flesh', hp: 240, radius: 0.62, height: 0.85, speed: 1.9, sight: 12, drops: { stardust: [2, 3], heart: 0.1 },
     poise: 95, dissolve: 0xc9a57a, mult: { earth: 1.3 },
     think(e, dt) {
       const D = e.data;
