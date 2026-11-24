@@ -687,27 +687,65 @@ function stoneCircle(site, r) {
   putLying(site, STAND[0], 0, site.h(0, 0) + 0.3, 0, 0.4, 2.6, 0.95, 1.6, 0.04) || stone(site, 0, site.h(0, 0) + 0.3, 0, 1.4, 0.5, 0.9, ST.mossy, 0.4);
 }
 function chapelRuin(site, r) {
-  const y = site.h(0, 0) - 0.5, L = 13, Wd = 7, H = 6;
-  for (const s of [-1, 1]) { // side walls with window gaps, broken tops
+  const y = site.h(0, 0) - 0.5, L = 13, Wd = 7, H = 6, T = lmTier(), jr = mulberry32(7171);
+  for (const s of [-1, 1]) { // side walls of coursed ashlar between window gaps, broken tops, buttresses outside
     for (let k = 0; k < 4; k++) {
       const z = -L / 2 + 1.6 + k * 3.3, h = H - (s > 0 ? k * 0.9 : (3 - k) * 0.6) - r() * 0.8;
-      B(site, 0.9, h, 2.2, ST.lime, s * Wd / 2, y + h / 2, z);
+      coursedWall(site.root, ST.lime, s * Wd / 2, y, z, 2.2, 0.9, h, Math.PI / 2, T, jr, { ragged: 0.6, slope: s });
+      if (T < 2 && (k === 0 || k === 2)) {   // a stepped buttress against the pier
+        block(site.root, ST.lime, s * (Wd / 2 + 0.75), y + 0.9, z, 0.6, 1.8, 0.8, 0, 0.04);
+        block(site.root, ST.lime, s * (Wd / 2 + 0.62), y + 2.3, z, 0.36, 1.0, 0.72, 0, 0.04);
+      }
     }
     site.colBox(s * Wd / 2, 0, 0.45, L / 2, 0, y - 1, y + H - 1);
   }
-  // gable end with a pointed window (east) and a stump of the west front
+  // gable end with a pointed window (east): core, voussoirs round the window, a mullion, coping up the slopes
   const sh = new THREE.Shape(); sh.moveTo(-Wd / 2 - 0.45, 0); sh.lineTo(Wd / 2 + 0.45, 0); sh.lineTo(Wd / 2 + 0.45, H); sh.lineTo(0, H + 3.6); sh.lineTo(-Wd / 2 - 0.45, H); sh.lineTo(-Wd / 2 - 0.45, 0);
   const hole = new THREE.Path(); hole.moveTo(-0.9, 2.2); hole.lineTo(0.9, 2.2); hole.lineTo(0.9, 4.6); hole.quadraticCurveTo(0.8, 5.8, 0, 6.5); hole.quadraticCurveTo(-0.8, 5.8, -0.9, 4.6); hole.lineTo(-0.9, 2.2);
   sh.holes.push(hole);
   const geo = new THREE.ExtrudeGeometry(sh, { depth: 0.9, bevelEnabled: false, curveSegments: 5 }); geo.translate(0, 0, -0.45);
   const m = new THREE.Mesh(geo, ST.lime); m.position.set(0, y, -L / 2); m.castShadow = m.receiveShadow = true; site.add(m);
-  B(site, 1.4, 1.6, 0.9, ST.lime, 0, y + H + 3.6 + 0.4, -L / 2); // bell-cote stump
-  for (const s of [-1, 1]) B(site, 2.2, 3.4 - (s > 0 ? 1.6 : 0), 0.9, ST.lime, s * 2.4, y + 1.7, L / 2);
+  const gz = -L / 2;
+  if (T < 2) {
+    // the window's dressed surround: blocks round the pointed head (two arcs), jamb stones, a sill and a mullion
+    const pt = (t, side) => { const u = 1 - t; return [side * (u * u * 0.9 + 2 * u * t * 0.8), u * u * 4.6 + 2 * u * t * 5.8 + t * t * 6.5]; };
+    for (const side of [-1, 1]) {
+      for (let i = 0; i < 4; i++) {
+        const [x0, y0] = pt(i / 4, side), [x1, y1] = pt((i + 1) / 4, side), mx = (x0 + x1) / 2, my = (y0 + y1) / 2;
+        const len = Math.hypot(x1 - x0, y1 - y0), ang = Math.atan2(y1 - y0, x1 - x0);
+        const nx = (side > 0 ? y1 - y0 : y0 - y1) / len, ny = (side > 0 ? x0 - x1 : x1 - x0) / len;   // outward from the opening
+        for (const f of [-1, 1]) plank(site.root, ST.lime, mx + nx * 0.17, y + my + ny * 0.17, gz + f * 0.47, len - 0.03, 0.34, 0.06, f > 0 ? 0 : Math.PI, f > 0 ? ang : -ang);
+      }
+      for (let jy = 2.3; jy < 4.5; jy += 0.55) for (const f of [-1, 1]) plank(site.root, ST.lime, side * 1.08, y + jy + 0.26, gz + f * 0.47, 0.34, 0.5, 0.06, f > 0 ? 0 : Math.PI);
+    }
+    block(site.root, ST.lime, 0, y + 2.12, gz, 2.2, 0.16, 1.1, 0, 0.03);
+    site.add(box(0.16, 3.6, 0.3, ST.lime, 0, y + 2.2 + 1.8, gz));
+    // coping stones up both slopes of the gable, a kneeler at each foot
+    for (const side of [-1, 1]) {
+      const n = 6, x0 = side * (Wd / 2 + 0.45), y0 = H, x1 = 0, y1 = H + 3.6, ang = Math.atan2(y1 - y0, x1 - x0);
+      for (let i = 0; i < n; i++) {
+        const t = (i + 0.5) / n, cx = x0 + (x1 - x0) * t, cy = y0 + (y1 - y0) * t;
+        const c = bevelBox(Math.hypot(x1 - x0, y1 - y0) / n - 0.03, 0.24, 1.05, ST.lime, cx, y + cy + 0.08, gz, 0.03); c.rotation.z = ang + (side > 0 ? Math.PI : 0); site.add(c);
+      }
+      block(site.root, ST.lime, side * (Wd / 2 + 0.3), y + H - 0.2, gz, 0.9, 0.5, 1.1, 0, 0.04);
+    }
+  }
+  // bell-cote stump: two little piers and the spring of their arch
+  if (T < 2) { for (const s of [-1, 1]) block(site.root, ST.lime, s * 0.48, y + H + 3.6 + 0.45, gz, 0.44, 1.5, 0.9, 0, 0.04); block(site.root, ST.lime, -0.25, y + H + 3.6 + 1.3, gz, 0.6, 0.25, 0.9, 0.3, 0.03); }
+  else B(site, 1.4, 1.6, 0.9, ST.lime, 0, y + H + 3.6 + 0.4, -L / 2);
+  // stumps of the west front
+  for (const s of [-1, 1]) coursedWall(site.root, ST.lime, s * 2.4, y, L / 2, 2.2, 0.9, 3.4 - (s > 0 ? 1.6 : 0), 0, T, jr, { ragged: 0.7, slope: -s });
   site.colBox(0, -L / 2, Wd / 2, 0.45, 0, y - 1, y + H);
-  // fallen roof beams and rubble inside
-  for (let k = 0; k < 3; k++) site.add(beam(-2 + k * 1.6, y + 0.3, -3 + k, 1.5 - k, y + 1.4 + k * 0.3, 2 + k, 0.22, 0.22, WD.dark));
-  for (let k = 0; k < 10; k++) stone(site, (r() - 0.5) * 6, y + 0.6, (r() - 0.5) * 11, 0.4 + r() * 0.3, 0.25, 0.35, ST.lime, r() * 3);
-  B(site, 1.6, 1.0, 0.8, ST.grey, 0, y + 0.9, -L / 2 + 1.4); // altar block
+  // fallen roof beams (charred, split) and rubble inside
+  for (let k = 0; k < 3; k++) {
+    const bm = beam(-2 + k * 1.6, y + 0.3, -3 + k, 1.5 - k, y + 1.4 + k * 0.3, 2 + k, 0.22, 0.22, WD.dark); site.add(bm);
+    if (T < 2) site.add(beam(-2 + k * 1.6 + 0.4, y + 0.55, -3 + k + 0.6, -2 + k * 1.6 + 1.4, y + 0.15, -3 + k + 2.4, 0.12, 0.1, WD.old));
+  }
+  for (let k = 0; k < 10; k++) { const x = (r() - 0.5) * 6, z = (r() - 0.5) * 11, sx = 0.4 + r() * 0.3, ry = r() * 3; rubble(site, ST.lime, x, y + 0.6, z, sx, 0.25, 0.35, ry, (jr() - 0.5) * 0.4, (jr() - 0.5) * 0.4); }
+  // the altar: a moulded slab on a block, on a step
+  block(site.root, ST.grey, 0, y + 0.47, -L / 2 + 1.4, 2.2, 0.14, 1.3, 0, 0.03);
+  block(site.root, ST.grey, 0, y + 0.95, -L / 2 + 1.4, 1.4, 0.82, 0.62, 0, 0.04);
+  block(site.root, ST.lime, 0, y + 1.43, -L / 2 + 1.4, 1.75, 0.14, 0.92, 0, 0.04);
 }
 function charcoalCamp(site, r) {
   const y = site.h(0, 0);
