@@ -1,0 +1,18 @@
+{
+ "sculpt_embersnake": {
+  "file": "models/sculpt/snake_ember.glb",
+  "type": "model",
+  "license": "CC0 (original body sculpted for this project; skeleton and clips from the source pack, CC0)",
+  "author": "sculpted for this project (rig: Quaternius, CC0 (skeleton + clips))",
+  "source": "tools/sculpt/assets/snake_ember.mjs",
+  "scale": 1,
+  "tris": 14000,
+  "clips": [
+   "SnakeArmature|Snake_Attack",
+   "SnakeArmature|Snake_Idle",
+   "SnakeArmature|Snake_Jump",
+   "SnakeArmature|Snake_Walk"
+  ],
+  "notes": "Clip use: idle=Snake_Idle, move=Snake_Walk, attack=Snake_Attack. Sculpted ember serpent on the mon_serpent skeleton (joints, IBMs, clips unchanged). Vertex colours; TEXCOORD_0.x = ember glow (the game adds emissive through a ramp); eyes added by the game on the Mouth bone."
+ }
+}

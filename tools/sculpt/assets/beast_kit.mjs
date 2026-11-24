@@ -78,23 +78,25 @@ async function postProcess(name) {
   for (const n of doc.getRoot().listNodes()) if ((def.dropNodes || []).includes(n.getName())) { const m = n.getMesh(); n.setMesh(null); n.dispose(); if (m && !m.listParents().some((x) => x.propertyType === 'Node')) m.dispose(); console.log('post: dropped node', n.getName()); }
   for (const m of doc.getRoot().listMaterials()) if (!m.listParents().some((x) => x.propertyType === 'Primitive')) m.dispose();
   const prim = doc.getRoot().listNodes().find((n) => n.getSkin() && n.getMesh()).getMesh().listPrimitives()[0];
-  if (prim.getAttribute('TEXCOORD_0')) { fs.writeFileSync(file, await io.writeBinary(doc)); console.log('already post-processed (nodes / materials pruned)'); return; }
+  const again = !!prim.getAttribute('TEXCOORD_0');   // a second run only recomputes the glow
   const rig = await loadRig(file);
-  const Pp = prim.getAttribute('POSITION').getArray(), C = prim.getAttribute('COLOR_0').getArray();
+  const Pp = prim.getAttribute('POSITION').getArray(), C = prim.getAttribute('COLOR_0').getArray(), Nn = prim.getAttribute('NORMAL').getArray();
   const J = prim.getAttribute('JOINTS_0').getArray(), W = prim.getAttribute('WEIGHTS_0').getArray();
   const n = Pp.length / 3;
-  console.log('post: welded weights on', weldWeights(Pp, J, W, n), 'coincident vertices');
+  if (!again) console.log('post: welded weights on', weldWeights(Pp, J, W, n), 'coincident vertices');
   const UV = new Float32Array(n * 2);
   let glowN = 0;
   for (let v = 0; v < n; v++) {
     const p = M4.pt(rig.meshWorld, Pp[v * 3], Pp[v * 3 + 1], Pp[v * 3 + 2]);
-    // the paint as the sculptor wrote it (sRGB 0..1), for the glow rule
+    const d = M4.dir(rig.meshWorld, Nn[v * 3], Nn[v * 3 + 1], Nn[v * 3 + 2]), dl = Math.hypot(d[0], d[1], d[2]) || 1, nr = [d[0] / dl, d[1] / dl, d[2] / dl];
+    // the paint as the sculptor wrote it (sRGB 0..1), the bind position and normal, for the glow rule
     const s = [enc(C[v * 3]), enc(C[v * 3 + 1]), enc(C[v * 3 + 2])];
-    const g = mod.glow ? Math.max(0, Math.min(1, mod.glow(s, p))) : 0;
+    const g = mod.glow ? Math.max(0, Math.min(1, mod.glow(s, p, nr))) : 0;
     UV[v * 2] = g; UV[v * 2 + 1] = 0.5; if (g > 0.05) glowN++;
   }
   const buf = doc.getRoot().listBuffers()[0];
-  prim.setAttribute('TEXCOORD_0', doc.createAccessor().setType('VEC2').setArray(UV).setBuffer(buf));
+  if (again) prim.getAttribute('TEXCOORD_0').setArray(UV);
+  else prim.setAttribute('TEXCOORD_0', doc.createAccessor().setType('VEC2').setArray(UV).setBuffer(buf));
   const bin = await io.writeBinary(doc); fs.writeFileSync(file, bin);
   console.log(`post: wrote ${file} ${(bin.length / 1024).toFixed(0)} KB; ${n} verts, ${prim.getIndices().getCount() / 3} tris, glow on ${glowN} verts`);
 }

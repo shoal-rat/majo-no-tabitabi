@@ -581,7 +581,7 @@ export function installBeasts(TYPES) {
 
   // 余烬蛇 — ember serpent
   TYPES.embersnake = {
-    asset: 'mon_serpent', scale: 0.82, tint: { color: 0xffa070, emissive: 0x7a2000, emissiveIntensity: 0.45 }, material: 'flesh', hp: 470, radius: 0.8, height: 2.3,
+    asset: 'sculpt_embersnake', scale: 0.82, tint: { color: 0xffa070, emissive: 0x7a2000, emissiveIntensity: 0.45 }, material: 'flesh', hp: 470, radius: 0.8, height: 2.3,
     speed: 2.8, sight: 16, immune: ['burning', 'fire'], drops: { stardust: [6, 9], heart: 0.4 }, poise: 185, staggerT: 1.5, mult: { water: 1.3, ice: 1.2 },
     clips: { idle: 'Snake_Idle', move: 'Snake_Walk', attack: 'Snake_Attack', leap: 'Snake_Jump', hit: 'Snake_Idle', death: 'Snake_Idle' },
     onSpawn(e) {

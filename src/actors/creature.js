@@ -538,6 +538,7 @@ const KIT_BODY = { ani_chicken: ['hen', 'sculpt_ani_chicken'] };
 // toward +z, the iris colour, the bone it rides — a textured cap that blinks (named 'Eye'), crisp at any size.
 const KIT_OWN = {
   sculpt_froststag: { type: 'creatures', old: 'ani_stag', style: 'paper', lift: 0x1a3550, eyes: { bone: 'Head', at: [0.094, 1.68, 0.79], r: [0.036, 0.032, 0.016], yaw: 64, iris: 0x3fa9dc } },
+  sculpt_embersnake: { type: 'creatures', old: 'mon_serpent', glow: 0xff6a1a, eyes: { bone: 'Mouth', cx: -0.025, at: [0.345, 2.82, 0.53], r: [0.085, 0.078, 0.04], yaw: 70, iris: 0xf2b42a, slit: true } },
 };
 const kitOn = (type) => !!G.sculpt?.on?.(type);
 const _kb = new THREE.Matrix4(), _ki = new THREE.Matrix4();
@@ -560,8 +561,8 @@ function kitFrame(model, sm) {
 const kitGlowDone = new WeakSet();
 const kitEyeMats = new Map();
 let kitEyeGeo = null;
-function kitEyeMaterial(iris) {
-  let m = kitEyeMats.get(iris);
+function kitEyeMaterial(iris, slit) {
+  let m = kitEyeMats.get(iris + (slit ? 's' : ''));
   if (m) return m;
   const cv = document.createElement('canvas'); cv.width = cv.height = 128;
   const x = cv.getContext('2d');
@@ -571,14 +572,14 @@ function kitEyeMaterial(iris) {
   let g = x.createRadialGradient(64, 70, 6, 64, 66, 50);
   g.addColorStop(0, hex(ic.clone().multiplyScalar(0.35))); g.addColorStop(0.55, hex(ic)); g.addColorStop(0.86, hex(ic.clone().lerp(new THREE.Color(0xffffff), 0.25))); g.addColorStop(1, hex(ic.clone().multiplyScalar(0.3)));
   x.fillStyle = g; x.beginPath(); x.ellipse(64, 66, 47, 52, 0, 0, TAU); x.fill();
-  x.fillStyle = '#0b1020'; x.beginPath(); x.ellipse(64, 66, 19, 23, 0, 0, TAU); x.fill();
+  x.fillStyle = '#0b1020'; x.beginPath(); x.ellipse(64, 66, slit ? 7 : 19, slit ? 40 : 23, 0, 0, TAU); x.fill();
   x.fillStyle = 'rgba(255,255,255,0.95)'; x.beginPath(); x.ellipse(50, 44, 13, 11, -0.4, 0, TAU); x.fill();
   x.beginPath(); x.ellipse(80, 88, 5, 4, 0, 0, TAU); x.fill();
   const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace;
   m = new THREE.MeshToonMaterial({ map: t, gradientMap: toonGradient(), emissive: 0xffffff, emissiveMap: t, emissiveIntensity: 0.28 });
   m.name = 'KitEye'; m.userData.shared = true;
   hookMaterial(m);
-  kitEyeMats.set(iris, m);
+  kitEyeMats.set(iris + (slit ? 's' : ''), m);
   return m;
 }
 /** Eyes of a kit body: two textured caps in the sculpt's sockets, riding a bone through its inverse bind matrix. */
@@ -595,10 +596,10 @@ function addKitEyes(model, E) {
   const holder = new THREE.Group(); holder.name = 'KitEyes';
   holder.matrixAutoUpdate = false; holder.matrix.copy(sm.skeleton.boneInverses[hi]).multiply(kitFrame(model, sm));
   bones[hi].add(holder);
-  const mat = kitEyeMaterial(E.iris);
+  const mat = kitEyeMaterial(E.iris, !!E.slit);
   for (const s of [1, -1]) {
     const e = new THREE.Mesh(kitEyeGeo, mat); e.name = 'Eye';
-    e.position.set(E.at[0] * s, E.at[1], E.at[2]);
+    e.position.set((E.cx || 0) + E.at[0] * s, E.at[1], E.at[2]);
     e.rotation.y = s * E.yaw * Math.PI / 180;
     e.scale.set(E.r[0], E.r[1], E.r[2]);
     holder.add(e);
