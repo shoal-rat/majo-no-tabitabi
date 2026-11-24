@@ -6,19 +6,19 @@
 // (orbs, warm lamps) as before so the night lamp pools still find them.
 import * as THREE from 'three';
 import { mat } from './kit.js';
-import { GeoBuilder, ByMat, hash01 } from './city-geo.js';
+import { GeoBuilder, ByMat, hash01, plain } from './city-geo.js';
 
-const C = (hex) => mat.paint(hex);
+const C = (hex) => plain(mat.paint(hex));
 const fruitM = [0xc8463a, 0xe08a32, 0xd8c24a, 0x8d4a8a, 0x7fae4a, 0xe0645a].map(C),
   leafM = [0x6c9a52, 0x5f8c4a, 0x7aa65c].map(C),
   petalM = [0xd65a4f, 0xe794a8, 0xf3eee2, 0xebc85a, 0xb77ad0].map(C),
-  stripe = mat.cloth(0xf3eee2),
+  stripe = plain(mat.cloth(0xf3eee2)),
   wicker = mat.wood(0xb08a55),
-  burlap = mat.cloth(0xb59a6e),
+  burlap = plain(mat.cloth(0xb59a6e)),
   soil = mat.paint(0x5a4836),
   water = mat.paint(0x9fd3e0),
   spray = mat.paint(0xd2eff6),
-  bread = mat.paint(0xc98a4a);
+  bread = C(0xc98a4a);
 
 /** A round fruit (6-sided lathe, slightly squat), into builder b at (x, y, z) with radius r. */
 function fruit(b, x, y, z, r, seg = 6) {

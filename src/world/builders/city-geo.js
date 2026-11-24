@@ -296,6 +296,15 @@ export function fixWinding(b, from) {
     for (const arr of [P, N, C]) if (arr) for (let k = 0; k < 3; k++) { const t = arr[i + 3 + k]; arr[i + 3 + k] = arr[i + 6 + k]; arr[i + 6 + k] = t; }
   }
 }
+/**
+ * Draw calls: core/mats.js guesses a look from a material's colour (a rim, a translucency, a sheen), and the
+ * draw-call pass merges only materials with the same look. The city's own paints and cloths drop the guess so each
+ * surface kind stays one family per block. Returns m.
+ */
+export function plain(m) {
+  if (m.userData.look) delete m.userData.look;
+  return m;
+}
 /** Seeded 0..1 hash of two numbers (stable per house / bay). */
 export function hash01(a, b = 0) {
   const s = Math.sin(a * 127.1 + b * 311.7) * 43758.5453;

@@ -4,21 +4,21 @@
 // it sways with the wind). CITY_DRESS collects the spots the animated life (life/city-ambient.js) needs.
 import * as THREE from 'three';
 import { mat, clothify } from './kit.js';
-import { GeoBuilder, ByMat, hash01 } from './city-geo.js';
+import { GeoBuilder, ByMat, hash01, plain } from './city-geo.js';
 
 /** World-space spots for life/city-ambient.js, filled while the city is built (cleared at each build). */
 export const CITY_DRESS = { smoke: [], cats: [], glints: [], books: [], lanterns: [], pigeons: [], windows: [] };
 export function resetDress() {
   for (const k in CITY_DRESS) CITY_DRESS[k].length = 0;
 }
-const wash = [0xf4efe4, 0xe9c9c4, 0xc9d6e6, 0xf0dcb0, 0xd8e2d0, 0x9e3b35, 0x3d5f8c].map((c) => mat.cloth(c)),
+const wash = [0xf4efe4, 0xc9d6e6].map((c) => plain(mat.cloth(c))), // two colours: each is a draw per block
   rope = mat.wood(0xb59a6e),
   pot = mat.stone(0xb7704c),
-  leaf = [0x6c9a52, 0x5f8c4a, 0x7aa65c].map((c) => mat.paint(c)),
-  bloom = [0xd65a4f, 0xe794a8, 0xebc85a, 0xf3eee2, 0xb77ad0].map((c) => mat.paint(c)),
+  leaf = [0x6c9a52, 0x5f8c4a, 0x7aa65c].map((c) => plain(mat.paint(c))),
+  bloom = [0xd65a4f, 0xe794a8, 0xebc85a, 0xf3eee2, 0xb77ad0].map((c) => plain(mat.paint(c))),
   wood = mat.wood(0x6e4c38),
-  straw = mat.paint(0xd8b26a),
-  paper = [0xf4efe4, 0xebe0c6, 0xe8d7b0, 0xdfe6ea].map((c) => mat.paint(c)),
+  straw = plain(mat.paint(0xd8b26a)),
+  paper = [0xf4efe4, 0xebe0c6, 0xe8d7b0, 0xdfe6ea].map((c) => plain(mat.paint(c))),
   brass = mat.metal(0xcf9f52),
   roofM = mat.tile(0xa8472d);
 

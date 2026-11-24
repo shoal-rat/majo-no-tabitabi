@@ -7,8 +7,7 @@
 // returned to the caller so it stays a lamp for the night pools.
 import * as THREE from 'three';
 import { mat } from './kit.js';
-import { glow } from '../../core/mats.js';
-import { GeoBuilder, ByMat, hash01, frontRing, fixWinding } from './city-geo.js';
+import { GeoBuilder, ByMat, hash01, frontRing, fixWinding, plain } from './city-geo.js';
 import { wallLantern } from './city-market.js';
 
 const C = {
@@ -19,21 +18,22 @@ const C = {
   frame: mat.wood(0x5a4232),
   wood: mat.wood(0x6e4c38),
   glass: mat.paint(0x3d5667),
-  lit: glow(0xd9b07a, 0.95), // a lamp-lit shop interior behind the panes
+  lit: plain(mat.paint(0xe6c48c)), // a lamp-lit shop interior behind the panes
   brass: mat.metal(0xcf9f52),
   iron: mat.paint(0x35393f),
-  cream: mat.cloth(0xf3eee2),
+  cream: plain(mat.cloth(0xf3eee2)),
   board: mat.wood(0x7b5a3e)
 };
-const P = (hex) => mat.paint(hex);
+const P = (hex) => plain(mat.paint(hex)),
+  CL = (hex) => plain(mat.cloth(hex));
 /** Trades: awning colour, signboard colour, emblem colours. */
 export const TRADES = [
-  { id: 'bakery', awn: mat.cloth(0xc0563f), sign: P(0xe9d3a0), em: [P(0xc98a4a), P(0xe7c27a)] },
-  { id: 'apothecary', awn: mat.cloth(0x4f7259), sign: P(0x2f4a3c), em: [P(0x7ad0a8), P(0xd9b45a)] },
-  { id: 'broom', awn: mat.cloth(0x5b4a8a), sign: P(0x3a2f52), em: [P(0x8a5a35), P(0xd8b26a)] },
-  { id: 'books', awn: mat.cloth(0x3d5f8c), sign: P(0xe8dfcc), em: [P(0x9e3b35), P(0xf3eee2)] },
-  { id: 'tailor', awn: mat.cloth(0xb76f8a), sign: P(0xf0e2e6), em: [P(0xbfc6cc), P(0x9e3b35)] },
-  { id: 'florist', awn: mat.cloth(0x6c9a52), sign: P(0xf4efe4), em: [P(0xe794a8), P(0x5f8c4a)] }
+  { id: 'bakery', awn: CL(0xc0563f), sign: P(0xe9d3a0), em: [P(0xc98a4a), P(0xe7c27a)] },
+  { id: 'apothecary', awn: CL(0x4f7259), sign: P(0x2f4a3c), em: [P(0x7ad0a8), P(0xd9b45a)] },
+  { id: 'broom', awn: CL(0x5b4a8a), sign: P(0x3a2f52), em: [P(0x8a5a35), P(0xd8b26a)] },
+  { id: 'books', awn: CL(0x3d5f8c), sign: P(0xe8dfcc), em: [P(0x9e3b35), P(0xf3eee2)] },
+  { id: 'tailor', awn: CL(0xb76f8a), sign: P(0xf0e2e6), em: [P(0xbfc6cc), P(0x9e3b35)] },
+  { id: 'florist', awn: CL(0x6c9a52), sign: P(0xf4efe4), em: [P(0xe794a8), P(0x5f8c4a)] }
 ];
 export const tradeOf = (seed) => TRADES[Math.floor(hash01(seed, 61) * TRADES.length)];
 
@@ -180,7 +180,7 @@ export function shopFront(g, t, wx, ww, doorX, zf, seed, lite) {
   B.flush(g);
   return { glint: t.id === 'apothecary' || t.id === 'broom' ? [wx, 1.8, zf + 0.12] : null, book: t.id === 'books' ? [wx, zf + 1.4] : null };
 }
-const goodsM = { bread: P(0xc98a4a), crust: P(0xa96a35), pot: mat.stone(0xb7704c), leaf: P(0x6c9a52), bloom: [0xd65a4f, 0xe794a8, 0xebc85a, 0xf3eee2].map(P), straw: P(0xd8b26a), cloth: [0x9e3b35, 0x3d5f8c, 0xd9b45a, 0x6c9a52].map(mat.cloth), wicker: mat.wood(0xb08a55), glass: P(0x7ad0a8) };
+const goodsM = { bread: P(0xc98a4a), crust: P(0xa96a35), pot: mat.stone(0xb7704c), leaf: P(0x6c9a52), bloom: [0xd65a4f, 0xe794a8, 0xebc85a, 0xf3eee2].map(P), straw: P(0xd8b26a), cloth: [0x9e3b35, 0x3d5f8c, 0xd9b45a, 0x6c9a52].map((c) => CL(c)), wicker: mat.wood(0xb08a55), glass: P(0x7ad0a8) };
 function goods(B, t, wx, ww, zf, seed) {
   const x0 = wx - ww / 2 + 0.3, z = zf + 0.45;
   if (t.id === 'bakery') {

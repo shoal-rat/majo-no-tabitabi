@@ -61,6 +61,7 @@ export function modelTile(m, k = 1) {
   let t = _tile.get(hex);
   if (!t) {
     _tile.set(hex, (t = flat(hex, { surface: 'tile', look: { spec: 0.065, specPower: 50, detail: 0.22, bump: 0.3 }, flatShading: false })));
+    t.userData.look = { spec: 0.065, specPower: 50, detail: 0.22, bump: 0.3 }; // the same look for every colour: one family
     _tileSet.add(t);
   }
   return t;
