@@ -11,6 +11,9 @@ import { CLIPS } from '../actors/clips.js';
 import { createCamera } from './camera.js';
 import { createBroom, BROOM } from './broom.js';
 import { createWings } from './wings.js';
+import { createStamina, STAMINA } from './stamina.js';
+import { stepClimb, tryGrab, poseClimb, colliderTopAt, probe as wallProbe, findLedge, ledge } from './climb.js';
+import { installMoveHints } from './move-hints.js';
 import { createWardrobe, assetOf, initialOutfit } from './wardrobe.js';   // wardrobe
 import { outfitById, journeyOutfit } from '../data/outfits.js';          // wardrobe
 
@@ -69,8 +72,9 @@ function build() {
     control: true,
   };
 
+  createStamina(P);
   const S = {
-    tilt, rig: null, coyote: 0, buffer: 0, jumpCut: false, airJumps: 1, airDodge: true, jumpHeldT: 0,
+    tilt, rig: null, climbCd: 0, wallPush: 0, climb: null, mantle: null, sinkT: 0, diveDip: 0, slideOn: false, coyote: 0, buffer: 0, jumpCut: false, airJumps: 1, airDodge: true, jumpHeldT: 0,
     dodgeT: 0, dodgeCd: 0, dodgeDir: new THREE.Vector3(), iframes: 0, invuln: 0, lockT: 0, stunT: 0,
     squash: 0, squashV: 0, lean: 0, bank: 0, pitch: 0, prevYaw: 0,
     fallMaxVy: 0, airT: 0, stepAcc: 0, safe: new THREE.Vector3(), safeT: 0,
@@ -127,6 +131,7 @@ function build() {
       P.maxMana = 100 + 20 * (u.mana | 0);
       P.hp = Math.min(P.maxHp, P.hp > 0 ? P.hp : hpFrac * P.maxHp);
       P.mana = Math.min(P.maxMana, P.mana);
+      P.stam.recalc();
       return P;
     },
     /** Deal damage. opts { element?, from? (Vector3|object with pos), knock? (number m/s | Vector3), source? }. Returns damage taken. */
@@ -247,7 +252,8 @@ function build() {
       P.dead = false;
       P.hp = P.maxHp;
       P.mana = Math.max(P.mana, P.maxMana * 0.6);
-      S.lockT = 0.9; S.invuln = 2.5; S.deadT = 0;
+      S.lockT = 0.9; S.invuln = 2.5; S.deadT = 0; S.sinkT = 0;
+      P.stam.fill();
       if (P.reactor) { P.reactor.burning = 0; P.reactor.frozen = 0; P.reactor.shocked = 0; }
       rig.paused = false;
       rig.play('revive', { fade: 0.05, next: 'idle' });
@@ -274,7 +280,8 @@ function build() {
     P.onBroom = s === 'broom';
     const gl = s === 'glide';
     if (gl !== P.gliding) { P.gliding = gl; S.wings.set(gl); G.events.emit('player:glide', { on: gl }); if (gl) G.audio?.sfx('wings_open', { pos: P.pos }); }
-    if (prev === 'swim' && s !== 'swim') S.swimT = 0;
+    if (prev === 'swim' && s !== 'swim') { S.swimT = 0; S.sinkT = 0; S.diveDip = 0; }
+    if (s !== 'climb' && S.climb) S.climb.kind = '';
   }
   S.setState = setState;
 
@@ -439,6 +446,9 @@ function readInput(P, S) {
 function groundBelow(P, S, x, z, y) {
   const W = G.world;
   let g = W.groundAt(x, z, y, MOVE.STEP);
+  // the top of a boulder / pier / stone wall she climbed onto or landed on (house walls under a roof are not floors)
+  const ct = colliderTopAt(x, z, y);
+  if (ct > g) g = ct;
   let sup = G.physics?.supportAt?.(x, z, y, 1.6);
   S.support = null;
   if (sup && sup.y > g && sup.y <= y + MOVE.STEP + 0.02) { g = sup.y; S.support = sup.body || null; return g; }
@@ -504,12 +514,16 @@ function stepGround(dt, P, S, I) {
   const W = G.world;
   const stats = P.stats;
   // speed
-  let maxV = I.sprint ? stats.sprint : stats.walk;
+  const air = P.state === 'air' || P.state === 'glide';
+  // sprinting costs stamina; winded she cannot sprint and trudges a little slower
+  const sprint = I.sprint && !air && P.stam.can();
+  if (sprint && I.wish) P.stam.drain(STAMINA.SPRINT, dt);
+  let maxV = sprint || (air && I.sprint && !P.winded) ? stats.sprint : stats.walk;   // a running jump keeps its pace (air is free)
+  if (P.winded) maxV *= 0.8;
   const r = P.reactor;
   if (r) { if (r.burning) maxV *= 1.1; if (r.wet > 0) maxV *= 0.95; if (!r.frozen) maxV *= Math.max(0.4, r.speedMul ?? 1); } // mud / frost fields slow her too
   if (S.wade) maxV *= 0.68;
   if (P.guarding) maxV *= 0.45;
-  const air = P.state === 'air' || P.state === 'glide';
   const tvx = I.wx * maxV * I.wish, tvz = I.wz * maxV * I.wish;
   let acc = air ? MOVE.AIR_ACCEL : (I.wish ? MOVE.ACCEL : MOVE.DECEL);
   // sharp reversal on the ground: brake harder
@@ -520,7 +534,7 @@ function stepGround(dt, P, S, I) {
     if (dl <= step) { P.vel.x = tvx; P.vel.z = tvz; }
     else if (!(air && !I.wish)) { P.vel.x += dvx / dl * step; P.vel.z += dvz / dl * step; }
   }
-  P.sprinting = I.sprint && I.wish && !air;
+  P.sprinting = sprint && I.wish > 0;
   // facing
   let faceT = null;
   if (S.faceAimT > 0) faceT = S.faceYaw ?? (P.aim ? Math.atan2(P.aim.dir.x, P.aim.dir.z) : null);
@@ -542,17 +556,22 @@ function integrate(dt, P, S, I) {
     S.dodgeT -= dt;
     if (S.dodgeT <= 0) { P.vel.x = S.dodgeDir.x * 4.5; P.vel.z = S.dodgeDir.z * 4.5; }
   }
-  // steep slope slide
+  // steep slope slide (she can steer across the fall line and jump off), and a slide on purpose: {descend} held while
+  // running downhill on a slope over ~17° rides it down, gaining speed (free; it ends when she lets go or the land levels)
   if (P.state === 'ground' && !S.support && p.y <= W.heightAt(p.x, p.z) + 0.05) {
     const sl = W.slopeAt(p.x, p.z);
-    if (sl > MOVE.SLIDE_SLOPE) {
-      const n = W.normalAt(p.x, p.z, _v1);
-      const h = Math.hypot(n.x, n.z) || 1;
-      const a = MOVE.GRAVITY * Math.sin(sl) * 0.9;
-      P.vel.x += n.x / h * a * dt; P.vel.z += n.z / h * a * dt;
-      S.slideT = 0.25;
+    const n = W.normalAt(p.x, p.z, _v1);
+    const h = Math.hypot(n.x, n.z) || 1, dx = n.x / h, dz = n.z / h;
+    if (!S.slideOn && I.down && sl > 0.3 && P.vel.x * dx + P.vel.z * dz > 3 && S.dodgeT <= 0) { S.slideOn = true; G.events.emit('player:slide', { on: true }); }
+    if (S.slideOn && (!I.down || (sl < 0.12 && P.speed < 4) || P.speed < 1.2)) { S.slideOn = false; G.events.emit('player:slide', { on: false }); }
+    if (sl > MOVE.SLIDE_SLOPE || S.slideOn) {
+      const a = MOVE.GRAVITY * Math.sin(sl) * (S.slideOn ? 0.75 : 0.9);
+      P.vel.x += dx * a * dt; P.vel.z += dz * a * dt;
+      if (I.wish) { const side = I.wx * dz - I.wz * dx; P.vel.x += dz * side * 5 * dt; P.vel.z -= dx * side * 5 * dt; }
+      if (S.slideOn) { const sp = Math.hypot(P.vel.x, P.vel.z), k = (1 - 0.2 * dt) * (sp > 16 ? 16 / sp : 1); P.vel.x *= k; P.vel.z *= k; }
+      S.slideT = Math.max(S.slideT, S.slideOn ? 0.12 : 0.25);
     }
-  }
+  } else if (S.slideOn && P.state !== 'ground') { S.slideOn = false; }
   if (S.slideT > 0) S.slideT -= dt;
   S.onSlide = S.slideT > 0;
   // gravity
@@ -748,15 +767,30 @@ function startDodge(P, S, I) {
 function stepSwim(dt, P, S, I) {
   const W = G.world;
   const p = P.pos;
-  const maxV = I.sprint ? MOVE.SWIM_FAST : MOVE.SWIM;
+  const sea = W.seaLevel;
+  // winded in deep water: she struggles, then sinks, and the water gives her back at the last bank she stood on
+  if (P.winded) {
+    S.sinkT += dt;
+    if (S.sinkT > 0.7) {
+      P.vel.x = damp(P.vel.x, 0, 3, dt); P.vel.z = damp(P.vel.z, 0, 3, dt);
+      p.y = damp(p.y, sea - 1.9, 1.6, dt);
+      if ((S.sinkWarn = (S.sinkWarn || 0) - dt) <= 0) { S.sinkWarn = 0.45; _v1.set(p.x, sea + 0.05, p.z); G.fx?.burst('splash', _v1, { scale: 0.35, count: 0.3, power: 0.3 }); }
+      if (S.sinkT > 2.3) drown(P, S);
+      return;
+    }
+  } else S.sinkT = 0;
+  const fast = I.sprint && I.wish > 0 && P.stam.can();
+  P.stam.drain(fast ? STAMINA.SWIM_FAST : STAMINA.SWIM, dt);
+  const maxV = fast ? MOVE.SWIM_FAST : MOVE.SWIM;
   const tvx = I.wx * maxV * I.wish, tvz = I.wz * maxV * I.wish;
   P.vel.x = damp(P.vel.x, tvx, 3.2, dt); P.vel.z = damp(P.vel.z, tvz, 3.2, dt);
   if (I.wish) P.yaw = dampAngle(P.yaw, Math.atan2(I.wx, I.wz), 5, dt);
   S.swimT += dt;
   p.x += P.vel.x * dt; p.z += P.vel.z * dt;
   W.resolveCollisions(p, MOVE.RADIUS, MOVE.HEIGHT);
-  const sea = W.seaLevel;
-  p.y = damp(p.y, sea + Math.sin(S.swimT * 2.4) * 0.035, 6, dt);
+  // after a dive she is under for a moment and comes up
+  S.diveDip = damp(S.diveDip, 0, 1.7, dt);
+  p.y = damp(p.y, sea + Math.sin(S.swimT * 2.4) * 0.035 - S.diveDip, S.diveDip > 0.05 ? 10 : 6, dt);
   P.vel.y = 0;
   // soak + put out fire
   S.soakT -= dt;
@@ -780,6 +814,16 @@ function stepSwim(dt, P, S, I) {
   }
 }
 function splash(P, S, k) { S.splash(k); }
+/** Sank out of stamina: back on the last bank she stood on (like falling out of the world: 8 damage), stamina full. */
+function drown(P, S) {
+  S.sinkT = 0;
+  const s = S.safe;
+  G.ui?.fade?.(0.6, 0.1)?.then?.(() => G.ui?.fade?.(0, 0.5));
+  P.teleport(s.x, s.y + 0.05, s.z);
+  P.stam.fill();
+  P.takeDamage(8, { source: 'drown', dot: true });
+  G.events.emit('player:drowned', {});
+}
 
 function stepGlide(dt, P, S, I) {
   // heading turns toward input; constant forward drift; lift from wind / updrafts
@@ -822,6 +866,8 @@ export const playerSystem = {
     G.player = P;
     G.cam = createCamera();
     G.actors = { createActor, makeActorShadowBlob, CLIPS };
+    S.hints = installMoveHints();
+    P._climb = { probe: wallProbe, findLedge, ledge, colliderTopAt };   // tests / probes
     // stand at the spawn behind the title
     const a = G.world.ANCHORS?.spawn || { x: -540, z: 58, face: Math.PI };
     P.teleport(a.x, undefined, a.z);
@@ -882,7 +928,7 @@ export const playerSystem = {
     S.dodgeCd = Math.max(0, S.dodgeCd - dt); S.faceAimT = Math.max(0, S.faceAimT - dt);
     if (S.faceAimT <= 0) S.faceYaw = null;
     S.coyote = Math.max(0, S.coyote - dt); S.buffer = Math.max(0, S.buffer - dt);
-    S.splashCd = Math.max(0, S.splashCd - dt);
+    S.splashCd = Math.max(0, S.splashCd - dt); S.climbCd = Math.max(0, S.climbCd - dt);
     if (S.expT > 0) { S.expT -= dt; if (S.expT <= 0) rig.clearExpressions(); }
     S.actFace?.(dt);
 
@@ -930,7 +976,14 @@ export const playerSystem = {
       case 'broom': {
         BIN.mx = I.mx; BIN.my = I.my; BIN.up = I.jumpH; BIN.down = I.down; BIN.boost = I.sprint;
         const res = P.broom.fly(dt, BIN);
-        if (res === 'landed') {
+        if (res === 'dive') {
+          // a skimming dive into deep water: she goes in head first with the broom's way on and surfaces swimming
+          const sp = Math.hypot(P.vel.x, P.vel.z);
+          P.pos.y = W.seaLevel; S.setState('swim');
+          P.vel.x *= 0.4; P.vel.z *= 0.4; P.vel.y = 0;
+          S.diveDip = clamp(sp / 12, 0.8, 1.6); S.splashCd = 0; S.splash(clamp(sp / 10, 1, 2));
+          G.events.emit('player:dive', { speed: sp, from: 'broom' });
+        } else if (res === 'landed') {
           const W2 = G.world;
           if (W2.isWater(P.pos.x, P.pos.z) && W2.groundAt(P.pos.x, P.pos.z) < W2.seaLevel - MOVE.SWIM_DEPTH) { P.pos.y = W2.seaLevel; S.setState('swim'); S.splash(0.6); }
           else { P.pos.y = groundBelow(P, S, P.pos.x, P.pos.z, P.pos.y + 0.3); S.setState('ground'); P.vel.set(0, 0, 0); rig.play('broom_dismount', { fade: 0.1, restart: true }); }
@@ -940,12 +993,25 @@ export const playerSystem = {
       }
       case 'swim':
         stepSwim(dt, P, S, I);
-        if (I.dodge) { /* a quick dive-dash in the water */ P.vel.x += Math.sin(P.yaw) * 4; P.vel.z += Math.cos(P.yaw) * 4; S.splash(0.4); }
+        // a stroke burst (stamina)
+        if (P.state === 'swim' && I.dodge && S.sinkT <= 0 && P.stam.spend(STAMINA.STROKE)) { P.vel.x += Math.sin(P.yaw) * 4; P.vel.z += Math.cos(P.yaw) * 4; S.splash(0.4); }
+        // swim into a bank: climb out (a low bank) or onto the rock (a cliff)
+        if (P.state === 'swim' && S.sinkT <= 0) tryGrab(P, S, I, dt, 'swim');
         break;
+      case 'climb': {
+        stepClimb(dt, P, S, I, CLIMB_H);
+        // climbed down into deep water: swim
+        if (P.state === 'climb' && W.isWater(P.pos.x, P.pos.z) && P.pos.y < W.seaLevel - 0.3) { P.pos.y = W.seaLevel; S.setState('swim'); S.splash(0.4); }
+        break;
+      }
       case 'glide':
         stepGlide(dt, P, S, I);
         integrateGlide(dt);
-        if (!I.jumpH || !canWings()) { S.setState('air'); }
+        if (P.state === 'glide') {
+          P.stam.drain(STAMINA.GLIDE, dt);
+          if (!I.jumpH || !canWings() || P.winded) S.setState('air');
+          else tryGrab(P, S, I, dt, 'glide');
+        }
         break;
       default: { // ground / air
         if (P.state === 'air') { S.airT += dt; S.fallMaxVy = Math.max(S.fallMaxVy, -P.vel.y); }
@@ -971,6 +1037,8 @@ export const playerSystem = {
         if (I.dodge) startDodge(P, S, I);
         stepGround(dt, P, S, I);
         integrate(dt, P, S, I);
+        // walking / jumping / falling into a wall: take hold (or vault a low ledge)
+        if (P.state === 'ground' || (P.state === 'air' && !S.bouncing)) tryGrab(P, S, I, dt, P.state);
         // water entry from ground / air
         const sea = W.seaLevel;
         if (P.state !== 'swim' && W.isWater(P.pos.x, P.pos.z)) {
@@ -980,7 +1048,9 @@ export const playerSystem = {
             P.pos.y = sea; P.vel.y = 0; P.vel.x *= 0.5; P.vel.z *= 0.5;
             S.setState('swim');
             S.fallMaxVy = 0;
+            S.diveDip = clamp(v / 12, 0, 1.6);   // a fall into deep water goes under for a moment (and never hurts)
             S.splash(clamp(v / 8, 0.4, 2));
+            if (v > 9) G.events.emit('player:dive', { speed: v, from: 'air' });
           }
         }
         S.wade = P.state === 'ground' && S.groundY < sea - 0.25 && S.groundY > sea - MOVE.SWIM_DEPTH - 0.1;
@@ -990,6 +1060,7 @@ export const playerSystem = {
     }
 
     afterMove(dt);
+    S.hints?.update(dt, P);
     animate(dt, I);
     rig.update(dt);
     placeVisuals(dt);
@@ -1001,11 +1072,13 @@ export const playerSystem = {
   },
 };
 const INPUT_ZERO = { mx: 0, my: 0, wx: 0, wz: 0, wish: 0 };
+const CLIMB_H = { groundBelow };
+const CLIMB_V = [new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3()];
 const BIN = { mx: 0, my: 0, up: false, down: false, boost: false };
 
 function canWings() { return !!(G.state?.abilities?.wings || G.params.autostart || G.params.wings); }
 function startGlide() {
-  if (P.state !== 'air') return;
+  if (P.state !== 'air' || !P.stam.can()) return;
   S.setState('glide');
   S.glideT = 0;
   P.vel.y = Math.max(P.vel.y, -3);
@@ -1082,6 +1155,8 @@ function afterMove(dt) {
       else if (P.speed > 7.5 && (surface === 'path' || surface === 'sand')) { _v1.copy(p); _v1.y += 0.1; G.fx?.burst('dust', _v1, { power: 0.25, scale: 0.45, count: 0.4 }); }
     }
   } else S.stepAcc = 0.5;
+  // stamina refills on firm ground and on the broom
+  P.stam.tick(dt, P.state === 'ground' || P.state === 'broom');
   // wing dust off when not gliding
   if (S.wingDust && !P.gliding) S.wingDust.active = false;
   // rig feet: plant only when standing on the ground
@@ -1104,6 +1179,7 @@ function animate(dt, I) {
       want = P.broom.boosting ? 'broom_boost' : 'sit_broom';
       break;
     case 'swim': want = P.speed > 0.6 ? 'swim' : 'swim_idle'; v = P.speed; break;
+    case 'climb': want = S.climb?.kind === 'mantle' ? null : 'climb_hold'; break;
     case 'glide': {
       want = 'glide';
       // bank into the turn: the Glide_Bank_L / _R clips share Glide_Loop's timing (time-locked blend)
@@ -1133,6 +1209,7 @@ function animate(dt, I) {
     }
   }
   rig.legYaw = legYaw;
+  poseClimb(P, S, rig, CLIMB_V);
   if (want === 'move') rig.move(v, { back, force: true });
   else if (want && rig.current !== want) rig.play(want);
   if (want === 'swim' && rig.current === 'swim') rig.setGroundSpeed(v);

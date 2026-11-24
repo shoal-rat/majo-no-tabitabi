@@ -360,19 +360,24 @@
 - `tex_fx_star_sparkle` —  — white-on-transparent additive/alpha sprite, source star_08.png (512x512), RGB forced to white
 - `tex_fx_twirl` —  — white-on-transparent additive/alpha sprite, source twirl_01.png (512x512), RGB forced to white
 
-## bgm_ (12)
-- `bgm_battle` — 94.7s — Intense Japanese orchestral battle music driven by wadaiko and strings.
-- `bgm_boss` — 91.2s — Epic cinematic Japanese symphonic-rock boss battle with choir, guitar, taiko.
-- `bgm_duel` — 120.0s — Fast, driving, passionate sword-fight piece (shamisen, shakuhachi, brass, taiko); duel.
-- `bgm_dusk` — 117.4s — Wistful, tender and a little sad folk-tale melody (koto, shakuhachi, clarinet); everlasting dusk.
-- `bgm_ending` — 141.9s — Warm, hopeful, gentle chill-out with koto, piano, flute and choir; ending credits.
-- `bgm_final` — 168.0s — Dramatic, heavy orchestral epic boss battle for the final fight (FreePD, CC0).
-- `bgm_flight` — 97.9s — Bright, soaring fantasy orchestra with harp and brass; flying over the open fields.
-- `bgm_night` — 141.2s — Quiet, mysterious ambient shakuhachi and koto with moon-and-mist mood; night lands.
-- `bgm_shrine` — 121.1s — Calm, serene garden music: koto, sho, flute and soft strings; shrine precinct.
-- `bgm_sun` — 117.7s — Gentle, bright pastoral village tune with koto, flute and piano; sunny meadow.
-- `bgm_title` — 140.1s — Elegant, emotional Japanese orchestral piece with koto, flute and strings; opening-screen feel.
-- `bgm_town` — 68.9s — Lively, cheerful festival-town tune (shamisen, flutes, kagura bells, drums); night market.
+## bgm_ (17)
+- `bgm_battle` — 100.5s — Ordinary fights: spiccato ostinato, toms and the journey theme head in B minor; hot layer bgm_battle_hot adds kit, horns, second violins and piano; 148 bpm.
+- `bgm_battle_hot` — 100.5s — Intensity layer of bgm_battle: played in sync with it and faded in as a fight heats up.
+- `bgm_boss` — 107.1s — Named foes (elites, page guardians): the theme head in D minor on horns over marcato strings, timpani and low choir; hot layer adds kit, high strings and brass; 112 bpm.
+- `bgm_boss_hot` — 107.1s — Intensity layer of bgm_boss: played in sync with it and faded in as a fight heats up.
+- `bgm_duel` — 91.6s — Fran's spar: the magic motif as a duel figure in E Dorian (pizzicato, spiccato, celesta, frame drum); hot layer adds kit, horns and second violins when she flies; 152 bpm.
+- `bgm_duel_hot` — 91.6s — Intensity layer of bgm_duel: played in sync with it and faded in as a fight heats up.
+- `bgm_dusk` — 115.4s — Dusk: a 3/4 evening tune on low whistle over fingerpicked guitar, accordion and cello, the theme head turned minor; E minor, 92 bpm.
+- `bgm_ending` — 195.7s — End credits: a traveller's song in B minor (low whistle, nylon guitar, accordion, cello) whose chorus becomes the journey theme in D major; 92 bpm.
+- `bgm_final` — 93.0s — Fran's recollection bout: her duel figure, the journey theme head in E minor, the whole theme in G major with the magic motif's runs; hot layer for her later movements; 160 bpm.
+- `bgm_final_hot` — 93.0s — Intensity layer of bgm_final: played in sync with it and faded in as a fight heats up.
+- `bgm_flight` — 107.8s — Broom flight: the journey theme lifted to E major over driving piano, strings and kit, a breakdown and a soaring string line; 138 bpm.
+- `bgm_home` — 108.0s — Hometown and outskirts by day: the journey theme as a 6/8 morning song (flute, nylon guitar, music box), an accordion chore tune, violins with piano; G major.
+- `bgm_night` — 141.8s — Night: the journey theme told quietly on piano and celesta, the bridge on solo cello, a codetta with a far bell; D major, 66 bpm.
+- `bgm_pages` — 163.6s — Page trials: the magic motif in A Dorian over a held drone, harp, celesta and a soft choir; 3/4, 66 bpm.
+- `bgm_sun` — 128.3s — Day field: the journey theme as a travelling song (strummed guitar, soft kit, flute, violins) with a tin-whistle interlude; D major, 116 bpm.
+- `bgm_title` — 145.1s — Title screen: the journey theme on solo piano, the bridge on flute with strings, then the whole theme on violins and flute; D major, 86 bpm.
+- `bgm_town` — 107.7s — City of Magic: a waltz on the magic motif (accordion, mandolin, pizzicato, celesta), a street tune in E minor, a rooftop lift into C; G major with a Lydian C#, 132 bpm.
 
 ## amb_ (10)
 - `amb_fire` — 27.8s — Crackling fireplace / campfire.

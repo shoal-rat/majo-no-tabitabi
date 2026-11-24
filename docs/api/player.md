@@ -172,3 +172,50 @@ Behaviour:
 - `G.player.damageFloor` (number | null): while set, hp never drops below it; `G.player.onDamageFloor(amount, opts)` is called when a hit reaches it. Duels use this instead of wrapping takeDamage.
 - fix2 burning: her own ground fire (she cast fire within 16 m in the last 14 s) burns at 2 hp/s instead of 4 (enemy fire was 5), shows a light hurt vignette, and toasts `player.ownFire` once per save (flag `fix2OwnFireTip`). A burning heroine no longer spreads fire to the grass under her.
 - fix2 mana regen: max(1.6, 6·daylight) + 10·lantern-light per second (day 6/s, night 1.6/s, more near lit lanterns).
+
+
+## Climb, swim and stamina round (move-craft PR 1, 2026-11-24)
+Design: docs/JOURNEY.md §5 "Movement and craft". Files: `src/player/stamina.js` (pool + `STAMINA` numbers),
+`src/player/climb.js` (wall probe, climb controller, ledge vaults, pose), `src/player/move-hints.js` (first-use hints),
+`src/ui/stamina.js` (the petal ring), small additions in `player.js`, `broom.js`, `actors/rig.js`, `actors/clips.js`,
+`world/ground.js`, `world/builders/kit.js`, `world/flora/life.js`, `spells/spells.js`.
+
+- **Stamina**: `G.player.stamina`, `.maxStamina` (100 + 20 × `G.state.upgrades.stamina`, default 0), `.winded`, and
+  `G.player.stam` = `{ value, max, winded, draining, can(), drain(rate, dt), spend(n), fill(), recalc(), tick(dt, resting) }`.
+  Costs: sprint 7/s, climb 9/s (1.5/s holding still, ×1.5 on rock in a shower), climb jump 20, swim 2/s, fast swim 11/s,
+  stroke 16, glide 4/s. Refill 32/s after 0.6 s on the ground or on the broom. At 0 she is winded until it is full again:
+  no sprint (walk ×0.8), climb, fast swim, stroke or glide. Air momentum is free: a running jump keeps sprint pace.
+  `?god=1` uses none. Event `'player:stamina' { winded }`.
+- **New state `'climb'`** (`P.state`). `S.climb = { nx, nz, kind: 'collider'|'terrain'|'ladder'|'mantle', col, phase }`.
+  - Walls (`climb.js probe(x, y, z, dx, dz, reach)`): any live `G.world` collider with a finite top, box or cylinder
+    r ≥ 0.9 (`climb: false` opts out: tree and mushroom trunks; `climb: 'ladder'` = a ladder: no stamina, 2.2 m/s, no
+    sideways), or land rising above her chest that is steeper than walkable (slope > ~0.85 rad where she touches it).
+    New world query `G.world.collidersNear(x, z, r, fn)` (each collider once, no allocation).
+  - Grab: walking into a wall for 0.18 s, or jumping / falling / gliding / swimming into one. A ledge within 2.1 m of
+    her feet is vaulted from a jump (mantle); a bank within 1.3 m of the water is climbed out of.
+  - On the wall: stick up/down/sideways (1.5 / 2.4 / 1.8 m/s), {jump} = climb jump 2 m (with stick down: kick off
+    backwards), {descend} or {dodge} = let go. Spells wait (`spells canAct` is false while climbing); the broom can be
+    called off a wall.
+  - Tops: a collider top with a floor past it (a platform, or a collider top that is not an `eave`) is mantled onto; a
+    house wall (`kit.building` marks its wall colliders `eave: true`) leaves her hanging under the eaves (hint once per
+    90 s). Land tops: the first walkable point past the face within reach.
+  - Standing on collider tops: `groundBelow` also takes `colliderTopAt(x, z, y)` (non-eave collider tops she is on or above),
+    so boulders, piers and stone walls she climbs or lands on hold her; it never steps her up onto them from below.
+  - Pose: `climb_hold` (Jump_Loop held at 0.15×) + hand IK (`rig.reach.R/L`) and new **foot reach**
+    (`rig.reach.FR/FL = { w, target }`, two-bone leg with the knee forward) on the face, alternating as she moves; the
+    mantle plays `climb` (ClimbUp_1m).
+  - Events: `'player:climb' { on, kind?, how?, why? }` (why: drop | kick | winded | lost | ground | mantle),
+    `'player:mantle' { from, rise }`, `'player:eave'`.
+- **Swimming**: slow 3.3 m/s, fast ({sprint}) 5 m/s, stroke ({dodge}). Winded in deep water: 0.7 s of struggling, then
+  she sinks and at 2.3 s is put back on the last bank she stood on (`S.safe`), 8 damage, stamina full
+  (`'player:drowned'`). Falling into deep water dips her under by up to 1.6 m (`S.diveDip`) and never hurts.
+- **Broom dive**: skimming deep water at ≥ 6 m/s with {descend} held for 0.3 s → `broom.fly` returns `'dive'`, she goes
+  in with some way on (`'player:dive' { speed, from: 'broom' | 'air' }`). Settling onto water at low speed still
+  dismounts as before.
+- **Slides**: on land steeper than walkable she slides down and can steer across the fall line; holding {descend}
+  while running downhill on a slope over 0.3 rad starts a slide on purpose (≤ 16 m/s, ends when released or the land
+  levels; `'player:slide' { on }`).
+- **Hints** (`move-hints.js`, flags `G.state.flags.moveHint_<id>`): climb, winded, swim, dive, slide; eave repeats at
+  most every 90 s. Never during a fight, a conversation or a story beat; one that comes up then waits up to 6 s.
+- HUD: `src/ui/stamina.js` twelve gold petals beside her right shoulder (projected each frame), shown while not full or
+  in use, rose when winded, pulsing under 22 %.

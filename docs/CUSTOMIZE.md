@@ -119,7 +119,7 @@ After changing place coordinates or quest flow, update the playthrough acceptanc
 | Global palette | `PAL` in `src/core/mats.js` (the main colours of characters, buildings, the three lands, lamplight and water all come from here) |
 | UI icons, eight-aspect emblems | `src/ui/icons.js`; UI styles in `src/ui/style.js` |
 | Title screen | `src/ui/title.js` (the title text is `title` in `core.js`) |
-| Music | `assets/audio/music/bgm_*.ogg`, 12 tracks (`title sun shrine dusk night town battle duel boss final ending flight`). Replacing a file with one of the same name is enough; which track plays when is in `src/audio/director.js` |
+| Music | `assets/audio/music/bgm_*.ogg`, 13 tracks (`title home sun dusk night town pages flight battle boss duel final ending`) plus `_hot` intensity layers for the four fight tracks. They are rendered from score files in `tools/music/` (README there); a replacement file needs its loop start in `MUSIC_LOOP` (`src/audio/names.js`), and a layer must match its track's length. Which track plays when is in `src/audio/director.js` |
 | Ambience and sound effects | `assets/audio/ambience/`, `assets/audio/sfx/`; the name mapping is in `src/audio/names.js` |
 | Asset sources and licences | `license` / `author` / `source` in each entry of `assets/manifest.json`; `node tools/gen-credits.mjs` generates the credits list from them |
 

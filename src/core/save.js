@@ -13,7 +13,7 @@ export function defaultState() {
     player: { x: ANCHORS.spawn.x, z: ANCHORS.spawn.z, y: null, yaw: ANCHORS.spawn.face, hp: 100, mana: 100 },
     checkpoint: { id: 'home', x: ANCHORS.spawn.x, z: ANCHORS.spawn.z },
     /** upgrade levels bought / earned (0..5 each) */
-    upgrades: { hp: 0, mana: 0, broom: 0, charm: 0 },
+    upgrades: { hp: 0, mana: 0, broom: 0, charm: 0, stamina: 0 },   // stamina: +20 气力 per level (player/stamina.js)
     /** counters: stardust(星屑) dango(团子) moontear(月之泪) + any ingredient / key item ids */
     inventory: { stardust: 0, dango: 2, moontear: 0 },
     /** 灵诀 levels: element id -> 0 (unknown) | 1 (small form) | 2 (big form). ids: fire water ice wind thunder earth sun moon.

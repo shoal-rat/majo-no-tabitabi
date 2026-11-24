@@ -16,7 +16,7 @@ What it does:
   - a duel gives duel (final for oboroyo)
   - G.combat?.inCombat, or a threat in the last 7 s, gives battle. Threats are 'enemy:hit', 'player:damaged' with an enemy as `from`, or 'enemy:spawned' within 35 m.
   - on the broom, more than 22 m up or faster than 19 m/s for 2 s, gives flight (it ends 4 s after that stops)
-  - region shrine or training gives shrine; town gives town; otherwise sun, dusk or night by land.
+  - region shrine or training gives shrine; town gives town; otherwise sun, dusk or night by land. (Superseded: see "Original score round" at the end.)
   
   A new mood must stay wanted for 0.3 s if urgent, 2.5 s for exploring, and an exploring track plays at least 8 s, so short flickers never restart a track. Exploring tracks resume where they stopped if you return within 150 s.
 - **Director, ambience.** Beds crossfade by land: meadow, dusk woods, night, mountain on 霜见岳 (Frostview Peak), town murmur near 万灯镇 (Myriad Lantern Town). Layers on top: river (riverDist), lake and sea (an isWater ring sample), rain (isRainingAt), fire (burning ground cells and burning objects near the listener), wind rising with altitude and broom speed, and a broom rush that follows speed. Birds and crickets fade as she climbs.
@@ -37,7 +37,7 @@ What it does:
 - **World, props and pickups:** pickup→sfx_pickup_1/2; pickup_gem; coin→sfx_coin_1..3; tear→sfx_pickup_gem+chime; chest (=chest_open)→sfx_chest_open+sparkle; chest_close; door (=door_open)→sfx_door_open; door_close; door_creak; lock_open; switch→sfx_switch_1/2; bell→sfx_bell_small_1..3; shrine_bell→sfx_shrine_bell_1/2; chime→sfx_wind_chime_1/2; crystal→sfx_crystal_chime_1..3; taiko→sfx_taiko_1/2; taiko_roll; koto→sfx_koto_stinger_1/2; firework→sfx_firework_1..3; lantern_ignite→sfx_lantern_ignite(+bell); lantern_out→sizzle; greatlantern→sfx_lantern_ignite at rate 0.7+shrine_bell; checkpoint→small bells+ui_save; race_ring→crystal chimes+whoosh.
 - **fx burst names also accepted as sounds:** dust→sfx_land_soft; leaves (=petals)→sfx_cloth_rustle; feathers→sfx_wing_flap_1/2.
 - **Loops for loop():** fire_loop→amb_fire; wind_loop→amb_wind_high (synth wind fallback); rain_loop→amb_rain; water_loop→amb_river; lake_loop→amb_lake; steam_loop→sfx_steam_sizzle; charge_loop→synth hum; swirl_loop→sfx_broom_whoosh_loop.
-- **Music moods:** title, sun, dusk, night, shrine, town, flight, battle, duel, boss, final, ending → the matching bgm_* track.
+- **Music moods:** title, home, sun, dusk, night, town, pages, flight, battle, duel, boss, final, ending → the matching bgm_* track (see "Original score round" below).
 - **Ambience beds:** meadow, dusk, night, mountain, town, river, lake, rain, fire, wind → the matching amb_* loop; broom → sfx_broom_whoosh_loop.
 
 ## Public API
@@ -50,7 +50,7 @@ G.audio (system 'audio', pausable:false):
   - name is a loop entry from the table, or a raw audio asset id (e.g. 'amb_fire'). Unknown names return a harmless dummy handle.
   - Level glides to vol × entry vol × distance falloff; positional loops are panned. The playback start point is randomised.
 - ★ music(mood | null, { fade=2 }).
-  - mood is one of title, sun, dusk, night, shrine, town, flight, battle, duel, boss, final, ending, or a 'bgm_*' id.
+  - mood is one of title, home, sun, dusk, night, town, pages, flight, battle, duel, boss, final, ending, or a 'bgm_*' id.
   - Any manual call overrides the director; null fades to silence; music('auto') hands control back to the director.
   - Crossfades are equal-power. A track that is fading out comes back without restarting. Exploring tracks resume from where they stopped if you return within 150 s.
 - unlock(): resumes the AudioContext. It is also wired to the first pointerdown, keydown, touchstart or mousedown and to 'input:lockGained'.
@@ -63,7 +63,7 @@ G.audio (system 'audio', pausable:false):
   - ctx and muted (getters)
 - debug({ meter? }) -> { ctxState, muted, sampleRate, music:{ current, target, override, wanted, pending, decks:[{mood,id,level,target,playing,from}] }, ambience:[{name,id,target,level,playing}], loops:[{name,vol,playing}], playing (voice count), voices:[names], decoded, loading, decodedIds, decodeErrors:[{id,message}], missingIds, missingNames, stats:{calls,played,cooled,culled,stolen,dropped,unknown,late,maxVoices,maxPerName}, duck:{music,world,lp}, env:{x,z,alt,veil,region,wet,river,mount,town,rain,fire,onBroom,speed}, meter?:{rms,peak} }.
 - Mute is read from G.params.mute (any value except '0' or 'false' mutes) and re-checked every frame.
-- Tables exported from src/audio/names.js: SFX, resolveTable, STEP (surface → step name), MUSIC (mood → track id), MUSIC_TRIM, AMB (bed → loop id).
+- Tables exported from src/audio/names.js: SFX, resolveTable, STEP (surface → step name), MUSIC (mood → track id), MUSIC_TRIM, MUSIC_LOOP (track → loop start s), MUSIC_LAYERS (track → intensity layer), AMB (bed → loop id).
 
 ## Known issues
 - Nothing has been heard by ear: headless Chrome runs with --mute-audio. Correctness is checked through debug() and an output-level meter, so the mix balance, the volumes and how the synth fallbacks sound still need a human listen.
@@ -80,3 +80,27 @@ G.audio (system 'audio', pausable:false):
 ## As-built updates (fix-systems, 2026-11)
 - Engine event sounds (prop:broken, physics:impact, enemy:killed, item:collected) are deferred one frame and skipped if another positional sound started within 2.5 m and 0.15 s (count: `debug().stats.deduped`). The physics:impact volume uses relSpeed when present. Systems that play their own sound on these events should not also expect the director's.
 - `src/audio/names.js` is the list of valid sfx / loop names; always check `G.audio.has(name)` before playing a name that might be missing.
+
+## Original score round (2026-11)
+The inherited music set is replaced by an original score written and rendered in `tools/music/` (see its README for
+the cue list, the two themes and how to render). Engine changes in `src/audio/`:
+- **Moods** (`director.js chooseMood`): ending / title by mode; Fran's spar → `duel` (the recollection bout →
+  `final`); a fight with an elite or page guardian within 45 m → `boss`, any other fight → `battle`; City of Magic
+  regions (bellcrown, gate, roof, inn, bellkeep, lookout) → `town`; flight; beside a page trial whose page is not yet
+  read (within its arena + 40 m) → `pages`; hometown / farewell outskirts by day → `home`; else sun / dusk / night.
+  `shrine` is gone (no region produced it). `debug().music` and the director state report `named`, `pageNear` and
+  `intensity`.
+- **Loop points** (`MUSIC_LOOP`): a file is `intro | body | the body's first bars again`; decks set
+  `loopStart`/`loopEnd` so the game loops from the loop start to the end. The remembered playhead of an exploring
+  track wraps into the loop region (`wrapHead`).
+- **Intensity layers** (`MUSIC_LAYERS`): `bgm_battle`, `bgm_boss`, `bgm_duel` and `bgm_final` have a `_hot` file of
+  the same length. A deck decodes both and starts them on the same clock tick and offset (if the layer is missing it
+  plays alone). The layer's gain follows the director's intensity, rising over ~2 s and ebbing over ~6 s. Intensity
+  is 1 while (and 8 s after) any of these holds, else 0: three or more foes on her, a foe that rallied or reached its
+  second phase, her health under 35 %, a boss in phase 2+, Fran in her second movement (story bout) or third
+  (recollection). Tests can hold it with `G.audio.setIntensity(x)` (`null` hands it back).
+- **Loudness**: every track and layer sum is mastered to −18 LUFS (−1 dBTP ceiling), so `MUSIC_TRIM` is empty.
+  `tools/music/probe-volume.js` measures every mood after the master bus in game.
+- **Memory**: `LRU.music` is 4 (a fight's track and its layer are two entries). Decoded music is ~0.38 MB per second
+  of track, so 100–200 s files are 38–75 MB each.
+

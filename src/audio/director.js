@@ -2,12 +2,20 @@
 // Music: picks a mood from context every 0.25 s; a new mood has to stay wanted for a while (short for battle, longer for
 // exploring) before it crossfades in, so flickers at borders never restart a track. Exploring tracks resume where they
 // stopped (audio.js remembers the playhead).
+//   fights   Fran's spar → duel (the recollection bout → final); a named foe (elite, page guardian) close by → boss;
+//            any other fight → battle. Intensity (0..1) fades in the track's hot layer: more foes on her, a foe that
+//            rallied or reached its second phase, low health, Fran's later movements.
+//   places   City of Magic → town; flying → flight; beside an unfinished page trial → pages; home and its outskirts by
+//            day → home; else sun / dusk / night from the Veil.
 // Ambience: base beds by land (meadow / dusk woods / night / mountain / town) + local layers (wind with altitude, broom
 // rush with speed, river, lake & sea, rain, fire), each a looping handle whose level glides to its target.
 import { clamp, smoothstep } from '../core/util.js';
 import { AMB } from './names.js';
 
 const URGENT = new Set(['battle', 'boss', 'duel', 'final', 'ending', 'title']);
+const FIGHT = new Set(['battle', 'boss', 'duel', 'final']);
+const CITY = new Set(['bellcrown', 'gate', 'roof', 'inn', 'bellkeep', 'lookout']);
+const HOME = new Set(['hometown', 'farewell']);
 const FINAL_RE = /oboroyo|mumy|mumei|final|tsukuyomi/i;
 const TOWN = { x: 205, z: -125 };
 const RING8 = Array.from({ length: 8 }, (_, i) => [Math.cos(i * Math.PI / 4), Math.sin(i * Math.PI / 4)]);
@@ -15,7 +23,7 @@ const RING8 = Array.from({ length: 8 }, (_, i) => [Math.cos(i * Math.PI / 4), Ma
 export function createDirector({ G, A, sfx, setMusic, makeLoop }) {
   const S = {
     acc: 0, envAcc: 0, want: null, pending: null, pendingSince: 0, lastSwitch: -99, current: undefined,
-    lastThreat: -99, bossId: null, duelId: null, flightOn: false, flightT: 0,
+    lastThreat: -99, bossId: null, duelId: null, flightOn: false, flightT: 0, hotUntil: -99, named: false, pageNear: false,
     beds: {}, levels: {}, env: {},
   };
   const now = () => G.time.real;
@@ -23,7 +31,8 @@ export function createDirector({ G, A, sfx, setMusic, makeLoop }) {
 
   const on = (n, f) => G.events.on(n, (p) => { try { f(p || {}); } catch (e) { G.reportError('audio:' + n, e); } });
   on('boss:start', (p) => { S.bossId = p.id || 'boss'; threat(); kick(); });
-  on('boss:defeated', () => { S.bossId = null; S.lastThreat = -99; sfx('stinger_victory'); kick(); });
+  on('boss:defeated', () => { S.bossId = null; S.bossPhase = 0; S.lastThreat = -99; sfx('stinger_victory'); kick(); });
+  on('boss:phase', (p) => { S.bossPhase = p.phase || 0; });
   on('duel:start', (p) => { S.duelId = p.id || 'duel'; threat(); kick(); });
   on('duel:end', (p) => { S.duelId = null; S.lastThreat = -99; if (p.won) sfx('stinger_quest'); kick(); });
   on('player:damaged', (p) => { if (p.from && typeof p.from === 'object') threat(); });
@@ -44,14 +53,60 @@ export function createDirector({ G, A, sfx, setMusic, makeLoop }) {
     const m = G.mode;
     if (m === 'ending') return 'ending';
     if (m === 'title' || m === 'boot') return 'title';
+    const spar = G.story?.spar;
+    if (spar?.active) return spar.memory ? 'final' : 'duel';
     if (S.bossId) return FINAL_RE.test(S.bossId) ? 'final' : 'boss';
     if (S.duelId) return FINAL_RE.test(S.duelId) ? 'final' : 'duel';
-    if (G.combat?.inCombat || now() - S.lastThreat < 7) return 'battle';
+    if (G.combat?.inCombat || now() - S.lastThreat < 7) return S.named ? 'boss' : 'battle';
+    const r = G.env.region, major = G.env.major || 'sun';
+    if (CITY.has(r)) return 'town';
     if (S.flightOn) return 'flight';
-    const r = G.env.region;
-    if (r === 'shrine' || r === 'training') return 'shrine';
-    if (r === 'town') return 'town';
-    return G.env.major || 'sun';
+    if (S.pageNear) return 'pages';
+    if (HOME.has(r) && major !== 'night') return 'home';
+    return major;
+  }
+
+  /** Foes on her (within 45 m and awake): count, a named one among them, any rallied / in a second phase. */
+  function readFight() {
+    const P = G.player, list = G.combat?.enemies;
+    let n = 0, named = false, hot = false;
+    if (P?.pos && list) {
+      for (const e of list) {
+        if (!e || e.dead || e.dormant || !e.aggro || !e.pos) continue;
+        if (Math.hypot(e.pos.x - P.pos.x, e.pos.z - P.pos.z) > 45) continue;
+        n++;
+        if (e.named || e.elite) named = true;
+        if (e.rallied || e.phase2) hot = true;
+      }
+    }
+    return { n, named, hot };
+  }
+
+  /** Beside a page trial that is not finished (its page not yet read): the quiet before its seal. */
+  function nearPage() {
+    const P = G.player, sites = G.wilds?.pages?.sites, st = G.state?.wilds?.pages;
+    if (!P?.pos || !sites) return false;
+    for (const s of sites) {
+      const d = s.def;
+      if (!d || st?.[d.id] === 'read') continue;
+      if (Math.hypot(d.x - P.pos.x, d.z - P.pos.z) < (d.arena ?? 30) + 40) return true;
+    }
+    return false;
+  }
+
+  function updateIntensity(mood) {
+    let raw = 0;
+    if (mood === 'duel' || mood === 'final') {
+      const ph = G.story?.spar?.stats?.phase ?? 0;
+      raw = ph >= (mood === 'final' ? 2 : 1) ? 1 : 0;
+    } else if (FIGHT.has(mood)) {
+      const f = readFight(), P = G.player;
+      const low = P && P.maxHp > 0 && P.hp / P.maxHp < 0.35;
+      raw = (f.n >= 3 ? 1 : 0) + (f.hot ? 1 : 0) + (low ? 1 : 0) + (S.bossPhase >= 2 ? 1 : 0);
+    }
+    const t = now();
+    if (raw >= 1) S.hotUntil = t + 8;            // once hot, stay hot a while
+    A.intensity = FIGHT.has(mood) && t < S.hotUntil ? 1 : 0;
   }
 
   function updateFlight(dt) {
@@ -68,7 +123,11 @@ export function createDirector({ G, A, sfx, setMusic, makeLoop }) {
 
   function updateMusic(dt) {
     updateFlight(dt);
+    const f = G.combat?.inCombat || now() - S.lastThreat < 7 ? readFight() : null;
+    S.named = !!f?.named;
+    S.pageNear = !f && nearPage();
     const want = chooseMood();
+    updateIntensity(S.current && FIGHT.has(S.current) ? S.current : want);
     S.want = want;
     if (want === S.current) { S.pending = null; S.kicked = false; return; }
     const t = now();
@@ -159,7 +218,7 @@ export function createDirector({ G, A, sfx, setMusic, makeLoop }) {
 
   return {
     kick,
-    reset() { S.lastThreat = -99; S.bossId = null; S.duelId = null; S.flightOn = false; S.flightT = 0; kick(); },
+    reset() { S.lastThreat = -99; S.bossId = null; S.bossPhase = 0; S.duelId = null; S.flightOn = false; S.flightT = 0; S.hotUntil = -99; A.intensity = 0; kick(); },
     update(dt) {
       S.acc += dt; S.envAcc += dt;
       if (S.acc >= 0.25) { S.acc = 0; updateMusic(0.25); }
@@ -169,7 +228,7 @@ export function createDirector({ G, A, sfx, setMusic, makeLoop }) {
       const beds = [];
       for (const k in S.levels) { const h = S.beds[k]; if (S.levels[k] > 0.01 || (h && h.cur > 0.002)) beds.push({ name: k, id: AMB[k].id, target: +S.levels[k].toFixed(3), level: h ? +h.cur.toFixed(3) : 0, playing: !!h?.src }); }
       beds.sort((a, b) => b.target - a.target);
-      return { want: S.want, pending: S.pending, current: S.current, beds, env: S.env, flight: S.flightOn, boss: S.bossId, duel: S.duelId };
+      return { want: S.want, pending: S.pending, current: S.current, beds, env: S.env, flight: S.flightOn, boss: S.bossId, duel: S.duelId, named: S.named, pageNear: S.pageNear, intensity: A.intensity };
     },
   };
 }

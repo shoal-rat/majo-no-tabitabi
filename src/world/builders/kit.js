@@ -200,7 +200,8 @@ export class Site {
     }
     this.add(b.group, lx, gy, lz, ry);
     if (b.eaveY) { const w0b = b.walls[0] || { hw: 1, hd: 1 }; this.footprint(lx + (w0b.x || 0) * c + (w0b.z || 0) * s, lz - (w0b.x || 0) * s + (w0b.z || 0) * c, ry, (b.foot?.hw ?? w0b.hw) + 0.4, (b.foot?.hd ?? w0b.hd) + 0.4, gy + b.eaveY); }
-    if (solid) for (const w of b.walls) { const [ax, az] = loc(w.x, w.z); this.colBox(ax, az, w.hw, w.hd, ry, gy + (w.y0 ?? -1), gy + w.y1); }
+    // walls under a roof: climbable, but their top (the eaves) is no floor to stand on (player/climb.js colliderTopAt)
+    if (solid) for (const w of b.walls) { const [ax, az] = loc(w.x, w.z); this.colBox(ax, az, w.hw, w.hd, ry, gy + (w.y0 ?? -1), gy + w.y1).eave = true; }
     for (const f of b.floors || []) { const [ax, az] = loc(f.x, f.z); this.platBox(ax, az, f.hw, f.hd, ry, gy + f.top, f.thick ?? 1.2); }
     if (roofPads) for (const p of b.pads || []) { const [ax, az] = loc(p.x || 0, p.z || 0); this.platBox(ax, az, p.hw, p.hd, ry, gy + p.top, 0.9); }
     return gy;

@@ -72,18 +72,19 @@ const out = [
   '',
   '## 音乐与音效',
   '',
-  '### PeriTune（Sei Mutsuki）',
+  '### 原创配乐',
   '',
-  '下列作品的原曲发布于 2016 至 2024 年。作者明确保留 2026 年 2 月及以前已发布作品的 CC BY 4.0 许可。游戏版本做了响度调整与 Ogg/Opus 转码，循环曲和短提示音使用原曲提供的相应版本。[CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) · [PeriTune 许可变更公告](https://peritune.com/blog/2026/03/01/terms-update/)',
-  '',
-  '| 游戏内素材 | 原曲与作者发布页 |',
-  '| --- | --- |',
 ];
+// the background music is the project's own score (tools/music/): written as data, rendered by its synthesiser
+const score = buckets.project.filter(e => /^bgm_/.test(e.id) && !/_hot$/.test(e.id));
+const layers = buckets.project.filter(e => /^bgm_.*_hot$/.test(e.id));
+out.push('游戏的背景音乐是本项目的原创配乐，共 ' + score.length + ' 首：' + assetIds(score) + '。全部旋律、和声与编配都以乐谱数据写在仓库里，由仓库内的合成器逐音渲染，不含采样。战斗类曲目另有与主曲同步播放的强度层（' + assetIds(layers) + '）。[配乐工具与乐谱](tools/music/)',
+  '', '### PeriTune（Sei Mutsuki）', '',
+  '下列提示音取自 PeriTune 发布的作品。作者明确保留 2026 年 2 月及以前已发布作品的 CC BY 4.0 许可。游戏版本做了响度调整与 Ogg/Opus 转码，短提示音使用原曲提供的相应版本。[CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) · [PeriTune 许可变更公告](https://peritune.com/blog/2026/03/01/terms-update/)',
+  '', '| 游戏内素材 | 原曲与作者发布页 |', '| --- | --- |');
 const music = buckets.by.filter(e => e.author.startsWith('PeriTune'));
 for (const e of music) out.push('| `' + e.id + '` | ' + link(e.sourceTitle, e.source) + ' |');
-const freepd = manifest.bgm_final;
-out.push('', '终战音乐《' + freepd.sourceTitle + '》来自 FreePD 公有领域音乐库，游戏中以 `bgm_final` 播放。[FreePD](https://freepd.com/) · [CC0](https://creativecommons.org/publicdomain/zero/1.0/)',
-  '', '### 其他署名音效', '',
+out.push('', '### 其他署名音效', '',
   '这些音效经过响度调整与 Ogg/Opus 转码。游戏中的每组音效对应下列原包，各片段原名见素材清单的 `notes` 字段。[CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)', '');
 const sounds = buckets.by.filter(e => e.type === 'audio' && !music.includes(e));
 for (const [url, rows] of groupBy(sounds, e => sourceUrls(e.source)[0])) {
@@ -115,7 +116,7 @@ out.push('', '## 同人角色与项目美术', '',
   '- 基础项目的旅行装、两套水着与衣装预览分别记录了网格、纹样、骨架或渲染来源。水着设计参考伊蕾娜相关角色商品。中文字标经图像生成、抠图和逐字校对。早期天空绘景使用了图像生成辅助。[服装制作工具](tools/costume/) · [字标与天空的素材记录](assets/manifest.json)',
   '- 清单明确标为 CC0 的项目自制基础模型、道具和动作共 ' + buckets.projectCC0.length + ' 项。这些条目保留各自的许可和制作说明。[自制模型生成器](tools/sculpt/) · [动作工具](tools/anim/)',
 );
-const projectGroups = groupBy(buckets.project, e => e.license);
+const projectGroups = groupBy(buckets.project.filter(e => !/^bgm_/.test(e.id)), e => e.license);
 out.push('', '项目制作记录也可按清单标识查找。', '');
 for (const entries of projectGroups.values()) {
   const sample = entries[0];

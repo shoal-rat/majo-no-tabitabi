@@ -11,15 +11,15 @@
 import * as THREE from 'three';
 import { G } from '../core/game.js';
 import { clamp } from '../core/util.js';
-import { SFX, resolveTable, STEP, MUSIC, MUSIC_TRIM } from './names.js';
+import { SFX, resolveTable, STEP, MUSIC, MUSIC_TRIM, MUSIC_LOOP, MUSIC_LAYERS } from './names.js';
 import { renderSynth, SYNTH_KINDS } from './synth.js';
 import { createDirector } from './director.js';
 
 const MAX_VOICES = 40;        // global one-shot cap
-const LRU = { music: 3, amb: 8 };
+const LRU = { music: 4, amb: 8 };   // music: a fight's track and its intensity layer count as two
 const PEND_MAX = 0.25;        // a one-shot whose file is still decoding starts late only within this window (s)
 const REF_DIST = 4;           // full volume within this distance (m)
-const EXPLORE = new Set(['sun', 'dusk', 'night', 'shrine', 'town', 'flight']);
+const EXPLORE = new Set(['sun', 'dusk', 'night', 'home', 'pages', 'town', 'flight']);
 
 const T = resolveTable(SFX);
 const _right = new THREE.Vector3();
@@ -38,6 +38,8 @@ const A = {
   decks: [],                  // music decks
   resume: new Map(),          // track id -> { offset, at }
   override: undefined,        // manual music() mood (undefined = director)
+  intensity: 0,               // fight intensity 0..1 from the director: fades in a track's layer (MUSIC_LAYERS)
+  intensityOverride: null,    // tests: a fixed intensity instead of the director's
   musicTarget: null,          // mood last asked for (director or manual)
   stingerUntil: 0,
   unknown: new Set(), missing: new Set(), decodeErrors: [],
@@ -412,42 +414,67 @@ function setMusic(mood, fade = 2) {
     else { d.target = 0; d.rate = rate; }
   }
   if (!id || found) return;
-  const d = { mood, id, level: 0, target: 1, rate, src: null, g: null, startAt: 0, offset: 0, waiting: false, trim: MUSIC_TRIM[id] || 1, cache: null, born: now() };
+  const d = { mood, id, level: 0, target: 1, rate, src: null, g: null, startAt: 0, offset: 0, waiting: false, trim: MUSIC_TRIM[id] || 1, cache: null, born: now(),
+    layerId: MUSIC_LAYERS[id] || null, lsrc: null, lg: null, lcache: null, lLevel: 0 };
   A.decks.push(d);
   attachDeck(d);
+}
+
+/** Where a looping track is after playing `pos` seconds from its start: past the end it wraps into the loop region. */
+function wrapHead(id, pos, dur) {
+  if (pos < dur) return pos;
+  const ls = MUSIC_LOOP[id] || 0, len = dur - ls;
+  return len > 1 ? ls + ((pos - ls) % len) : pos % dur;
 }
 
 function attachDeck(d) {
   if (!A.ctx || d.src || d.waiting) return;
   d.waiting = true;
-  ensure(d.id).then((buf) => {
+  // the track and its layer start together, on the same clock tick and offset, or the layer is left out
+  Promise.all([ensure(d.id), d.layerId && G.assets?.has?.(d.layerId) ? ensure(d.layerId) : null]).then(([buf, lbuf]) => {
     d.waiting = false;
     if (!buf || d.src || d.dead || d.target === 0) return;
     const ctx = A.ctx;
-    const src = ctx.createBufferSource(); src.buffer = buf; src.loop = true;
+    const source = (b) => {
+      const src = ctx.createBufferSource(); src.buffer = b; src.loop = true;
+      const ls = MUSIC_LOOP[d.id];
+      if (ls > 0 && ls < b.duration - 1) { src.loopStart = ls; src.loopEnd = b.duration; }
+      return src;
+    };
+    const src = source(buf);
     const g = ctx.createGain(); g.gain.value = 0;
     src.connect(g); g.connect(A.nodes.music);
     const r = A.resume.get(d.id);
-    d.offset = EXPLORE.has(d.mood) && r && now() - r.at < 150 ? r.offset % buf.duration : 0;
-    src.start(ctx.currentTime, d.offset);
-    d.startAt = ctx.currentTime; d.src = src; d.g = g;
+    d.offset = EXPLORE.has(d.mood) && r && now() - r.at < 150 ? wrapHead(d.id, r.offset, buf.duration) : 0;
+    const at = ctx.currentTime + 0.03;
+    src.start(at, d.offset);
+    if (lbuf && Math.abs(lbuf.duration - buf.duration) < 0.02) {
+      const ls = source(lbuf), lg = ctx.createGain();
+      lg.gain.value = 0; d.lLevel = 0; d.lSent = 0;
+      ls.connect(lg); lg.connect(g); ls.start(at, d.offset);
+      d.lsrc = ls; d.lg = lg;
+      const lc = A.cache.get(d.layerId); if (lc) { d.lcache = lc; lc.inUse++; }
+    }
+    d.startAt = at; d.src = src; d.g = g;
     const c = A.cache.get(d.id); if (c) { d.cache = c; c.inUse++; }
   });
 }
 
 function updateMusic(rdt) {
   const ct = A.ctx?.currentTime || 0;
+  const want = A.intensityOverride ?? A.intensity;
   for (let i = A.decks.length - 1; i >= 0; i--) {
     const d = A.decks[i];
     if (d.level < d.target) d.level = Math.min(d.target, d.level + d.rate * rdt);
     else if (d.level > d.target) d.level = Math.max(d.target, d.level - d.rate * rdt);
     if (d.target === 0 && d.level <= 0) {
       if (d.src) {
-        const dur = d.src.buffer.duration;
-        A.resume.set(d.id, { offset: (d.offset + (ct - d.startAt)) % dur, at: now() });
+        A.resume.set(d.id, { offset: wrapHead(d.id, d.offset + Math.max(0, ct - d.startAt), d.src.buffer.duration), at: now() });
         try { d.src.stop(); d.src.disconnect(); d.g.disconnect(); } catch (e) { /* gone */ }
+        if (d.lsrc) try { d.lsrc.stop(); d.lsrc.disconnect(); d.lg.disconnect(); } catch (e) { /* gone */ }
       }
       if (d.cache) d.cache.inUse = Math.max(0, d.cache.inUse - 1);
+      if (d.lcache) d.lcache.inUse = Math.max(0, d.lcache.inUse - 1);
       d.dead = true;
       A.decks.splice(i, 1);
       continue;
@@ -455,6 +482,13 @@ function updateMusic(rdt) {
     if (!d.src && !d.waiting && d.target > 0 && !A.muted) attachDeck(d);
     const gv = Math.sin(d.level * Math.PI / 2) * d.trim;
     if (d.g && Math.abs(gv - (d.sent ?? -1)) > 0.002) { d.sent = gv; d.g.gain.setTargetAtTime(gv, ct, 0.05); }
+    if (d.lg) {
+      // the layer swells in over ~2 s and ebbs over ~6 s, so a short lull does not drain a fight
+      const k = want > d.lLevel ? rdt / 2 : rdt / 6;
+      d.lLevel = want > d.lLevel ? Math.min(want, d.lLevel + k) : Math.max(want, d.lLevel - k);
+      const lv = Math.sin(d.lLevel * Math.PI / 2);
+      if (Math.abs(lv - d.lSent) > 0.002) { d.lSent = lv; d.lg.gain.setTargetAtTime(lv, ct, 0.05); }
+    }
   }
 }
 
@@ -573,7 +607,9 @@ function debug(o = {}) {
   return {
     ctxState: A.ctx ? A.ctx.state : 'none', muted: A.muted, sampleRate: A.ctx?.sampleRate || 0,
     music: { current: loud && loud.level > 0.001 ? loud.mood : loud?.target ? loud.mood : null, target: A.musicTarget, override: A.override, wanted: dir.want, pending: dir.pending,
-      decks: A.decks.map((d) => ({ mood: d.mood, id: d.id, level: +d.level.toFixed(3), target: d.target, playing: !!d.src, from: +d.offset.toFixed(1) })) },
+      intensity: +(A.intensityOverride ?? A.intensity).toFixed(2),
+      decks: A.decks.map((d) => ({ mood: d.mood, id: d.id, level: +d.level.toFixed(3), target: d.target, playing: !!d.src, from: +d.offset.toFixed(1), loopStart: d.src ? +d.src.loopStart.toFixed(3) : null, layer: d.lg ? +d.lLevel.toFixed(2) : null,
+        at: d.src ? +wrapHead(d.id, d.offset + Math.max(0, A.ctx.currentTime - d.startAt), d.src.buffer.duration).toFixed(2) : null })) },
     ambience: (dir.beds || []),
     loops: A.loops.filter((h) => !h.isBed).map((h) => ({ name: h.name, vol: +h.cur.toFixed(3), playing: !!h.src })),
     playing: A.voices.length, voices: A.voices.map((v) => v.name),
@@ -601,6 +637,8 @@ export const audioSystem = {
     A.director = createDirector({ G, A, sfx, setMusic, makeLoop, T });
     G.audio = {
       sfx, loop, music, unlock, setVolumes, debug,
+      /** Tests: hold the fight intensity (0..1) that fades in a track's layer; null hands it back to the director. */
+      setIntensity: (x) => { A.intensityOverride = x == null ? null : clamp(+x || 0, 0, 1); },
       /** Resolved name table (read-only use). */
       names: T,
       /** Does a logical name exist? */
