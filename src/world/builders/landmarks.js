@@ -32,8 +32,8 @@ let lamp = null;
 // ---------------------------------------------------------------- sculpted pieces (tools/sculpt/assets/lm_*.mjs)
 // Vertex-coloured LODs with no textures, merged into the site's own baked meshes (builders/sculpt.js sculptGroup): the
 // stone and stone slates into one smooth stone family, wood, straw, iron and offerings into theirs, so a sculpted
-// landmark adds no draw call. Detail follows the quality tier. ?sculpt=0 (G.sculpt.enabled false) or a missing asset
-// builds the first round's primitives instead.
+// landmark adds no draw call. Detail follows the quality tier. G.sculpt type 'landmarks' (core/assets.js): ?sculpt=0, a
+// list without it, or a missing asset builds the first round's primitives instead.
 // smooth stone whose painted surface layer is kept low: the sculpt's own form and vertex colour carry the detail
 const CARVED = toon(0xffffff, { surface: 'stone', look: { detail: 0.45, bump: 0.5 } });
 const SCULPT_MAT = (n) => (/^(Limestone|Sandstone|Slate|Stone)/.test(n) ? CARVED : /^Wood/.test(n) ? WD.wood : /^Straw/.test(n) ? M.straw()
@@ -42,11 +42,11 @@ const SCULPT_MAT = (n) => (/^(Limestone|Sandstone|Slate|Stone)/.test(n) ? CARVED
 const lmTier = () => { const q = G.quality || {}; return q.mobile || q.name === 'low' ? 2 : q.name === 'med' ? 1 : 0; };
 // The kit's COLOR_0 is linear albedo x its baked AO / cavity, which leaves a piece darker than the site surfaces it
 // stands among (those carry the game's own vertex shading instead). The pieces are lifted once here, in linear and
-// with the hue kept (core/assets.js's sRGB re-encode for the SCULPT_TYPES ids would also pale and grey them).
+// with the hue kept (core/assets.js lists them in SCULPT_VC_OK: no sRGB re-encode, which would pale and grey them).
 const LIFT = 1.45;
 const _colourFixed = new Set();
 function fixColours(id, raw) {
-  if (_colourFixed.has(id) || G.sculpt?.typeOf?.(id)) return;
+  if (_colourFixed.has(id)) return;
   _colourFixed.add(id);
   const done = new Set();
   raw.scene.traverse((o) => {
@@ -61,7 +61,7 @@ function fixColours(id, raw) {
 }
 /** a placeable group of sculpted piece `id` at LOD `lod` (clamped to what the asset has), or null (old primitives) */
 function piece(id, lod) {
-  if (G.sculpt?.enabled === false) return null;
+  if (!G.sculpt?.on?.('landmarks')) return null;   // ?sculpt=0 or a list without 'landmarks': the first round's pieces
   const raw = G.assets?.raw?.(id);
   if (!raw) return null;
   fixColours(id, raw);
