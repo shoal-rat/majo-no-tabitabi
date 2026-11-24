@@ -1,0 +1,42 @@
+{
+ "sculpt_mech_candle_b": {
+  "file": "models/sculpt/mech_candle_b.glb",
+  "type": "model",
+  "license": "CC0 (original work)",
+  "author": "sculpted for this project",
+  "source": "tools/sculpt/assets/mech_candles.mjs (node, facet kit + three.js generators)",
+  "scale": 1,
+  "size": [
+   0.594,
+   2.124,
+   0.625
+  ],
+  "tris": 2232,
+  "lods": [
+   2232,
+   1178
+  ],
+  "materials": [
+   "Iron_metal",
+   "Wax_none"
+  ],
+  "mats": {
+   "Iron_metal": {
+    "surface": "metal",
+    "look": {
+     "spec": 0.5,
+     "specPower": 40,
+     "rim": 0.35
+    }
+   },
+   "Wax_none": {
+    "surface": "none",
+    "look": {
+     "wrap": 0.6,
+     "rim": 0.3
+    }
+   }
+  },
+  "notes": "Fire page trial: wrought-iron candle stand (pan at 1.35 m), as mech_candle_a. Vertex colours on every LOD."
+ }
+}

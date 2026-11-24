@@ -1,0 +1,49 @@
+{
+ "sculpt_mech_candles": {
+  "file": "models/sculpt/mech_candles.glb",
+  "type": "model",
+  "license": "CC0 (original work)",
+  "author": "sculpted for this project",
+  "source": "tools/sculpt/assets/mech_candles.mjs (node, facet kit + three.js generators)",
+  "scale": 1,
+  "size": [
+   1.113,
+   1.714,
+   0.854
+  ],
+  "tris": 2686,
+  "lods": [
+   2686,
+   1626
+  ],
+  "materials": [
+   "Stone_stone",
+   "Wax_none",
+   "Moss_none"
+  ],
+  "mats": {
+   "Stone_stone": {
+    "surface": "stone",
+    "look": {
+     "rim": 0.22,
+     "wrap": 0.3
+    }
+   },
+   "Wax_none": {
+    "surface": "none",
+    "look": {
+     "wrap": 0.6,
+     "rim": 0.3
+    }
+   },
+   "Moss_none": {
+    "surface": "none",
+    "look": {
+     "rim": 0.3,
+     "wrap": 0.5
+    }
+   }
+  },
+  "notes": "Fire page trial: stone reading pedestal (moulded foot, chamfered shaft, cornice, slanted desk) with an open stone book, a ribbon, spilt wax. Vertex colours on every LOD."
+ }
+}

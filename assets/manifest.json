@@ -23406,5 +23406,722 @@
    }
   },
   "notes": "Wool cap with a short peak for the City of Magic townsmen (eight stitched panels, button, band, peak). Vertex colours on every LOD, no textures: drawn instanced and posed to the head bone on the CPU (builders/mage-folk.js)."
+ },
+ "sculpt_mech_basin": {
+  "file": "models/sculpt/mech_basin.glb",
+  "type": "model",
+  "license": "CC0 (original work)",
+  "author": "sculpted for this project",
+  "source": "tools/sculpt/assets/mech_bud.mjs (node, facet kit + three.js generators)",
+  "scale": 1,
+  "size": [
+   5.975,
+   1.044,
+   6.113
+  ],
+  "tris": 1284,
+  "lods": [
+   1284,
+   844
+  ],
+  "materials": [
+   "Stone_stone",
+   "Moss_none"
+  ],
+  "mats": {
+   "Stone_stone": {
+    "surface": "stone",
+    "look": {
+     "rim": 0.22,
+     "wrap": 0.3
+    }
+   },
+   "Moss_none": {
+    "surface": "none",
+    "look": {
+     "rim": 0.3,
+     "wrap": 0.5
+    }
+   }
+  },
+  "notes": "Water page trial: basin of fourteen fitted kerb blocks round the lily bud (dressed worn tops, moss on the north blocks) with a dry cracked mud floor. Vertex colours on every LOD."
+ },
+ "sculpt_mech_bud_petal": {
+  "file": "models/sculpt/mech_bud_petal.glb",
+  "type": "model",
+  "license": "CC0 (original work)",
+  "author": "sculpted for this project",
+  "source": "tools/sculpt/assets/mech_bud.mjs (node, facet kit + three.js generators)",
+  "scale": 1,
+  "size": [
+   0.378,
+   1.214,
+   0.236
+  ],
+  "tris": 832,
+  "lods": [
+   832,
+   236
+  ],
+  "materials": [
+   "Bronze_metal"
+  ],
+  "mats": {
+   "Bronze_metal": {
+    "surface": "metal",
+    "look": {
+     "spec": 0.6,
+     "specPower": 36,
+     "rim": 0.4
+    }
+   }
+  },
+  "notes": "Water page trial: one bronze lily petal (cupped blade, raised midrib, flared tip; hinge at the origin): the game hinges five round the bud and opens them. Vertex colours on every LOD."
+ },
+ "sculpt_mech_bud_stem": {
+  "file": "models/sculpt/mech_bud_stem.glb",
+  "type": "model",
+  "license": "CC0 (original work)",
+  "author": "sculpted for this project",
+  "source": "tools/sculpt/assets/mech_bud.mjs (node, facet kit + three.js generators)",
+  "scale": 1,
+  "size": [
+   0.538,
+   1.195,
+   0.522
+  ],
+  "tris": 1216,
+  "lods": [
+   1216,
+   496
+  ],
+  "materials": [
+   "Bronze_metal"
+  ],
+  "mats": {
+   "Bronze_metal": {
+    "surface": "metal",
+    "look": {
+     "spec": 0.6,
+     "specPower": 36,
+     "rim": 0.4
+    }
+   }
+  },
+  "notes": "Water page trial: bronze stem of the lily bud (flared foot, node collar, five sepals), green-gold patina. Vertex colours on every LOD."
+ },
+ "sculpt_mech_candle_a": {
+  "file": "models/sculpt/mech_candle_a.glb",
+  "type": "model",
+  "license": "CC0 (original work)",
+  "author": "sculpted for this project",
+  "source": "tools/sculpt/assets/mech_candles.mjs (node, facet kit + three.js generators)",
+  "scale": 1,
+  "size": [
+   0.594,
+   1.774,
+   0.625
+  ],
+  "tris": 2232,
+  "lods": [
+   2232,
+   1178
+  ],
+  "materials": [
+   "Iron_metal",
+   "Wax_none"
+  ],
+  "mats": {
+   "Iron_metal": {
+    "surface": "metal",
+    "look": {
+     "spec": 0.5,
+     "specPower": 40,
+     "rim": 0.35
+    }
+   },
+   "Wax_none": {
+    "surface": "none",
+    "look": {
+     "wrap": 0.6,
+     "rim": 0.3
+    }
+   }
+  },
+  "notes": "Fire page trial: wrought-iron candle stand (pan at 1.0 m): scrolled tripod, turned shaft with knops, drip pan, church candle with wax runs, melted cup and wick (the game lights it). Vertex colours on every LOD."
+ },
+ "sculpt_mech_candle_b": {
+  "file": "models/sculpt/mech_candle_b.glb",
+  "type": "model",
+  "license": "CC0 (original work)",
+  "author": "sculpted for this project",
+  "source": "tools/sculpt/assets/mech_candles.mjs (node, facet kit + three.js generators)",
+  "scale": 1,
+  "size": [
+   0.594,
+   2.124,
+   0.625
+  ],
+  "tris": 2232,
+  "lods": [
+   2232,
+   1178
+  ],
+  "materials": [
+   "Iron_metal",
+   "Wax_none"
+  ],
+  "mats": {
+   "Iron_metal": {
+    "surface": "metal",
+    "look": {
+     "spec": 0.5,
+     "specPower": 40,
+     "rim": 0.35
+    }
+   },
+   "Wax_none": {
+    "surface": "none",
+    "look": {
+     "wrap": 0.6,
+     "rim": 0.3
+    }
+   }
+  },
+  "notes": "Fire page trial: wrought-iron candle stand (pan at 1.35 m), as mech_candle_a. Vertex colours on every LOD."
+ },
+ "sculpt_mech_candles": {
+  "file": "models/sculpt/mech_candles.glb",
+  "type": "model",
+  "license": "CC0 (original work)",
+  "author": "sculpted for this project",
+  "source": "tools/sculpt/assets/mech_candles.mjs (node, facet kit + three.js generators)",
+  "scale": 1,
+  "size": [
+   1.113,
+   1.714,
+   0.854
+  ],
+  "tris": 2686,
+  "lods": [
+   2686,
+   1626
+  ],
+  "materials": [
+   "Stone_stone",
+   "Wax_none",
+   "Moss_none"
+  ],
+  "mats": {
+   "Stone_stone": {
+    "surface": "stone",
+    "look": {
+     "rim": 0.22,
+     "wrap": 0.3
+    }
+   },
+   "Wax_none": {
+    "surface": "none",
+    "look": {
+     "wrap": 0.6,
+     "rim": 0.3
+    }
+   },
+   "Moss_none": {
+    "surface": "none",
+    "look": {
+     "rim": 0.3,
+     "wrap": 0.5
+    }
+   }
+  },
+  "notes": "Fire page trial: stone reading pedestal (moulded foot, chamfered shaft, cornice, slanted desk) with an open stone book, a ribbon, spilt wax. Vertex colours on every LOD."
+ },
+ "sculpt_mech_harp": {
+  "file": "models/sculpt/mech_harp.glb",
+  "type": "model",
+  "license": "CC0 (original work)",
+  "author": "sculpted for this project",
+  "source": "tools/sculpt/assets/mech_harp.mjs (node, facet kit + three.js generators)",
+  "scale": 1,
+  "size": [
+   3.819,
+   4.256,
+   0.773
+  ],
+  "tris": 5116,
+  "lods": [
+   5116,
+   3816
+  ],
+  "materials": [
+   "Stone_stone",
+   "Bronze_metal",
+   "Moss_none"
+  ],
+  "mats": {
+   "Stone_stone": {
+    "surface": "stone",
+    "look": {
+     "rim": 0.22,
+     "wrap": 0.3
+    }
+   },
+   "Bronze_metal": {
+    "surface": "metal",
+    "look": {
+     "spec": 0.6,
+     "specPower": 36,
+     "rim": 0.4
+    }
+   },
+   "Moss_none": {
+    "surface": "none",
+    "look": {
+     "rim": 0.3,
+     "wrap": 0.5
+    }
+   }
+  },
+  "notes": "Wind page trial: stone harp (octagonal pillars on plinths, capitals, finials, gabled yoke with a carved wind spiral, stone string bar, bronze pins and tuning keys per string, moss). The strings stay the game's own glowing meshes. Vertex colours on every LOD."
+ },
+ "sculpt_mech_lectern": {
+  "file": "models/sculpt/mech_lectern.glb",
+  "type": "model",
+  "license": "CC0 (original work)",
+  "author": "sculpted for this project",
+  "source": "tools/sculpt/assets/mech_lectern.mjs (node, facet kit + three.js generators)",
+  "scale": 1,
+  "size": [
+   1.1,
+   1.627,
+   0.816
+  ],
+  "tris": 1048,
+  "lods": [
+   1048,
+   456
+  ],
+  "materials": [
+   "Stone_stone",
+   "Bronze_metal"
+  ],
+  "mats": {
+   "Stone_stone": {
+    "surface": "stone",
+    "look": {
+     "rim": 0.22,
+     "wrap": 0.3
+    }
+   },
+   "Bronze_metal": {
+    "surface": "metal",
+    "look": {
+     "spec": 0.6,
+     "specPower": 36,
+     "rim": 0.4
+    }
+   }
+  },
+  "notes": "Earth page trial: the rising stone lectern (foot, octagonal shaft, corbel, slanted desk with lip, closed stone book with bronze corners and clasps; soil stains on its buried half). Vertex colours on every LOD."
+ },
+ "sculpt_mech_lectern_ring": {
+  "file": "models/sculpt/mech_lectern_ring.glb",
+  "type": "model",
+  "license": "CC0 (original work)",
+  "author": "sculpted for this project",
+  "source": "tools/sculpt/assets/mech_lectern.mjs (node, facet kit + three.js generators)",
+  "scale": 1,
+  "size": [
+   5.24,
+   0.764,
+   5.157
+  ],
+  "tris": 2238,
+  "lods": [
+   2238,
+   986
+  ],
+  "materials": [
+   "Stone_stone",
+   "Moss_none"
+  ],
+  "mats": {
+   "Stone_stone": {
+    "surface": "stone",
+    "look": {
+     "rim": 0.22,
+     "wrap": 0.3
+    }
+   },
+   "Moss_none": {
+    "surface": "none",
+    "look": {
+     "rim": 0.3,
+     "wrap": 0.5
+    }
+   }
+  },
+  "notes": "Earth page trial: nine hewn kerb stones round the sunken lectern (dressed tops, worn shoulders, earth marks, moss). Vertex colours on every LOD."
+ },
+ "sculpt_mech_rod": {
+  "file": "models/sculpt/mech_rod.glb",
+  "type": "model",
+  "license": "CC0 (original work)",
+  "author": "sculpted for this project",
+  "source": "tools/sculpt/assets/mech_rod.mjs (node, facet kit + three.js generators)",
+  "scale": 1,
+  "size": [
+   3.604,
+   10.47,
+   5.416
+  ],
+  "tris": 7704,
+  "lods": [
+   7704,
+   5270
+  ],
+  "materials": [
+   "Stone_stone",
+   "Iron_metal",
+   "Bronze_metal",
+   "Moss_none"
+  ],
+  "mats": {
+   "Stone_stone": {
+    "surface": "stone",
+    "look": {
+     "rim": 0.22,
+     "wrap": 0.3
+    }
+   },
+   "Iron_metal": {
+    "surface": "metal",
+    "look": {
+     "spec": 0.5,
+     "specPower": 40,
+     "rim": 0.35
+    }
+   },
+   "Bronze_metal": {
+    "surface": "metal",
+    "look": {
+     "spec": 0.6,
+     "specPower": 36,
+     "rim": 0.4
+    }
+   },
+   "Moss_none": {
+    "surface": "none",
+    "look": {
+     "rim": 0.3,
+     "wrap": 0.5
+    }
+   }
+  },
+  "notes": "Thunder page trial: lightning rod on a broken round tower of coursed ashlar (five courses, four parapet teeth), octagonal iron rod with collars, cross bar, crowned point and three stays, copper strap with rivets down the front into a round seal stone with a carved bolt. Vertex colours on every LOD."
+ },
+ "sculpt_mech_spring": {
+  "file": "models/sculpt/mech_spring.glb",
+  "type": "model",
+  "license": "CC0 (original work)",
+  "author": "sculpted for this project",
+  "source": "tools/sculpt/assets/mech_spring.mjs (node, facet kit + three.js generators)",
+  "scale": 1,
+  "size": [
+   5.525,
+   4.846,
+   5.397
+  ],
+  "tris": 3553,
+  "lods": [
+   3553,
+   2027
+  ],
+  "materials": [
+   "Stone_stone",
+   "Moss_none"
+  ],
+  "mats": {
+   "Stone_stone": {
+    "surface": "stone",
+    "look": {
+     "rim": 0.22,
+     "wrap": 0.3
+    }
+   },
+   "Moss_none": {
+    "surface": "none",
+    "look": {
+     "rim": 0.3,
+     "wrap": 0.5
+    }
+   }
+  },
+  "notes": "Ice page trial: crag of bedded rock blocks with moss, a dressed spout stone with a channel and lip (the game's falling sheet starts at its lip), a carved ice star, a basin of ten curved blocks with a worn rim. Vertex colours on every LOD."
+ },
+ "sculpt_stele_earth": {
+  "file": "models/sculpt/stele_earth.glb",
+  "type": "model",
+  "license": "CC0 (original work)",
+  "author": "sculpted for this project",
+  "source": "tools/sculpt/assets/stele_page.mjs (node, facet kit + three.js generators)",
+  "scale": 1,
+  "size": [
+   1.32,
+   2.519,
+   0.652
+  ],
+  "tris": 4607,
+  "lods": [
+   4607,
+   1791
+  ],
+  "materials": [
+   "Stone_stone",
+   "Moss_none",
+   "Glow_none"
+  ],
+  "mats": {
+   "Stone_stone": {
+    "surface": "stone",
+    "look": {
+     "rim": 0.22,
+     "wrap": 0.3
+    }
+   },
+   "Moss_none": {
+    "surface": "none",
+    "look": {
+     "rim": 0.3,
+     "wrap": 0.5
+    }
+   },
+   "Glow_none": {
+    "surface": "none",
+    "look": {}
+   }
+  },
+  "notes": "Page-trial marker stele (earth): tapering arched slab, capstone, worn foot stone, raised roundel with the element sigil (part Glow: the game's sigil glow), carved letters, lichen, moss. Vertex colours on every LOD, no textures; merged per material into the site (gameplay/wilds-pages.js)."
+ },
+ "sculpt_stele_fire": {
+  "file": "models/sculpt/stele_fire.glb",
+  "type": "model",
+  "license": "CC0 (original work)",
+  "author": "sculpted for this project",
+  "source": "tools/sculpt/assets/stele_page.mjs (node, facet kit + three.js generators)",
+  "scale": 1,
+  "size": [
+   1.32,
+   2.519,
+   0.651
+  ],
+  "tris": 6399,
+  "lods": [
+   6399,
+   2267
+  ],
+  "materials": [
+   "Stone_stone",
+   "Moss_none",
+   "Glow_none"
+  ],
+  "mats": {
+   "Stone_stone": {
+    "surface": "stone",
+    "look": {
+     "rim": 0.22,
+     "wrap": 0.3
+    }
+   },
+   "Moss_none": {
+    "surface": "none",
+    "look": {
+     "rim": 0.3,
+     "wrap": 0.5
+    }
+   },
+   "Glow_none": {
+    "surface": "none",
+    "look": {}
+   }
+  },
+  "notes": "Page-trial marker stele (fire): tapering arched slab, capstone, worn foot stone, raised roundel with the element sigil (part Glow: the game's sigil glow), carved letters, lichen, moss. Vertex colours on every LOD, no textures; merged per material into the site (gameplay/wilds-pages.js)."
+ },
+ "sculpt_stele_ice": {
+  "file": "models/sculpt/stele_ice.glb",
+  "type": "model",
+  "license": "CC0 (original work)",
+  "author": "sculpted for this project",
+  "source": "tools/sculpt/assets/stele_page.mjs (node, facet kit + three.js generators)",
+  "scale": 1,
+  "size": [
+   1.32,
+   2.52,
+   0.651
+  ],
+  "tris": 5231,
+  "lods": [
+   5231,
+   2171
+  ],
+  "materials": [
+   "Stone_stone",
+   "Moss_none",
+   "Glow_none"
+  ],
+  "mats": {
+   "Stone_stone": {
+    "surface": "stone",
+    "look": {
+     "rim": 0.22,
+     "wrap": 0.3
+    }
+   },
+   "Moss_none": {
+    "surface": "none",
+    "look": {
+     "rim": 0.3,
+     "wrap": 0.5
+    }
+   },
+   "Glow_none": {
+    "surface": "none",
+    "look": {}
+   }
+  },
+  "notes": "Page-trial marker stele (ice): tapering arched slab, capstone, worn foot stone, raised roundel with the element sigil (part Glow: the game's sigil glow), carved letters, lichen, moss. Vertex colours on every LOD, no textures; merged per material into the site (gameplay/wilds-pages.js)."
+ },
+ "sculpt_stele_thunder": {
+  "file": "models/sculpt/stele_thunder.glb",
+  "type": "model",
+  "license": "CC0 (original work)",
+  "author": "sculpted for this project",
+  "source": "tools/sculpt/assets/stele_page.mjs (node, facet kit + three.js generators)",
+  "scale": 1,
+  "size": [
+   1.32,
+   2.511,
+   0.649
+  ],
+  "tris": 4663,
+  "lods": [
+   4663,
+   1743
+  ],
+  "materials": [
+   "Stone_stone",
+   "Moss_none",
+   "Glow_none"
+  ],
+  "mats": {
+   "Stone_stone": {
+    "surface": "stone",
+    "look": {
+     "rim": 0.22,
+     "wrap": 0.3
+    }
+   },
+   "Moss_none": {
+    "surface": "none",
+    "look": {
+     "rim": 0.3,
+     "wrap": 0.5
+    }
+   },
+   "Glow_none": {
+    "surface": "none",
+    "look": {}
+   }
+  },
+  "notes": "Page-trial marker stele (thunder): tapering arched slab, capstone, worn foot stone, raised roundel with the element sigil (part Glow: the game's sigil glow), carved letters, lichen, moss. Vertex colours on every LOD, no textures; merged per material into the site (gameplay/wilds-pages.js)."
+ },
+ "sculpt_stele_water": {
+  "file": "models/sculpt/stele_water.glb",
+  "type": "model",
+  "license": "CC0 (original work)",
+  "author": "sculpted for this project",
+  "source": "tools/sculpt/assets/stele_page.mjs (node, facet kit + three.js generators)",
+  "scale": 1,
+  "size": [
+   1.32,
+   2.522,
+   0.649
+  ],
+  "tris": 5723,
+  "lods": [
+   5723,
+   2091
+  ],
+  "materials": [
+   "Stone_stone",
+   "Moss_none",
+   "Glow_none"
+  ],
+  "mats": {
+   "Stone_stone": {
+    "surface": "stone",
+    "look": {
+     "rim": 0.22,
+     "wrap": 0.3
+    }
+   },
+   "Moss_none": {
+    "surface": "none",
+    "look": {
+     "rim": 0.3,
+     "wrap": 0.5
+    }
+   },
+   "Glow_none": {
+    "surface": "none",
+    "look": {}
+   }
+  },
+  "notes": "Page-trial marker stele (water): tapering arched slab, capstone, worn foot stone, raised roundel with the element sigil (part Glow: the game's sigil glow), carved letters, lichen, moss. Vertex colours on every LOD, no textures; merged per material into the site (gameplay/wilds-pages.js)."
+ },
+ "sculpt_stele_wind": {
+  "file": "models/sculpt/stele_wind.glb",
+  "type": "model",
+  "license": "CC0 (original work)",
+  "author": "sculpted for this project",
+  "source": "tools/sculpt/assets/stele_page.mjs (node, facet kit + three.js generators)",
+  "scale": 1,
+  "size": [
+   1.32,
+   2.519,
+   0.65
+  ],
+  "tris": 6007,
+  "lods": [
+   6007,
+   2691
+  ],
+  "materials": [
+   "Stone_stone",
+   "Moss_none",
+   "Glow_none"
+  ],
+  "mats": {
+   "Stone_stone": {
+    "surface": "stone",
+    "look": {
+     "rim": 0.22,
+     "wrap": 0.3
+    }
+   },
+   "Moss_none": {
+    "surface": "none",
+    "look": {
+     "rim": 0.3,
+     "wrap": 0.5
+    }
+   },
+   "Glow_none": {
+    "surface": "none",
+    "look": {}
+   }
+  },
+  "notes": "Page-trial marker stele (wind): tapering arched slab, capstone, worn foot stone, raised roundel with the element sigil (part Glow: the game's sigil glow), carved letters, lichen, moss. Vertex colours on every LOD, no textures; merged per material into the site (gameplay/wilds-pages.js)."
  }
 }

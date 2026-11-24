@@ -48,6 +48,8 @@ function shareSkeletons(root) {
  *   ?sculpt=stone_lantern,komainu   exactly these types
  * G.sculpt.enabled = false before the world builds has the same effect as ?sculpt=0.
  */
+const FIGURE_SITES = ['wind', 'thunder', 'fire', 'earth', 'water', 'ice'].map((e) => 'sculpt_stele_' + e).concat(['harp', 'rod', 'candles', 'candle_a',
+  'candle_b', 'lectern_ring', 'lectern', 'basin', 'bud_stem', 'bud_petal', 'spring'].map((m) => 'sculpt_mech_' + m));
 export const SCULPT_TYPES = {
   stone_lantern: ['sculpt_stone_lantern'],
   komainu: ['sculpt_komainu_a', 'sculpt_komainu_un'],
@@ -77,17 +79,19 @@ export const SCULPT_TYPES = {
   // broad flat face, the paint reads grey next to the old warm cream — the face is the companion's charm (REVIEW.md)
   dango: ['sculpt_dango'], gohei: ['sculpt_prop_gohei'], broom: ['sculpt_prop_broom'], hip_lantern: ['sculpt_hip_lantern'],
   earth_column: ['sculpt_earth_column_a', 'sculpt_earth_column_b', 'sculpt_earth_column_c', 'sculpt_earth_rubble'],
-  // figures (round art-figures): the City of Magic residents' carried props (builders/mage-folk.js, tools/sculpt/assets/folk_*.mjs)
-  figures: ['sculpt_folk_basket', 'sculpt_folk_hat_straw', 'sculpt_folk_cap'],
+  // figures (round art-figures): the City of Magic residents' carried props (builders/mage-folk.js, tools/sculpt/assets/folk_*.mjs),
+  // the page-trial steles and mechanisms (gameplay/wilds-pages.js, tools/sculpt/assets/stele_page.mjs, mech_*.mjs)
+  figures: ['sculpt_folk_basket', 'sculpt_folk_hat_straw', 'sculpt_folk_cap', ...FIGURE_SITES],
 };
 export const SCULPT_DEFAULT = ['stone_lantern', 'komainu', 'kitsune', 'great_lantern', 'rockfam', 'drywall', 'mill', 'landmarks', 'pot', 'barrel', 'bucket', 'pumpkin',
   'jar', 'cart', 'hen', 'gohei', 'broom', 'hip_lantern', 'earth_column', 'figures'];
 // sculpt GLBs whose COLOR_0 was rewritten by the asset's own post step (dango.mjs post, gohei.mjs / hip_lantern.mjs --split /
 // --post: sRGB paint -> linear once) — measured single-encoded, so fixSculptColours must leave them alone
 // facet-kit GLBs (tools/sculpt/assets/rock_facet.mjs) write linear COLOR_0 once as well, and so does the landmark driver
-// (tools/sculpt/assets/landmarks_lib.mjs vcAll: the kit's bakeVertexColors, sRGB paint -> linear once)
+// (tools/sculpt/assets/landmarks_lib.mjs vcAll: the kit's bakeVertexColors, sRGB paint -> linear once), and the page-trial
+// sites (mech_lib.mjs on the facet kit's writer)
 const SCULPT_VC_OK = new Set(['sculpt_dango', 'sculpt_prop_gohei', 'sculpt_hip_lantern', ...SCULPT_TYPES.rockfam, ...SCULPT_TYPES.drywall, ...SCULPT_TYPES.mill,
-  ...SCULPT_TYPES.landmarks]);
+  ...SCULPT_TYPES.landmarks, ...FIGURE_SITES]);
 function sculptSwitch(G) {
   const p = G.params?.sculpt;
   const types = new Set(p === '0' ? [] : p === 'all' ? Object.keys(SCULPT_TYPES) : !p || p === '1' ? SCULPT_DEFAULT : String(p).split(',').map((s) => s.trim()).filter((s) => SCULPT_TYPES[s]));

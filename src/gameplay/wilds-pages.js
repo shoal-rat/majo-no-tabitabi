@@ -17,16 +17,88 @@ import * as THREE from 'three';
 import { G } from '../core/game.js';
 import { t } from '../core/i18n.js';
 import { mulberry32 } from '../core/util.js';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { box, cyl, cone, sphere, bakeStatic } from '../core/geo.js';
 import { toon, glowDynamic, own } from '../core/mats.js';
 import { PAGE_SITES, PAGE_SIGHT, PAGE_LEAVE, PAGE_DUST, regionOf } from '../data/wilds.js';
 import { makeElite } from '../combat/wards.js';
 import { sfx, toast } from './common.js';
+import { sculptAsset } from '../world/builders/sculpt.js';
+import { sculptVcMat } from '../world/builders/kit.js';
 
 /** The spell book's element colours (fx recipes COLORS), for sigils, glints, rings and pins. */
 export const PAGE_COLOR = { fire: 0xff8a2a, water: 0x58c6ff, ice: 0xaee9ff, wind: 0xb6f5d0, thunder: 0xb98cff, earth: 0xd6a96a };
 const hex = (c) => '#' + c.toString(16).padStart(6, '0');
 const RANK = { seen: 1, open: 2, won: 3, read: 4 };
+
+// ---- carved site pieces (round art-figures; tools/sculpt/assets/stele_page.mjs, mech_*.mjs; G.sculpt type 'figures') ----
+// Vertex-coloured LODs (phones / low: LOD1). The game's own live parts stay as they were (the glowing sigil and seal rings,
+// strings, flames, water, petals' hinges); a piece named Glow_* takes the site's glow material. bakeStatic drops vertex
+// colours, so the carved meshes are merged per material by mergeCarved() and kept out of it. ?sculpt=0 (or a list without
+// 'figures', or a missing GLB) builds the first round's primitives.
+const CARVED_MAT = {
+  stone: toon(0xffffff, { surface: 'stone', look: { detail: 0.35, bump: 0.4 } }),
+  moss: toon(0xffffff, { surface: 'none', look: { rim: 0.3, wrap: 0.5 } }),
+  metal: toon(0xffffff, { surface: 'metal', look: { spec: 0.5, specPower: 40, rim: 0.35 } }),
+  wax: toon(0xffffff, { surface: 'none', look: { wrap: 0.6, rim: 0.3 } }),
+};
+const carvedMat = (name) => sculptVcMat(/^Moss/.test(name) ? CARVED_MAT.moss : /^(Iron|Bronze)/.test(name) ? CARVED_MAT.metal : /^Wax/.test(name) ? CARVED_MAT.wax : CARVED_MAT.stone);
+const carvedLod = () => (G.quality?.mobile || G.quality?.name === 'low' ? 1 : 0);
+/** add sculpt `id` to `parent` (local position `at`, rotation [rx, ry, rz]); Glow_* pieces get `glow`. false when off / missing. */
+function carve(parent, id, { at = [0, 0, 0], rot = [0, 0, 0], glow = null } = {}) {
+  if (!G.sculpt?.on?.('figures')) return false;
+  const A = sculptAsset('sculpt_' + id);
+  const pieces = A?.lods[Math.min(carvedLod(), A.lods.length - 1)];
+  if (!pieces?.length) return false;
+  const g = new THREE.Group(); g.name = 'carved:' + id;
+  g.position.set(at[0], at[1], at[2]); g.rotation.set(rot[0], rot[1], rot[2]);
+  for (const p of pieces) {
+    const lit = /^Glow/.test(p.name);
+    if (lit && !glow) continue;
+    const m = new THREE.Mesh(p.geo, lit ? glow : carvedMat(p.name));
+    m.userData.carved = true; m.castShadow = !lit; m.receiveShadow = !lit;
+    g.add(m);
+  }
+  parent.add(g);
+  return true;
+}
+/** A part the site animates by its local position (strings, the lectern, the basin's water) sits in a dynamic holder:
+ *  bakeStatic gives the KEPT node its world-relative transform, so setting position.y / .z on the node itself afterwards
+ *  moved it to world y 0 / z 0 (the risen lectern and the filled basin were never seen; ringing strings jumped away). */
+function holder(o) { const h = new THREE.Group(); h.userData.dynamic = true; h.add(o); return h; }
+/** merge the static carved meshes under `root` per material (vertex colours kept), keep them out of bakeStatic */
+function mergeCarved(root) {
+  root.updateMatrixWorld(true);
+  const inv = new THREE.Matrix4().copy(root.matrixWorld).invert(), rel = new THREE.Matrix4();
+  const byMat = new Map(), drop = [];
+  root.traverse((o) => {
+    if (!o.isMesh || !o.userData.carved) return;
+    for (let q = o.parent; q && q !== root; q = q.parent) if (q.userData.dynamic) return;   // moving parts stay
+    const g = o.geometry.clone(); g.applyMatrix4(rel.multiplyMatrices(inv, o.matrixWorld));
+    if (!byMat.has(o.material)) byMat.set(o.material, []);
+    byMat.get(o.material).push(g); drop.push(o);
+  });
+  for (const o of drop) o.removeFromParent();
+  for (const [m, geos] of byMat) {
+    const g = geos.length > 1 ? mergeGeometries(geos, false) : geos[0];
+    if (geos.length > 1) for (const x of geos) x.dispose();
+    if (!g) continue;
+    const mesh = new THREE.Mesh(g, m);
+    mesh.name = 'carved'; mesh.userData.dynamic = true;
+    mesh.castShadow = !m.isMeshBasicMaterial; mesh.receiveShadow = !m.isMeshBasicMaterial;
+    root.add(mesh);
+  }
+}
+
+/** a lily pad: a disc with a notch cut to its middle, its rim curled up a little (y up, radius 0.5) */
+function lilyPad() {
+  const g = new THREE.CircleGeometry(0.5, 20, 0.22, Math.PI * 2 - 0.44);
+  g.rotateX(-Math.PI / 2);
+  const p = g.attributes.position;
+  for (let i = 0; i < p.count; i++) { const r = Math.hypot(p.getX(i), p.getZ(i)); p.setY(i, 0.015 + 0.05 * (r / 0.5) ** 3); }
+  g.computeVertexNormals();
+  return g;
+}
 
 function glintMaterial() {
   return new THREE.ShaderMaterial({
@@ -87,18 +159,23 @@ export function createWildPages({ wstate, tt }) {
   function buildMarker(s, root) {
     const r = mulberry32(s.def.x * 13 + s.def.z * 7 >>> 0);
     const col = PAGE_COLOR[s.def.el];
-    const stone = toon(0x8c877c), dark = toon(0x6f6a61), moss = toon(0x6f8a4a);
     const g = new THREE.Group();
+    // the sigil: a carved ring with the element's mark, lit from within
+    s.sigilMat = glowDynamic(col, 1.6);
+    // carved: the element's stele (stele_page.mjs), its raised sigil and inner ring lit by the sigil material
+    if (carve(g, 'stele_' + s.def.el, { glow: s.sigilMat })) { placeMarker(s, root, g); return; }
+    const stone = toon(0x8c877c), dark = toon(0x6f6a61), moss = toon(0x6f8a4a);
     const slab = box(1.05, 2.3, 0.34, stone, 0, 1.05, 0); slab.rotation.z = (r() - 0.5) * 0.08; g.add(slab);
     g.add(box(1.25, 0.32, 0.56, dark, 0, 0.12, 0));
     const cap = box(1.12, 0.18, 0.42, dark, 0, 2.24, 0); cap.rotation.z = slab.rotation.z; g.add(cap);
     for (let k = 0; k < 5; k++) g.add(sphere(0.12 + r() * 0.1, moss, (r() - 0.5) * 1.1, 0.18 + r() * 0.1, 0.2 + r() * 0.12, 5, 4));
-    // the sigil: a carved ring with the element's mark, lit from within
-    s.sigilMat = glowDynamic(col, 1.6);
     const ring = new THREE.Mesh(new THREE.TorusGeometry(0.3, 0.035, 6, 28), s.sigilMat); ring.position.set(0, 1.45, 0.18);
     const mark = new THREE.Mesh(new THREE.OctahedronGeometry(0.14, 0), s.sigilMat); mark.scale.set(1, 1.5, 0.3); mark.position.set(0, 1.45, 0.18);
     const band = new THREE.Mesh(new THREE.TorusGeometry(0.42, 0.012, 4, 36), s.sigilMat); band.position.set(0, 1.45, 0.175);
     for (const m of [ring, mark, band]) { m.userData.dynamic = true; m.castShadow = false; g.add(m); }
+    placeMarker(s, root, g);
+  }
+  function placeMarker(s, root, g) {
     // beside the mechanism, not in front of it (it would stop a cast aimed past it), its carved face turned to it
     local(s, 2.9, 3.1, -0.05, _v);
     g.position.copy(_v); g.rotation.y = Math.atan2(s.def.x - _v.x, s.def.z - _v.z);
@@ -112,14 +189,16 @@ export function createWildPages({ wstate, tt }) {
     harp(s, root) {
       const wood = toon(0x6e5844), stone = toon(0x8f8a80), gut = glowDynamic(0xf2e8cc, 0.55);
       const g = new THREE.Group();
-      g.add(box(0.55, 4.2, 0.55, stone, -1.5, 1.3, 0), box(0.55, 4.2, 0.55, stone, 1.5, 1.3, 0));
-      g.add(box(3.6, 0.32, 0.42, wood, 0, 3.3, 0), box(3.3, 0.22, 0.36, wood, 0, 0.55, 0));
-      g.add(cone(0.3, 0.5, stone, -1.5, 3.65, 0, 4), cone(0.3, 0.5, stone, 1.5, 3.65, 0, 4));
+      if (!carve(g, 'mech_harp')) {
+        g.add(box(0.55, 4.2, 0.55, stone, -1.5, 1.3, 0), box(0.55, 4.2, 0.55, stone, 1.5, 1.3, 0));
+        g.add(box(3.6, 0.32, 0.42, wood, 0, 3.3, 0), box(3.3, 0.22, 0.36, wood, 0, 0.55, 0));
+        g.add(cone(0.3, 0.5, stone, -1.5, 3.65, 0, 4), cone(0.3, 0.5, stone, 1.5, 3.65, 0, 4));
+      }
       s.strings = [];
       for (let k = 0; k < 7; k++) {
         const x = -1.05 + k * 0.35;
-        const st = cyl(0.014, 0.014, 2.55, gut, x, 1.93, 0, 4); st.userData.dynamic = true; st.castShadow = false;
-        g.add(st); s.strings.push(st);
+        const st = cyl(0.014, 0.014, 2.55, gut, x, 1.93, 0, 4); st.castShadow = false;
+        g.add(holder(st)); s.strings.push(st);
       }
       s.gut = gut;
       local(s, 0, 0, 0, _v); g.position.copy(_v); g.rotation.y = s.def.face;
@@ -139,13 +218,15 @@ export function createWildPages({ wstate, tt }) {
     rod(s, root) {
       const stone = toon(0x8a857a), dark = toon(0x6a655c), iron = toon(0x3e3a38), copper = toon(0x9a6a42);
       const g = new THREE.Group();
-      g.add(cyl(1.5, 1.75, 4.4, stone, 0, 1.2, 0, 10));
-      for (let k = 0; k < 5; k++) { const a = k / 5 * Math.PI * 2; if (k === 2) continue; g.add(box(0.7, 0.7 + (k % 2) * 0.5, 0.5, dark, Math.sin(a) * 1.35, 3.6, Math.cos(a) * 1.35)); }
-      g.add(cyl(0.06, 0.08, 6.2, iron, 0, 6.5, 0, 6));
-      { const bar = box(1.1, 0.06, 0.06, iron, 0, 8.6, 0); g.add(bar); g.add(cone(0.12, 0.5, iron, 0, 9.85, 0, 6)); }
-      // the copper strap down the stump into the seal stone at its foot
-      g.add(box(0.12, 3.5, 0.05, copper, 0, 1.75, 1.66));
-      g.add(cyl(0.95, 1.05, 0.26, dark, 0, 0.13, 2.6, 12));
+      if (!carve(g, 'mech_rod')) {
+        g.add(cyl(1.5, 1.75, 4.4, stone, 0, 1.2, 0, 10));
+        for (let k = 0; k < 5; k++) { const a = k / 5 * Math.PI * 2; if (k === 2) continue; g.add(box(0.7, 0.7 + (k % 2) * 0.5, 0.5, dark, Math.sin(a) * 1.35, 3.6, Math.cos(a) * 1.35)); }
+        g.add(cyl(0.06, 0.08, 6.2, iron, 0, 6.5, 0, 6));
+        { const bar = box(1.1, 0.06, 0.06, iron, 0, 8.6, 0); g.add(bar); g.add(cone(0.12, 0.5, iron, 0, 9.85, 0, 6)); }
+        // the copper strap down the stump into the seal stone at its foot
+        g.add(box(0.12, 3.5, 0.05, copper, 0, 1.75, 1.66));
+        g.add(cyl(0.95, 1.05, 0.26, dark, 0, 0.13, 2.6, 12));
+      }
       s.sealMat = glowDynamic(PAGE_COLOR.thunder, 0.4);
       const glyph = new THREE.Mesh(new THREE.TorusGeometry(0.62, 0.05, 5, 30), s.sealMat);
       glyph.rotation.x = -Math.PI / 2; glyph.position.set(0, 0.28, 2.6); glyph.userData.dynamic = true; g.add(glyph);
@@ -168,8 +249,10 @@ export function createWildPages({ wstate, tt }) {
     candles(s, root) {
       const stone = toon(0x8f8a80), wax = toon(0xf0e6cc), iron = toon(0x3e3a38);
       const g = new THREE.Group();
-      g.add(box(0.8, 1.8, 0.6, stone, 0, 0.4, 0), box(1.1, 0.12, 0.8, stone, 0, 1.32, 0));
-      const book = box(0.7, 0.1, 0.5, toon(0x7a4a3a), 0, 1.43, 0); book.rotation.x = -0.18; g.add(book);
+      if (!carve(g, 'mech_candles')) {
+        g.add(box(0.8, 1.8, 0.6, stone, 0, 0.4, 0), box(1.1, 0.12, 0.8, stone, 0, 1.32, 0));
+        const book = box(0.7, 0.1, 0.5, toon(0x7a4a3a), 0, 1.43, 0); book.rotation.x = -0.18; g.add(book);
+      }
       s.candles = [];
       local(s, 0, 0, 0, _v); g.position.copy(_v); g.rotation.y = s.def.face;
       root.add(g);
@@ -180,8 +263,11 @@ export function createWildPages({ wstate, tt }) {
         const a = k / 5 * Math.PI * 2 + 0.3, R = 3.3, h = 1.0 + (k % 2) * 0.35;
         const at = local(s, Math.sin(a) * R, Math.cos(a) * R, 0, new THREE.Vector3());
         const cg = new THREE.Group(); cg.position.copy(at);
-        cg.add(cyl(0.16, 0.22, h + 0.4, iron, 0, h / 2 - 0.2, 0, 6), cyl(0.24, 0.24, 0.05, iron, 0, h + 0.02, 0, 8));
-        cg.add(cyl(0.15, 0.16, 0.7, wax, 0, h + 0.4, 0, 8));
+        // carved: a wrought-iron stand with a church candle (mech_candles.mjs), each turned its own way
+        if (!carve(cg, k % 2 ? 'mech_candle_b' : 'mech_candle_a', { rot: [0, a * 1.7, 0] })) {
+          cg.add(cyl(0.16, 0.22, h + 0.4, iron, 0, h / 2 - 0.2, 0, 6), cyl(0.24, 0.24, 0.05, iron, 0, h + 0.02, 0, 8));
+          cg.add(cyl(0.15, 0.16, 0.7, wax, 0, h + 0.4, 0, 8));
+        }
         const fl = new THREE.Group();
         const outer = cone(0.13, 0.42, flameOuter, 0, 0.21, 0, 8);
         const inner = cone(0.07, 0.26, flameInner, 0, 0.13, 0, 6);
@@ -212,15 +298,21 @@ export function createWildPages({ wstate, tt }) {
     lectern(s, root) {
       const stone = toon(0x8f8a80), dark = toon(0x6d685f);
       const g = new THREE.Group();
-      for (let k = 0; k < 9; k++) { const a = k / 9 * Math.PI * 2; const st = box(0.9, 0.7, 0.55, dark, Math.sin(a) * 2.3, -0.2, Math.cos(a) * 2.3); st.rotation.y = a; g.add(st); }
+      if (!carve(g, 'mech_lectern_ring')) for (let k = 0; k < 9; k++) { const a = k / 9 * Math.PI * 2; const st = box(0.9, 0.7, 0.55, dark, Math.sin(a) * 2.3, -0.2, Math.cos(a) * 2.3); st.rotation.y = a; g.add(st); }
       // the lectern itself sinks into the ground; only its slanted top shows until earth lifts it
       const lec = new THREE.Group();
-      lec.add(box(0.7, 1.3, 0.6, stone, 0, 0.65, 0));
-      const top = box(1.1, 0.16, 0.8, stone, 0, 1.35, 0.05); top.rotation.x = -0.32; lec.add(top);
       s.leaf = glowDynamic(PAGE_COLOR.earth, 0.35);
-      const glyph = new THREE.Mesh(new THREE.TorusGeometry(0.22, 0.03, 4, 20), s.leaf); glyph.position.set(0, 1.45, 0.06); glyph.rotation.x = -0.32 - Math.PI / 2; lec.add(glyph);
-      lec.userData.dynamic = true; lec.position.y = -1.0;
-      g.add(lec); s.lec = lec;
+      if (carve(lec, 'mech_lectern')) {
+        // the glowing ring lies on the closed stone book's cover (desk centre (0, 1.35, 0.05) turned -0.32, cover 0.222 up)
+        const glyph = new THREE.Mesh(new THREE.TorusGeometry(0.15, 0.022, 4, 24), s.leaf);
+        glyph.position.set(0, 1.35 + 0.228 * Math.cos(-0.32), 0.05 + 0.228 * Math.sin(-0.32)); glyph.rotation.x = -0.32 - Math.PI / 2; lec.add(glyph);
+      } else {
+        lec.add(box(0.7, 1.3, 0.6, stone, 0, 0.65, 0));
+        const top = box(1.1, 0.16, 0.8, stone, 0, 1.35, 0.05); top.rotation.x = -0.32; lec.add(top);
+        const glyph = new THREE.Mesh(new THREE.TorusGeometry(0.22, 0.03, 4, 20), s.leaf); glyph.position.set(0, 1.45, 0.06); glyph.rotation.x = -0.32 - Math.PI / 2; lec.add(glyph);
+      }
+      lec.position.y = -1.0;
+      g.add(holder(lec)); s.lec = lec;
       local(s, 0, 0, 0, _v); g.position.copy(_v); g.rotation.y = s.def.face;
       root.add(g);
       s.mechPos = _v.clone().setY(_v.y + 0.6);
@@ -245,25 +337,36 @@ export function createWildPages({ wstate, tt }) {
     bud(s, root) {
       const stone = toon(0x8f8a80), mud = toon(0x6e5a44), stem = toon(0x5d7a3e);
       const g = new THREE.Group();
-      for (let k = 0; k < 14; k++) { const a = k / 14 * Math.PI * 2; const st = box(0.95, 1.0, 0.5, stone, Math.sin(a) * 2.7, -0.1, Math.cos(a) * 2.7); st.rotation.y = a; g.add(st); }
-      g.add(cyl(2.6, 2.6, 0.06, mud, 0, 0.02, 0, 24));
-      g.add(cyl(0.12, 0.16, 1.0, stem, 0, 0.5, 0, 6));
+      // carved: a basin of fitted kerb blocks with a dry mud floor, a bronze stem with sepals, bronze petals (mech_bud.mjs)
+      const carved = carve(g, 'mech_basin');
+      if (!carved) {
+        for (let k = 0; k < 14; k++) { const a = k / 14 * Math.PI * 2; const st = box(0.95, 1.0, 0.5, stone, Math.sin(a) * 2.7, -0.1, Math.cos(a) * 2.7); st.rotation.y = a; g.add(st); }
+        g.add(cyl(2.6, 2.6, 0.06, mud, 0, 0.02, 0, 24));
+      }
+      if (!carve(g, 'mech_bud_stem')) g.add(cyl(0.12, 0.16, 1.0, stem, 0, 0.5, 0, 6));
       s.padMat = own(toon(0x8a7a52));   // recoloured when it blooms: never the shared cached material
-      for (let k = 0; k < 4; k++) { const a = k * 1.7 + 0.4; const pad = cyl(0.5, 0.5, 0.03, s.padMat, Math.sin(a) * 1.5, 0.08, Math.cos(a) * 1.5, 12); g.add(pad); }
+      // lily pads: a notched leaf, cupped a little (carved) | a disc (first round)
+      const padGeo = carved ? lilyPad() : null;
+      for (let k = 0; k < 4; k++) {
+        const a = k * 1.7 + 0.4;
+        if (padGeo) { const pad = new THREE.Mesh(padGeo, s.padMat); pad.position.set(Math.sin(a) * 1.5, 0.08, Math.cos(a) * 1.5); pad.rotation.y = a * 2.3; g.add(pad); continue; }
+        const pad = cyl(0.5, 0.5, 0.03, s.padMat, Math.sin(a) * 1.5, 0.08, Math.cos(a) * 1.5, 12); g.add(pad);
+      }
       // five petals hinged at the base of the bud; closed they make a tall pale bud, open they fan out
       s.petals = [];
       const petalMat = toon(0xf4dce6, { emissive: 0x3a2030 });
       const bud = new THREE.Group(); bud.position.y = 1.0; bud.userData.dynamic = true;
       for (let k = 0; k < 5; k++) {
         const hinge = new THREE.Group(); hinge.rotation.y = k / 5 * Math.PI * 2;
-        const petal = sphere(0.36, petalMat, 0, 0.62, 0.12, 8, 6); petal.scale.set(0.7, 1.7, 0.3);
-        const tilt = new THREE.Group(); tilt.add(petal); hinge.add(tilt); bud.add(hinge); s.petals.push(tilt);
+        const tilt = new THREE.Group();
+        if (!carve(tilt, 'mech_bud_petal')) { const petal = sphere(0.36, petalMat, 0, 0.62, 0.12, 8, 6); petal.scale.set(0.7, 1.7, 0.3); tilt.add(petal); }
+        hinge.add(tilt); bud.add(hinge); s.petals.push(tilt);
       }
       s.heart = glowDynamic(PAGE_COLOR.water, 0.2);
       bud.add(sphere(0.2, s.heart, 0, 0.35, 0, 8, 6));
       g.add(bud);
       s.waterMat = toon(0x6fb8d8, { transparent: true, opacity: 0.78, surface: 'none', look: { spec: 1, specPower: 70, rim: 0.5 } });
-      const water = cyl(2.55, 2.55, 0.05, s.waterMat, 0, 0.0, 0, 28); water.userData.dynamic = true; water.visible = false; g.add(water); s.water = water;
+      const water = cyl(2.55, 2.55, 0.05, s.waterMat, 0, 0.0, 0, 28); water.visible = false; g.add(holder(water)); s.water = water;
       local(s, 0, 0, 0, _v); g.position.copy(_v); g.rotation.y = s.def.face;
       root.add(g);
       s.mechPos = _v.clone().setY(_v.y + 1.2);
@@ -280,12 +383,15 @@ export function createWildPages({ wstate, tt }) {
     spring(s, root) {
       const rock = toon(0x7f7a72), dark = toon(0x66615a), stone = toon(0x8f8a80);
       const g = new THREE.Group();
-      const geo = new THREE.DodecahedronGeometry(1, 0);
-      for (const [x, y, z, sx, sy, sz] of [[0, 1.6, -1.6, 2.4, 2.0, 1.4], [-1.9, 1.0, -1.4, 1.5, 1.4, 1.3], [1.8, 1.2, -1.5, 1.4, 1.6, 1.2], [0.2, 3.6, -1.8, 1.8, 1.0, 1.1], [-1.2, 2.9, -1.9, 1.0, 0.9, 0.9]]) {
-        const m = new THREE.Mesh(geo, y > 2.5 ? dark : rock); m.position.set(x, y, z); m.scale.set(sx, sy, sz); m.rotation.set(x, y * 0.7, z * 0.3); g.add(m);
+      // carved: the crag, the dressed spout stone and the basin of curved blocks (mech_spring.mjs)
+      if (!carve(g, 'mech_spring')) {
+        const geo = new THREE.DodecahedronGeometry(1, 0);
+        for (const [x, y, z, sx, sy, sz] of [[0, 1.6, -1.6, 2.4, 2.0, 1.4], [-1.9, 1.0, -1.4, 1.5, 1.4, 1.3], [1.8, 1.2, -1.5, 1.4, 1.6, 1.2], [0.2, 3.6, -1.8, 1.8, 1.0, 1.1], [-1.2, 2.9, -1.9, 1.0, 0.9, 0.9]]) {
+          const m = new THREE.Mesh(geo, y > 2.5 ? dark : rock); m.position.set(x, y, z); m.scale.set(sx, sy, sz); m.rotation.set(x, y * 0.7, z * 0.3); g.add(m);
+        }
+        g.add(box(0.5, 0.22, 1.0, stone, 0, 3.0, -0.3));
+        g.add(cyl(1.25, 1.35, 0.42, stone, 0, 0.21, 1.0, 14));
       }
-      g.add(box(0.5, 0.22, 1.0, stone, 0, 3.0, -0.3));
-      g.add(cyl(1.25, 1.35, 0.42, stone, 0, 0.21, 1.0, 14));
       // the falling sheet: a narrow ribbon with scrolling streaks; frozen it holds still and turns to rime
       s.sheetMat = new THREE.ShaderMaterial({
         transparent: true, depthWrite: false, side: THREE.DoubleSide,
@@ -517,6 +623,7 @@ export function createWildPages({ wstate, tt }) {
     const root = new THREE.Group();
     buildMarker(s, root);
     MECH[def.mech](s, root);
+    mergeCarved(root);
     const baked = bakeStatic(root);
     baked.name = 'wilds_page_' + def.id;
     G.scene.add(baked);

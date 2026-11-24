@@ -1,0 +1,50 @@
+{
+ "sculpt_mech_harp": {
+  "file": "models/sculpt/mech_harp.glb",
+  "type": "model",
+  "license": "CC0 (original work)",
+  "author": "sculpted for this project",
+  "source": "tools/sculpt/assets/mech_harp.mjs (node, facet kit + three.js generators)",
+  "scale": 1,
+  "size": [
+   3.819,
+   4.256,
+   0.773
+  ],
+  "tris": 5116,
+  "lods": [
+   5116,
+   3816
+  ],
+  "materials": [
+   "Stone_stone",
+   "Bronze_metal",
+   "Moss_none"
+  ],
+  "mats": {
+   "Stone_stone": {
+    "surface": "stone",
+    "look": {
+     "rim": 0.22,
+     "wrap": 0.3
+    }
+   },
+   "Bronze_metal": {
+    "surface": "metal",
+    "look": {
+     "spec": 0.6,
+     "specPower": 36,
+     "rim": 0.4
+    }
+   },
+   "Moss_none": {
+    "surface": "none",
+    "look": {
+     "rim": 0.3,
+     "wrap": 0.5
+    }
+   }
+  },
+  "notes": "Wind page trial: stone harp (octagonal pillars on plinths, capitals, finials, gabled yoke with a carved wind spiral, stone string bar, bronze pins and tuning keys per string, moss). The strings stay the game's own glowing meshes. Vertex colours on every LOD."
+ }
+}

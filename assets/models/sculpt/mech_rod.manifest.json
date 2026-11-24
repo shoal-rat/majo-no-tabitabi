@@ -1,0 +1,59 @@
+{
+ "sculpt_mech_rod": {
+  "file": "models/sculpt/mech_rod.glb",
+  "type": "model",
+  "license": "CC0 (original work)",
+  "author": "sculpted for this project",
+  "source": "tools/sculpt/assets/mech_rod.mjs (node, facet kit + three.js generators)",
+  "scale": 1,
+  "size": [
+   3.604,
+   10.47,
+   5.416
+  ],
+  "tris": 7704,
+  "lods": [
+   7704,
+   5270
+  ],
+  "materials": [
+   "Stone_stone",
+   "Iron_metal",
+   "Bronze_metal",
+   "Moss_none"
+  ],
+  "mats": {
+   "Stone_stone": {
+    "surface": "stone",
+    "look": {
+     "rim": 0.22,
+     "wrap": 0.3
+    }
+   },
+   "Iron_metal": {
+    "surface": "metal",
+    "look": {
+     "spec": 0.5,
+     "specPower": 40,
+     "rim": 0.35
+    }
+   },
+   "Bronze_metal": {
+    "surface": "metal",
+    "look": {
+     "spec": 0.6,
+     "specPower": 36,
+     "rim": 0.4
+    }
+   },
+   "Moss_none": {
+    "surface": "none",
+    "look": {
+     "rim": 0.3,
+     "wrap": 0.5
+    }
+   }
+  },
+  "notes": "Thunder page trial: lightning rod on a broken round tower of coursed ashlar (five courses, four parapet teeth), octagonal iron rod with collars, cross bar, crowned point and three stays, copper strap with rivets down the front into a round seal stone with a carved bolt. Vertex colours on every LOD."
+ }
+}

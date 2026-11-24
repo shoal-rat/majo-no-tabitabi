@@ -1,0 +1,46 @@
+{
+ "sculpt_stele_wind": {
+  "file": "models/sculpt/stele_wind.glb",
+  "type": "model",
+  "license": "CC0 (original work)",
+  "author": "sculpted for this project",
+  "source": "tools/sculpt/assets/stele_page.mjs (node, facet kit + three.js generators)",
+  "scale": 1,
+  "size": [
+   1.32,
+   2.519,
+   0.65
+  ],
+  "tris": 6007,
+  "lods": [
+   6007,
+   2691
+  ],
+  "materials": [
+   "Stone_stone",
+   "Moss_none",
+   "Glow_none"
+  ],
+  "mats": {
+   "Stone_stone": {
+    "surface": "stone",
+    "look": {
+     "rim": 0.22,
+     "wrap": 0.3
+    }
+   },
+   "Moss_none": {
+    "surface": "none",
+    "look": {
+     "rim": 0.3,
+     "wrap": 0.5
+    }
+   },
+   "Glow_none": {
+    "surface": "none",
+    "look": {}
+   }
+  },
+  "notes": "Page-trial marker stele (wind): tapering arched slab, capstone, worn foot stone, raised roundel with the element sigil (part Glow: the game's sigil glow), carved letters, lichen, moss. Vertex colours on every LOD, no textures; merged per material into the site (gameplay/wilds-pages.js)."
+ }
+}

@@ -1,0 +1,41 @@
+{
+ "sculpt_mech_lectern_ring": {
+  "file": "models/sculpt/mech_lectern_ring.glb",
+  "type": "model",
+  "license": "CC0 (original work)",
+  "author": "sculpted for this project",
+  "source": "tools/sculpt/assets/mech_lectern.mjs (node, facet kit + three.js generators)",
+  "scale": 1,
+  "size": [
+   5.24,
+   0.764,
+   5.157
+  ],
+  "tris": 2238,
+  "lods": [
+   2238,
+   986
+  ],
+  "materials": [
+   "Stone_stone",
+   "Moss_none"
+  ],
+  "mats": {
+   "Stone_stone": {
+    "surface": "stone",
+    "look": {
+     "rim": 0.22,
+     "wrap": 0.3
+    }
+   },
+   "Moss_none": {
+    "surface": "none",
+    "look": {
+     "rim": 0.3,
+     "wrap": 0.5
+    }
+   }
+  },
+  "notes": "Earth page trial: nine hewn kerb stones round the sunken lectern (dressed tops, worn shoulders, earth marks, moss). Vertex colours on every LOD."
+ }
+}

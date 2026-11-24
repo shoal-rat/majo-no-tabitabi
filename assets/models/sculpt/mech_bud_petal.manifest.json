@@ -1,0 +1,34 @@
+{
+ "sculpt_mech_bud_petal": {
+  "file": "models/sculpt/mech_bud_petal.glb",
+  "type": "model",
+  "license": "CC0 (original work)",
+  "author": "sculpted for this project",
+  "source": "tools/sculpt/assets/mech_bud.mjs (node, facet kit + three.js generators)",
+  "scale": 1,
+  "size": [
+   0.378,
+   1.214,
+   0.236
+  ],
+  "tris": 832,
+  "lods": [
+   832,
+   236
+  ],
+  "materials": [
+   "Bronze_metal"
+  ],
+  "mats": {
+   "Bronze_metal": {
+    "surface": "metal",
+    "look": {
+     "spec": 0.6,
+     "specPower": 36,
+     "rim": 0.4
+    }
+   }
+  },
+  "notes": "Water page trial: one bronze lily petal (cupped blade, raised midrib, flared tip; hinge at the origin): the game hinges five round the bud and opens them. Vertex colours on every LOD."
+ }
+}

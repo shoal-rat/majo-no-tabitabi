@@ -1,0 +1,42 @@
+{
+ "sculpt_mech_lectern": {
+  "file": "models/sculpt/mech_lectern.glb",
+  "type": "model",
+  "license": "CC0 (original work)",
+  "author": "sculpted for this project",
+  "source": "tools/sculpt/assets/mech_lectern.mjs (node, facet kit + three.js generators)",
+  "scale": 1,
+  "size": [
+   1.1,
+   1.627,
+   0.816
+  ],
+  "tris": 1048,
+  "lods": [
+   1048,
+   456
+  ],
+  "materials": [
+   "Stone_stone",
+   "Bronze_metal"
+  ],
+  "mats": {
+   "Stone_stone": {
+    "surface": "stone",
+    "look": {
+     "rim": 0.22,
+     "wrap": 0.3
+    }
+   },
+   "Bronze_metal": {
+    "surface": "metal",
+    "look": {
+     "spec": 0.6,
+     "specPower": 36,
+     "rim": 0.4
+    }
+   }
+  },
+  "notes": "Earth page trial: the rising stone lectern (foot, octagonal shaft, corbel, slanted desk with lip, closed stone book with bronze corners and clasps; soil stains on its buried half). Vertex colours on every LOD."
+ }
+}

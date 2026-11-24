@@ -1,0 +1,34 @@
+{
+ "sculpt_mech_bud_stem": {
+  "file": "models/sculpt/mech_bud_stem.glb",
+  "type": "model",
+  "license": "CC0 (original work)",
+  "author": "sculpted for this project",
+  "source": "tools/sculpt/assets/mech_bud.mjs (node, facet kit + three.js generators)",
+  "scale": 1,
+  "size": [
+   0.538,
+   1.195,
+   0.522
+  ],
+  "tris": 1216,
+  "lods": [
+   1216,
+   496
+  ],
+  "materials": [
+   "Bronze_metal"
+  ],
+  "mats": {
+   "Bronze_metal": {
+    "surface": "metal",
+    "look": {
+     "spec": 0.6,
+     "specPower": 36,
+     "rim": 0.4
+    }
+   }
+  },
+  "notes": "Water page trial: bronze stem of the lily bud (flared foot, node collar, five sepals), green-gold patina. Vertex colours on every LOD."
+ }
+}

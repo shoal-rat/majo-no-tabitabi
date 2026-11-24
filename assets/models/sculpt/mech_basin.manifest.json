@@ -1,0 +1,41 @@
+{
+ "sculpt_mech_basin": {
+  "file": "models/sculpt/mech_basin.glb",
+  "type": "model",
+  "license": "CC0 (original work)",
+  "author": "sculpted for this project",
+  "source": "tools/sculpt/assets/mech_bud.mjs (node, facet kit + three.js generators)",
+  "scale": 1,
+  "size": [
+   5.975,
+   1.044,
+   6.113
+  ],
+  "tris": 1284,
+  "lods": [
+   1284,
+   844
+  ],
+  "materials": [
+   "Stone_stone",
+   "Moss_none"
+  ],
+  "mats": {
+   "Stone_stone": {
+    "surface": "stone",
+    "look": {
+     "rim": 0.22,
+     "wrap": 0.3
+    }
+   },
+   "Moss_none": {
+    "surface": "none",
+    "look": {
+     "rim": 0.3,
+     "wrap": 0.5
+    }
+   }
+  },
+  "notes": "Water page trial: basin of fourteen fitted kerb blocks round the lily bud (dressed worn tops, moss on the north blocks) with a dry cracked mud floor. Vertex colours on every LOD."
+ }
+}

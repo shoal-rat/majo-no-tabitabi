@@ -1,0 +1,41 @@
+{
+ "sculpt_mech_spring": {
+  "file": "models/sculpt/mech_spring.glb",
+  "type": "model",
+  "license": "CC0 (original work)",
+  "author": "sculpted for this project",
+  "source": "tools/sculpt/assets/mech_spring.mjs (node, facet kit + three.js generators)",
+  "scale": 1,
+  "size": [
+   5.525,
+   4.846,
+   5.397
+  ],
+  "tris": 3553,
+  "lods": [
+   3553,
+   2027
+  ],
+  "materials": [
+   "Stone_stone",
+   "Moss_none"
+  ],
+  "mats": {
+   "Stone_stone": {
+    "surface": "stone",
+    "look": {
+     "rim": 0.22,
+     "wrap": 0.3
+    }
+   },
+   "Moss_none": {
+    "surface": "none",
+    "look": {
+     "rim": 0.3,
+     "wrap": 0.5
+    }
+   }
+  },
+  "notes": "Ice page trial: crag of bedded rock blocks with moss, a dressed spout stone with a channel and lip (the game's falling sheet starts at its lip), a carved ice star, a basin of ten curved blocks with a worn rim. Vertex colours on every LOD."
+ }
+}
