@@ -36,13 +36,11 @@ const RANK = { seen: 1, open: 2, won: 3, read: 4 };
 // strings, flames, water, petals' hinges); a piece named Glow_* takes the site's glow material. bakeStatic drops vertex
 // colours, so the carved meshes are merged per material by mergeCarved() and kept out of it. ?sculpt=0 (or a list without
 // 'figures', or a missing GLB) builds the first round's primitives.
-const CARVED_MAT = {
-  stone: toon(0xffffff, { surface: 'stone', look: { detail: 0.35, bump: 0.4 } }),
-  moss: toon(0xffffff, { surface: 'none', look: { rim: 0.3, wrap: 0.5 } }),
-  metal: toon(0xffffff, { surface: 'metal', look: { spec: 0.5, specPower: 40, rim: 0.35 } }),
-  wax: toon(0xffffff, { surface: 'none', look: { wrap: 0.6, rim: 0.3 } }),
-};
-const carvedMat = (name) => sculptVcMat(/^Moss/.test(name) ? CARVED_MAT.moss : /^(Iron|Bronze)/.test(name) ? CARVED_MAT.metal : /^Wax/.test(name) ? CARVED_MAT.wax : CARVED_MAT.stone);
+// one material family for every carved piece (the moss, iron, bronze and wax are told apart by their vertex colours): the
+// same toon parameters as the landmarks' carved stone (builders/landmarks.js CARVED), so toon()'s cache hands back that
+// material and no new shader program is compiled for the sites
+const CARVED_MAT = toon(0xffffff, { surface: 'stone', look: { detail: 0.45, bump: 0.5 } });
+const carvedMat = () => sculptVcMat(CARVED_MAT);
 const carvedLod = () => (G.quality?.mobile || G.quality?.name === 'low' ? 1 : 0);
 /** add sculpt `id` to `parent` (local position `at`, rotation [rx, ry, rz]); Glow_* pieces get `glow`. false when off / missing. */
 function carve(parent, id, { at = [0, 0, 0], rot = [0, 0, 0], glow = null } = {}) {
