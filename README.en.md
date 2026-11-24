@@ -10,6 +10,18 @@ A free, third-person fan game of the first two episodes of the anime *Wandering 
 
 This is an unofficial, non-profit project made by a fan. It has no connection with the rights holders of the original work.
 
+## What's new in 2.0
+
+- **An original score**: 13 new tracks built on two themes, with seamless loops; fights, bosses and duels add a hotter layer as more foes join.
+- **A travel-journal interface**: entry stamps, diary-style narration, a passport map of the places you've been and crest gauges, with data structures ready for twelve episodes.
+- **Tougher, better-looking fights**: foes wind up before they strike, timed dodges and guards open them to a counter, broken posture staggers them, and a nearly beaten foe rallies. Named elites, page guardians and Fran's replay fight in phases and take a skilled player a few minutes.
+- **Learn to fight by fighting**: Fran's first spar is the combat tutorial; beam clashes, parries and charged-form combos are taught at the first page trial; Elaina's journal teaches everything else the first time you need it.
+- **Spell tiers**: you start with small forms only and earn each charged form at one of six page trials in the wilds by solving its seal and beating its guardian.
+- **Climbing and swimming**: cliffs, rock faces and house walls are climbable and water is swimmable, all on one stamina ring shared with sprinting and gliding.
+- **Star thread and back-light**: fell trees with magic, lift logs on the star thread, turn them, tie them into rafts and rig a sail; the back-light rewinds damage, so felled trees stand up, broken stone closes and scorched ground turns green.
+- **A hand-sculpted world**: the City of Magic's roofs, windows, gate, market, cathedral and five house types, with chimney smoke, laundry lines, cats and pigeons; the hometown houses, countryside stone and windmills, landmarks, trial grounds, foes and townsfolk are all re-sculpted.
+- **Broom wakes**: low flight lays a recovering swath through the meadow, lifts petals and grass and throws up spray on the lake; the gold light shows only while boosting. Cruise is 15 m/s and boost 26 m/s, and dives trade height for speed.
+
 ## The two episodes
 
 - **Episode 1 · The Apprentice Witch Elaina.** From home to Fran's cottage in the forest, wind magic in the clearing, and Fran's trial: watch her wand tip and raise your guard as the bolt arrives to send it back. Then the naming, the brooch, and goodbye to your mother.
@@ -25,7 +37,7 @@ Fran's meteor, the lake it leaves behind and the eclipse over the water on the w
 
 ![Fran's wand grows a magic circle and a stardust bolt flies in; Elaina raises her guard just as it arrives, a hexagonal ward and a starburst flare, and the bolt flies back at Fran.](docs/images/fran-duel.gif)
 
-Casts draw layered magic circles at the wand and under your feet, a guard raised at the last moment flares into a starburst and reflects the spell, and the decisive beats slow down for a moment. Fran's trial has three movements and can be replayed after the story. The east grassland is gentle; the western wilds and the high pass have camps, five named elites and riders who attack from the air. Wolves, mud blobs, stone guardians, ember snakes, frost stags and rogue mages each need a different answer: an elemental ward breaks only to the element that counters it, posture gauges can be broken, and each attack leaves an opening to punish.
+Casts draw layered magic circles at the wand and under your feet, a guard raised at the last moment flares into a starburst and reflects the spell, and the decisive beats slow down for a moment. Fran's first spar doubles as the combat tutorial; replaying it after the story adds a harder fourth movement. The east grassland is gentle; the western wilds and the high pass have camps, five named elites and riders who attack from the air. Wolves, mud blobs, stone guardians, ember snakes, frost stags and rogue mages each need a different answer: an elemental ward breaks only to the element that counters it, posture gauges can be broken, and each attack leaves an opening to punish.
 
 ### Combine the elements
 
@@ -90,6 +102,10 @@ Hold the phone or tablet sideways. The left half of the screen is a move stick, 
 | Lock on | middle mouse button or T |
 | Eat bread | X |
 | Journal, map, spell book, pause | J, M, B, Esc |
+| Climb | walk into a rock face or wall to grab it; Space to leap up, C to let go |
+| Swim | Shift for a fast stroke, Q for a big pull; F calls the broom out of the water |
+| Star thread (once learned) | Z draws the thread, left button catches or sets down; set a log against another to tie a star knot, right button unties |
+| Back-light (once learned) | G lights it; aim at something broken and press the left button |
 
 ## Run it locally
 
