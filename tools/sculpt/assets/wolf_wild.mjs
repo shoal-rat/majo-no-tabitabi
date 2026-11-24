@@ -10,14 +10,16 @@
 // After every build:  node tools/sculpt/assets/beast_kit.mjs post wolf_wild   (weld weights, glow uv for the eyes)
 import { buildWolf, rotHead, lockParam } from './wolf_lib.mjs';
 import * as P from '../sdf.mjs';
+// KIT_LO=1 builds the low / mobile body (same form, fewer triangles; creature.js picks it by tier).
+const LO = !!process.env.KIT_LO;
 
 export default {
-  name: 'wolf_wild',
-  id: 'sculpt_wolf_wild',
+  name: LO ? 'wolf_wild_lo' : 'wolf_wild',
+  id: LO ? 'sculpt_wolf_wild_lo' : 'sculpt_wolf_wild',
   rig: { file: 'assets/models/refined/ani_wolf.glb' },
   rigCredit: 'Quaternius, CC0 (skeleton + clips)',
-  voxel: 0.0036,
-  lods: [5600],
+  voxel: LO ? 0.0042 : 0.0036,
+  lods: [LO ? 2600 : 5600],
   ground: 0,
   aoRange: 0.07,
   aoStrength: 0.4,

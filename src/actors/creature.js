@@ -414,56 +414,63 @@ function mudGeometry(crust) {
   return w;
 }
 function smooth01(x) { const t = clamp(x, 0, 1); return t * t * (3 - 2 * t); }
+// one vertex-coloured geometry from [geometry, matrix, colour] pieces (position, normal, color; uv dropped)
+function paintedMerge(pieces) {
+  const out = pieces.map(([geo, m, hex]) => {
+    const g = (geo.index ? geo.toNonIndexed() : geo.clone()).applyMatrix4(m);
+    g.deleteAttribute('uv');
+    const c = new THREE.Color(hex), n = g.attributes.position.count, col = new Float32Array(n * 3);
+    for (let i = 0; i < n; i++) { col[i * 3] = c.r; col[i * 3 + 1] = c.g; col[i * 3 + 2] = c.b; }
+    g.setAttribute('color', new THREE.BufferAttribute(col, 3));
+    return g;
+  });
+  return BGU.mergeGeometries(out, false);
+}
+const _mm = (x, y, z, sx, sy, sz, rx = 0, ry = 0, rz = 0) => new THREE.Matrix4().compose(new THREE.Vector3(x, y, z), new THREE.Quaternion().setFromEuler(new THREE.Euler(rx, ry, rz)), new THREE.Vector3(sx, sy, sz));
 export function makeMudSpirit() {
   if (!_mudGeo) {
     _mudGeo = mudGeometry(false); _crustGeo = mudGeometry(true);
     _mudMats = {
       body: toon(0xffffff, { vertexColors: true, emissive: 0x1a1006 }),
       crust: toon(0xffffff, { vertexColors: true, emissive: 0x3a2610 }),
-      pond: toon(0x3d6f6a, { emissive: 0x0e2422 }),
-      reed: toon(0x7d8f3c), pad: toon(0x5f8a3a),
+      parts: toon(0xffffff, { vertexColors: true }),
+      eye: toon(0xffffff, { vertexColors: true, emissive: 0x262018 }),
       heart: glow(0xffb347, 2.4),
-      white: toon(0xfff4dc, { emissive: 0x3a3020 }), pupil: toon(0x1a120c), glint: glow(0xffffff, 1.4), mouth: toon(0x2a1810),
     };
-    // reeds: five tapered blades and two cattail heads standing in the pond
-    const parts = [], rng = (i) => ((Math.sin(i * 77.3) * 43758.5) % 1 + 1) % 1;
+    // reeds: five tapered blades and two cattail heads standing in the pond; the pond, a lily pad and the smile — one draw
+    const sph = new THREE.SphereGeometry(1, 16, 12), disc = new THREE.CircleGeometry(1, 20), rng = (i) => ((Math.sin(i * 77.3) * 43758.5) % 1 + 1) % 1;
+    const P = [];
     for (let i = 0; i < 5; i++) {
       const h = 0.3 + rng(i) * 0.22, r = new THREE.ConeGeometry(0.02, h, 4);
       r.translate(0, h / 2, 0); r.rotateZ((rng(i + 9) - 0.5) * 0.6); r.rotateX((rng(i + 19) - 0.5) * 0.5 - 0.15);
-      r.translate((rng(i + 29) - 0.5) * 0.2, 0.77, (rng(i + 39) - 0.5) * 0.14 - 0.08);
-      parts.push(r.toNonIndexed());
+      P.push([r, _mm((rng(i + 29) - 0.5) * 0.2, 0.77, (rng(i + 39) - 0.5) * 0.14 - 0.08, 1, 1, 1), 0x7d8f3c]);
     }
     for (const [x, z, h] of [[0.05, -0.1, 0.42], [-0.07, -0.05, 0.36]]) {
-      const st = new THREE.CylinderGeometry(0.008, 0.01, h, 4); st.translate(x, 0.77 + h / 2, z); parts.push(st.toNonIndexed());
-      const hd = new THREE.CapsuleGeometry(0.022, 0.08, 2, 6); hd.translate(x, 0.77 + h + 0.02, z); parts.push(hd.toNonIndexed());
+      P.push([new THREE.CylinderGeometry(0.008, 0.01, h, 4), _mm(x, 0.77 + h / 2, z, 1, 1, 1), 0x7d8f3c]);
+      P.push([new THREE.CapsuleGeometry(0.022, 0.08, 2, 6), _mm(x, 0.77 + h + 0.02, z, 1, 1, 1), 0x6a4a2a]);
     }
-    _reedGeo = BGU.mergeGeometries(parts.map((p) => { p.deleteAttribute('uv'); return p; }), false);
-    _eyeParts = { white: new THREE.SphereGeometry(1, 16, 12), disc: new THREE.CircleGeometry(1, 20) };
+    P.push([disc, _mm(0, 0.79, 0, 0.19, 0.19, 1, -Math.PI / 2), 0x3d6f6a]);
+    P.push([disc, _mm(0.07, 0.795, 0.06, 0.07, 0.06, 1, -Math.PI / 2), 0x5f8a3a]);
+    P.push([new THREE.TorusGeometry(0.04, 0.009, 6, 14, Math.PI), _mm(0, 0.37, 0.488, 1, 1, 1, -0.25, 0, Math.PI), 0x2a1810]);
+    _reedGeo = paintedMerge(P);
+    // an eye: an almond of white, a big dark pupil, a catch-light (one mesh; the group scale blinks it)
+    _eyeParts = {
+      L: paintedMerge([[sph, _mm(0, 0, 0, 0.085, 0.1, 0.035), 0xfff4dc], [sph, _mm(-0.006, -0.008, 0.012, 0.058, 0.074, 0.03), 0x1a120c], [sph, _mm(0.018, 0.03, 0.036, 0.02, 0.02, 0.012), 0xffffff]]),
+      R: paintedMerge([[sph, _mm(0, 0, 0, 0.085, 0.1, 0.035), 0xfff4dc], [sph, _mm(0.006, -0.008, 0.012, 0.058, 0.074, 0.03), 0x1a120c], [sph, _mm(-0.018, 0.03, 0.036, 0.02, 0.02, 0.012), 0xffffff]]),
+      heart: sph,
+    };
   }
   const g = new THREE.Group();
   const body = new THREE.Mesh(_mudGeo, _mudMats.body); body.name = 'MudBody';
   const crust = new THREE.Mesh(_crustGeo, _mudMats.crust); crust.name = 'MudCrust'; crust.visible = false;
-  const pond = new THREE.Mesh(_eyeParts.disc, _mudMats.pond); pond.name = 'MudPond';
-  pond.rotation.x = -Math.PI / 2; pond.position.y = 0.79; pond.scale.setScalar(0.19);
-  const pad = new THREE.Mesh(_eyeParts.disc, _mudMats.pad); pad.rotation.x = -Math.PI / 2; pad.position.set(0.07, 0.795, 0.06); pad.scale.set(0.07, 0.06, 1); pad.name = 'MudPad';
-  const heart = new THREE.Mesh(_eyeParts.white, _mudMats.heart); heart.name = 'Core'; heart.position.set(-0.03, 0.8, 0.05); heart.scale.set(0.045, 0.035, 0.045);
-  const reeds = new THREE.Mesh(_reedGeo, _mudMats.reed); reeds.name = 'MudReeds';
-  g.add(body, crust, pond, pad, heart, reeds);
-  // eyes: an almond of white set into the face, a big dark pupil, a catch-light; they blink (group named 'Eye')
+  const heart = new THREE.Mesh(_eyeParts.heart, _mudMats.heart); heart.name = 'Core'; heart.position.set(-0.03, 0.8, 0.05); heart.scale.set(0.045, 0.035, 0.045);
+  const parts = new THREE.Mesh(_reedGeo, _mudMats.parts); parts.name = 'MudReeds';
+  g.add(body, crust, heart, parts);
   for (const s of [-1, 1]) {
-    const eye = new THREE.Group(); eye.name = 'Eye';
-    const w = new THREE.Mesh(_eyeParts.white, _mudMats.white); w.scale.set(0.085, 0.1, 0.035);
-    const p = new THREE.Mesh(_eyeParts.white, _mudMats.pupil); p.scale.set(0.058, 0.074, 0.03); p.position.set(0.006 * s, -0.008, 0.012);
-    const gl = new THREE.Mesh(_eyeParts.white, _mudMats.glint); gl.scale.set(0.02, 0.02, 0.012); gl.position.set(-0.018 * s, 0.03, 0.036);
-    eye.add(w, p, gl);
+    const eye = new THREE.Mesh(s < 0 ? _eyeParts.L : _eyeParts.R, _mudMats.eye); eye.name = 'Eye';
     eye.position.set(0.135 * s, 0.47, 0.43); eye.rotation.set(-0.12, 0.3 * s, 0);
     g.add(eye);
   }
-  // a small smile (half a torus, open upward), pressed into the face
-  if (!_eyeParts.smile) _eyeParts.smile = new THREE.TorusGeometry(0.04, 0.009, 6, 14, Math.PI);
-  const mouth = new THREE.Mesh(_eyeParts.smile, _mudMats.mouth); mouth.name = 'MudMouth';
-  mouth.position.set(0, 0.37, 0.488); mouth.rotation.set(-0.25, 0, Math.PI);
-  g.add(mouth);
   g.userData.crust = crust;
   g.userData.creature = { motion: 'jelly', style: 'slime', outline: false, h: 0.83, r: 0.6 };
   return g;
@@ -670,6 +677,16 @@ const KIT_OWN = {
   sculpt_embersnake: { type: 'creatures', old: 'mon_serpent', glow: 0xff6a1a, eyes: { bone: 'Mouth', cx: -0.025, at: [0.345, 2.82, 0.53], r: [0.085, 0.078, 0.04], yaw: 70, iris: 0xf2b42a, slit: true } },
 };
 const kitOn = (type) => !!G.sculpt?.on?.(type);
+// low / mobile bodies (the same sculpt at about a third of the triangles, KIT_LO=1 builds): the tier picks one, the other
+// is the fallback when only it is loaded (src/core/assets.js loads the tier's own)
+const KIT_LO = { sculpt_froststag: 'sculpt_froststag_lo', sculpt_embersnake: 'sculpt_embersnake_lo', sculpt_wolf_wild: 'sculpt_wolf_wild_lo', sculpt_bat_star: 'sculpt_bat_star_lo' };
+const kitLoTier = () => !!G.quality?.mobile || G.quality?.name === 'low';
+function kitPick(id) {
+  const lo = KIT_LO[id], ready = (x) => !!G.assets?.ready?.(x);
+  if (!lo) return ready(id) ? id : null;
+  const [a, b] = kitLoTier() ? [lo, id] : [id, lo];
+  return ready(a) ? a : ready(b) ? b : null;
+}
 const _kb = new THREE.Matrix4(), _ki = new THREE.Matrix4();
 /** The bind frame of a kit body: model space of the sculpt (bind pose) -> the skinned mesh's own space. Voted over the
  *  joints at rest (a few joints' rest differs from their bind), cached per skeleton source. Child of bone b with
@@ -1259,18 +1276,20 @@ export function createCreature(assetId, opts = {}) {
   // a body from the sculpt kit (G.sculpt type, e.g. 'hen' -> sculpt_ani_chicken: same skeleton + clips, its own smooth
   // vertex-coloured body) replaces the asset-pack mesh, and applySculpt must not re-subdivide it / read its colours as AO
   const kit = !opts.primitive && !old && KIT_BODY[assetId];
-  const kitId = kit && kitOn(kit[0]) && G.assets?.ready?.(kit[1]) ? kit[1] : null;
+  const kitId = kit && kitOn(kit[0]) ? kitPick(kit[1]) : null;
   const own = !opts.primitive && KIT_OWN[assetId];
+  const ownId = own && !old && kitOn(own.type) ? kitPick(assetId) : null;
   if (own) {
-    if (!old && kitOn(own.type) && G.assets?.ready?.(assetId)) opts = Object.assign({}, opts, { tint: null });
+    if (ownId) opts = Object.assign({}, opts, { tint: null });
     else assetId = own.old;
   }
-  const ownKit = own && assetId !== own.old;
-  let model = (typeof opts.primitive === 'function' ? opts.primitive() : opts.primitive) || (assetId ? G.assets?.model(kitId || assetId) : null);
+  const ownKit = !!ownId;
+  const srcId = kitId || ownId || assetId;   // the asset whose model (and clips) is used
+  let model = (typeof opts.primitive === 'function' ? opts.primitive() : opts.primitive) || (assetId ? G.assets?.model(srcId) : null);
   const missing = !model;
   if (!model) model = placeholder();
   else if (!opts.primitive && !old && !kitId && !ownKit) applySculpt(assetId, model);
-  if (!missing && kitId && KIT_GLOW[kitId] != null && !opts.tint) kitGlow(model, KIT_GLOW[kitId]);
+  if (!missing && kitId && KIT_GLOW[kit[1]] != null && !opts.tint) kitGlow(model, KIT_GLOW[kit[1]]);
   if (!missing && (kitId || ownKit)) {
     if (ownKit && own.style) model.userData.creature = Object.assign({}, model.userData.creature, { style: own.style });
     if (ownKit && (own.glow != null || own.lift != null)) kitGlow(model, own.glow, own.lift);
@@ -1306,7 +1325,7 @@ export function createCreature(assetId, opts = {}) {
   const height = Math.max(0.2, box.max.y - box.min.y);
   const length = Math.max(box.max.z - box.min.z, box.max.x - box.min.x);
 
-  const clips = missing ? [] : (model.userData.clips || G.assets?.clips(assetId) || []);
+  const clips = missing ? [] : (model.userData.clips || G.assets?.clips(srcId) || []);
   const mixer = clips.length ? new THREE.AnimationMixer(model) : null;
   const table = Object.assign({}, clipUse(assetId), opts.clips || {});
   const actions = new Map();

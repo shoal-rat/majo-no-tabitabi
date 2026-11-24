@@ -6,6 +6,8 @@
 // After every build:  node tools/sculpt/assets/beast_kit.mjs post bat_star   (drops the pack eye node, welds, glow uv)
 import shadeBat from './shade_bat.mjs';
 import * as P from '../sdf.mjs';
+// KIT_LO=1 builds the low / mobile body (same form, fewer triangles; creature.js picks it by tier).
+const LO = !!process.env.KIT_LO;
 
 const RAMP = {
   fur: ['#2f231d', '#6f523f', '#b39274'], ruff: ['#a8936e', '#e6d8b8', '#fbf4e2'], abdomen: ['#3a2c24', '#7d6450', '#c2a988'],
@@ -36,8 +38,9 @@ export function star(x, y, z) {
 
 export default {
   ...shadeBat,
-  name: 'bat_star',
-  id: 'sculpt_bat_star',
+  name: LO ? 'bat_star_lo' : 'bat_star',
+  id: LO ? 'sculpt_bat_star_lo' : 'sculpt_bat_star',
+  lods: [LO ? 3200 : 9000],
   dropNodes: ['Eyes'],
   glowColor: [1.0, 0.78, 0.35],
   headView: [[-0.0215, 0.82, 0.33], 0.75],

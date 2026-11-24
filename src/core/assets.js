@@ -80,8 +80,13 @@ export const SCULPT_TYPES = {
   // foes and wildlife sculpted on the pack skeletons (round art-creatures, tools/sculpt/assets/{stag_frost,…}.mjs +
   // beast_kit.mjs post), swapped in by actors/creature.js KIT_OWN / KIT_BODY; off -> the pack bodies as before. Their
   // COLOR_0 is the kit's skinned output (like the hen's): lifted once at load by fixSculptColours
-  creatures: ['sculpt_froststag', 'sculpt_embersnake', 'sculpt_wolf_wild', 'sculpt_bat_star'],
+  creatures: ['sculpt_froststag', 'sculpt_embersnake', 'sculpt_wolf_wild', 'sculpt_bat_star',
+    'sculpt_froststag_lo', 'sculpt_embersnake_lo', 'sculpt_wolf_wild_lo', 'sculpt_bat_star_lo'],
 };
+// sculpts built twice (full body / *_lo at about a third of the triangles): each tier loads only its own; the creature
+// code falls back to the other if the tier changes later (actors/creature.js kitPick)
+const SCULPT_LO = new Set(['sculpt_froststag_lo', 'sculpt_embersnake_lo', 'sculpt_wolf_wild_lo', 'sculpt_bat_star_lo']);
+const SCULPT_HI = new Set([...SCULPT_LO].map((id) => id.slice(0, -3)));
 export const SCULPT_DEFAULT = ['stone_lantern', 'komainu', 'kitsune', 'great_lantern', 'rockfam', 'drywall', 'mill', 'landmarks', 'pot', 'barrel', 'bucket', 'pumpkin',
   'jar', 'cart', 'hen', 'gohei', 'broom', 'hip_lantern', 'earth_column', 'creatures'];
 // sculpt GLBs whose COLOR_0 was rewritten by the asset's own post step (dango.mjs post, gohei.mjs / hip_lantern.mjs --split /
@@ -352,8 +357,10 @@ export function createAssets(G) {
       await manifestP;
       if (opts.manifestOnly) return;
       // sculpted objects whose type is switched off are not loaded at all (?sculpt=0 boots exactly as before)
+      const loTier = !!G.quality?.mobile || G.quality?.name === 'low';
       const ids = Object.keys(manifest).filter((id) => manifest[id].type === 'model' && manifest[id].preload !== false
-        && (!G.sculpt.typeOf(id) || G.sculpt.on(G.sculpt.typeOf(id))));
+        && (!G.sculpt.typeOf(id) || G.sculpt.on(G.sculpt.typeOf(id)))
+        && !(loTier ? SCULPT_HI.has(id) : SCULPT_LO.has(id)));
       let done = 0;
       await Promise.all(ids.map((id) => api.load(id).then(() => progress?.(++done / ids.length))));
       progress?.(1);

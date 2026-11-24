@@ -12,6 +12,8 @@
 //  must not look like: the pack's green cartoon tube; a dragon; a worm; noise everywhere.
 // After every build:  node tools/sculpt/assets/beast_kit.mjs post snake_ember   (weld weights, glow uv)
 import { lock, V } from './beast_kit.mjs';
+// KIT_LO=1 builds the low / mobile body (same form, fewer triangles; creature.js picks it by tier).
+const LO = !!process.env.KIT_LO;
 
 const CX = -0.025;
 // centre line from the tail tip to the head (x = 0), read from slices of the pack body
@@ -30,12 +32,12 @@ const near = (x, y, z) => { let best = SAMP[0], bd = 1e9; for (const s of SAMP) 
 const NSEG = 24;
 
 export default {
-  name: 'snake_ember',
-  id: 'sculpt_embersnake',
+  name: LO ? 'snake_ember_lo' : 'snake_ember',
+  id: LO ? 'sculpt_embersnake_lo' : 'sculpt_embersnake',
   rig: { file: 'assets/models/creatures/mon_serpent.glb' },
   rigCredit: 'Quaternius, CC0 (skeleton + clips)',
-  voxel: 0.0062,
-  lods: [14000],
+  voxel: LO ? 0.008 : 0.0062,
+  lods: [LO ? 4500 : 14000],
   ground: 0,
   aoRange: 0.1,
   aoStrength: 0.4,

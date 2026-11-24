@@ -13,14 +13,16 @@
 //  must not look like: the pack's brown doe, a horse, a goat; a grey blob; noise everywhere.
 // After every build:  node tools/sculpt/assets/beast_kit.mjs post stag_frost   (weld weights, colours linear once, glow uv)
 import { lock, V } from './beast_kit.mjs';
+// KIT_LO=1 builds the low / mobile body (same form, fewer triangles; creature.js picks it by tier).
+const LO = !!process.env.KIT_LO;
 
 export default {
-  name: 'stag_frost',
-  id: 'sculpt_froststag',
+  name: LO ? 'stag_frost_lo' : 'stag_frost',
+  id: LO ? 'sculpt_froststag_lo' : 'sculpt_froststag',
   rig: { file: 'assets/models/refined/ani_stag.glb' },
   rigCredit: 'Quaternius, CC0 (skeleton + clips)',
-  voxel: 0.0045,
-  lods: [12000],
+  voxel: LO ? 0.006 : 0.0045,
+  lods: [LO ? 4000 : 12000],
   ground: 0,
   aoRange: 0.09,
   aoStrength: 0.4,
