@@ -66,7 +66,8 @@ export const SCULPT_TYPES = {
     'sculpt_lm_cairn', 'sculpt_lm_well_a', 'sculpt_lm_well_b', 'sculpt_lm_bench', 'sculpt_lm_hive_skep', 'sculpt_lm_hive_box'],
   // ground set pieces (round art-ground, tools/sculpt/assets/ground_rocks.mjs, facet kit): granite tor blocks, the quarry's
   // cut blocks with drill marks and its spoil heaps, baked into the landmark rock set pieces (world/landforms/setpieces.js)
-  ground: ['sculpt_ground_tor_a', 'sculpt_ground_tor_b', 'sculpt_ground_quarry', 'sculpt_ground_spoil'],
+  ground: ['sculpt_ground_tor_a', 'sculpt_ground_tor_b', 'sculpt_ground_quarry', 'sculpt_ground_spoil', 'sculpt_ground_quarry_face_a',
+    'sculpt_ground_quarry_face_b', 'sculpt_ground_quarry_half'],
   // retired by rockfam (no user left; kept for reference, never loaded by default): the distance-field rocks of 2026-11-17
   rocks: ['sculpt_rock_slab', 'sculpt_rock_outcrop', 'sculpt_rock_standing', 'sculpt_rock_rubble'],
   boulders: ['sculpt_rock_boulder_a', 'sculpt_rock_boulder_b'],

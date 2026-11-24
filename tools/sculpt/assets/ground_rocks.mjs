@@ -13,11 +13,14 @@
 //                    split by a row of plug-and-feather drill marks (narrow V joints), rough split back and flanks, a
 //                    stepped bed at the top behind the marks, lichen on the old faces
 //   ground_spoil     a quarry spoil heap: angular chips and flakes of the cut stone in a low mound, a few big ones on top
+//   ground_quarry_face_a / _b   the old quarry face: unequal beds each set back from the one below, weathered rounded
+//                    tops, chipped arrises, a joint through the upper beds, soil and grass on top
+//   ground_quarry_half  a block half won from the face: fresh sawn block with drill marks, still joined at its back
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
-  ROOT, prng, plane, planeD, norm, add, mul, ss, bevelPiece, emitPiece, mossCap, stonePaint, hullPlanes, insetPlanes,
-  FLOOR, Mesh, xform, writeGLB, writeFragment, previewSheet,
+  ROOT, prng, fbm, plane, planeD, norm, add, mul, ss, hex, bevelPiece, emitPiece, mossCap, stonePaint, hullPlanes, insetPlanes,
+  FLOOR, Mesh, writeGLB, writeFragment, previewSheet,
 } from './rock_facet.mjs';
 
 export const PARTS = {
@@ -127,6 +130,41 @@ const SHAPES = {
     void rnd;
     return mesh;
   },
+  // the old quarry face: bedded rock cut long ago — unequal beds, each cut face set back a little from the one below,
+  // weathered rounded tops, chipped arrises, a joint through the upper beds, soil and grass on top
+  quarry_face_a(lod) { return faceRock(lod, { seed: 101, beds: [0, 0.34, 0.58, 1.0], steps: [0, 0.035, 0.09], W: 1.0, D: 0.9, joint: 0.12, chips: [1, -1, 1] }); },
+  quarry_face_b(lod) { return faceRock(lod, { seed: 131, beds: [0, 0.46, 0.66, 0.82, 1.0], steps: [0, 0.05, 0.03, 0.11], W: 1.0, D: 0.85, joint: -0.18, chips: [-1, 1, -1, 1] }); },
+  // a block half won from the face: a fresh sawn block on its bed, cut free at the front and sides, still joined to the
+  // rock behind by its back (a narrow channel), the drill marks along its top arris
+  quarry_half(lod) {
+    const mesh = new Mesh(), all = [], H = 1.0;
+    const W = widths(lod, H, { crown: 0.05, edge: 0.022, crack: 0.004, crownY: 0.8 });
+    const old = stonePaint({ H, seed: 141, warm: 0.5, base: 0.6 }), fresh = stonePaint({ H, seed: 143, warm: 0.3, base: 0.72 });
+    const rough = (x0, x1, z0, z1, y0, y1, extra = []) => [plane([-1, 0.04, 0.08], [x0, 0, 0]), plane([1, 0.05, -0.06], [x1, 0, 0]), plane([0.05, 0.03, -1], [0, 0, z0]),
+      plane([0, 0.02, 1], [0, 0, z1]), planeD([0, -1, 0], -y0, y0 > 0 ? 'bed' : 'floor'), plane([0.04, 1, -0.05], [0, y1, 0]), ...extra];
+    const base = bevelPiece(rough(-0.5, 0.5, -0.45, 0.46, 0, 0.32), W, opts(lod));
+    emitPiece(mesh, base, old); all.push(base.planes);
+    const rear = bevelPiece(rough(-0.5, 0.5, -0.45, -0.14, 0.326, 1.0, [plane([0, 0.6, 1], [0, 0.95, -0.12])]), widths(lod, H, { crown: 0.08, edge: 0.03, crownY: 0.7 }), opts(lod));
+    emitPiece(mesh, rear, old); all.push(rear.planes);
+    // the block: sawn front and flanks, its bed 4 mm above the base, the channel behind it
+    const bx = 0.37, front = 0.4, top = 0.86, band = 0.2, deep = 0.06;
+    const env = [plane([0, -0.03, 1], [0, 0.5, front], 'face'), plane([-1, 0, 0], [-bx, 0, 0]), plane([1, 0, 0], [bx, 0, 0]), planeD([0, 0, -1], 0.1, 'crack')];
+    const paintB = (c) => { const v = fresh(c); return c.kind === 'crack' ? v.map((x) => x * 0.75) : v; };
+    const body = bevelPiece([...env, planeD([0, -1, 0], -0.324, 'bed'), planeD([0, 1, 0], top - band, 'bed')], W, opts(lod));
+    emitPiece(mesh, body, paintB); all.push(body.planes);
+    const rearBand = bevelPiece([...env, plane([0, 1, 0], [0, top, 0]), planeD([0, -1, 0], -(top - band) - 0.004, 'bed'), planeD([0, 0, 1], front - deep, 'crack')], W, opts(lod));
+    emitPiece(mesh, rearBand, paintB); all.push(rearBand.planes);
+    const n = lod === 2 ? 3 : 5, k = 0.14, zb = front - deep, L = Math.hypot(1, k);
+    for (let i = 0; i < n; i++) {
+      const a = -bx + 0.01 + (2 * bx - 0.02) * (i / n), b = -bx + 0.01 + (2 * bx - 0.02) * ((i + 1) / n), g = 0.004;
+      const pl = [...env, plane([0, 1, 0], [0, top, 0]), planeD([0, -1, 0], -(top - band) - 0.004, 'bed'), planeD([0, 0, -1], -(front - deep) - 0.004, 'crack')];
+      if (i > 0) pl.push(planeD([-1, 0, k], (-(a + g) + k * zb) / L, 'crack'));
+      if (i < n - 1) pl.push(planeD([1, 0, k], (b - g + k * zb) / L, 'crack'));
+      const pc = bevelPiece(pl, W, opts(lod)); emitPiece(mesh, pc, paintB); all.push(pc.planes);
+    }
+    mossCap(mesh, [rear.planes], { at: [0.05, -0.3], R: 0.24, T: 0.045, seed: 147, maxSlope: 0.7, lip: 0.01, top: hex(0x6f8c46), edge: hex(0x5f5a3b), ...MOSS(lod) });
+    return mesh;
+  },
   // spoil heap: chips and flakes piled in a low mound (~1.5 m across, 0.5 m high)
   spoil(lod) {
     const mesh = new Mesh(), rnd = prng(91), all = [];
@@ -152,6 +190,47 @@ const SHAPES = {
     return mesh;
   },
 };
+
+/**
+ * Bedded rock cut long ago (the old quarry face). o: { seed, beds: [y0, y1, ... top] (fractions of 1 m), steps: front
+ * set-back of each bed, W, D, joint (x of a joint through the upper beds), chips: per bed, which front corner is broken }
+ */
+function faceRock(lod, o) {
+  // (moss on the narrow bed ledges folded down the cut faces as green flags: left to the top's soil cushion)
+  const mesh = new Mesh(), all = [], rnd = prng(o.seed), H = o.beds[o.beds.length - 1], W2 = o.W / 2, D2 = o.D / 2;
+  const old = stonePaint({ H, seed: o.seed, warm: 0.5, base: 0.6 });
+  // old faces: darker, rain-streaked down the cut, a damp foot; the ledges' tops bleached
+  const paint = (c) => {
+    const v = old(c);
+    if (c.n[2] > 0.8) { const st = 0.88 + 0.12 * fbm(c.p[0] * 7 + o.seed, 0, c.p[2] * 3, o.seed + 1, 2); return v.map((x) => x * st); }
+    return v;
+  };
+  const Wd = widths(lod, H, { crown: 0.09, edge: 0.03, crack: 0.01, crownY: 0.75 });
+  const sides = [plane([-1, 0.04, 0.12 * (rnd() - 0.5)], [-W2, 0, 0]), plane([-1, 0.06, -0.3], [-W2 + 0.03, 0, -D2 * 0.6]),
+    plane([1, 0.05, 0.12 * (rnd() - 0.5)], [W2, 0, 0]), plane([1, 0.03, -0.35], [W2 - 0.02, 0, -D2 * 0.6]),
+    plane([0.1 * (rnd() - 0.5), 0.04, -1], [0, 0, -D2]), plane([0.4, 0.1, -1], [W2 * 0.6, 0, -D2 + 0.03])];
+  const nb = o.beds.length - 1;
+  for (let i = 0; i < nb; i++) {
+    const y0 = o.beds[i], y1 = o.beds[i + 1], st = o.steps[i] || 0, tilt = (rnd() - 0.5) * 0.08;
+    const pl = [...insetPlanes(sides, () => 0.012 * i), plane([0.05 * (rnd() - 0.5), tilt, 1], [0, (y0 + y1) / 2, D2 - st], 'face')];
+    pl.push(i ? planeD([0, -1, 0], -y0 - 0.005, 'bed') : FLOOR());
+    if (i < nb - 1) pl.push(planeD([0.02 * (rnd() - 0.5), 1, 0.03 * (rnd() - 0.5)], y1, 'bed'));
+    else pl.push(plane([0.08 * (rnd() - 0.5), 1, -0.06], [0, y1, 0]), plane([0, 1, 0.9], [0, y1 - 0.06, D2 - st - 0.02]));   // weathered crown rolling over the face
+    // a chipped arris: a front corner broken off
+    const ch = o.chips?.[i];
+    if (ch) pl.push(plane([ch * 0.65, 0.35, 0.68], [ch * (W2 - 0.08 - 0.05 * rnd()), y1 - 0.02, D2 - st - 0.03]));
+    // the joint through the upper beds
+    const pieces = i >= nb - 2 && o.joint !== undefined ? (() => { const u = norm([1, 0, 0.25]); return [[planeD(add(u, [0, 0.06, 0]), o.joint + 0.006, 'crack')], [planeD(add(mul(u, -1), [0, 0.06, 0]), -o.joint + 0.006, 'crack')]]; })() : [[]];
+    for (const extra of pieces) {
+      const p = bevelPiece([...pl, ...extra], Wd, opts(lod));
+      if (!p.faces.length) continue;
+      emitPiece(mesh, p, paint); all.push(p.planes);
+    }
+  }
+  // soil and grass on the top: a broad, thick cushion that browns toward its rim
+  mossCap(mesh, all, { at: [(rnd() - 0.5) * 0.2, -0.08], R: 0.34, T: 0.06, seed: o.seed + 9, maxSlope: 1.3, top: hex(0x71904a), edge: hex(0x655e40), ...MOSS(lod) });
+  return mesh;
+}
 
 export const NAMES = Object.keys(SHAPES);
 export const buildShape = (name) => [0, 1, 2].map((l) => SHAPES[name](l));

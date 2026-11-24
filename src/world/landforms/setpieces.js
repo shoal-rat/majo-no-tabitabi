@@ -4,9 +4,9 @@
 // Each piece is distance-culled (large: never; medium: 1100 m) and gets cylinder colliders for its big blocks.
 // Round art-ground (2026-11-24): the pieces are facet-kit stone (exact planes, bevelled arrises, beds and joints as
 // geometry, moss cushions) instead of smooth blobs with painted cracks: tors stack granite blocks that sit on one
-// another (tools/sculpt/assets/ground_rocks.mjs tor_a / tor_b), the crag is jointed columns (rock family 'crag'), the
-// quarry face is lifts of cut blocks with plug-and-feather drill marks along their arrises and spoil heaps at its foot,
-// pool and tarn rims are bedded shelves. Same placements (the same random draws), the same colliders (she climbs them).
+// another (tools/sculpt/assets/ground_rocks.mjs tor_a / tor_b), the crag is bedded ledges under jointed columns, the
+// quarry is a cut rock face of weathered bedded benches with a few fresh drill-marked blocks, half-won blocks, a collapsed
+// column and spoil at its foot (quarryFace), pool and tarn rims are bedded shelves. Same placements (the same random draws), the same colliders (she climbs them).
 // Two levels: near (LOD by tier) and far (sharp planes) swapped at ~170 m (phones ~90 m). ?sculpt=0: the old blobs.
 import * as THREE from 'three';
 import { mulberry32, noise2 } from '../../core/util.js';
@@ -105,7 +105,7 @@ export function buildSetpieces(G, root) {
   // facet stone: both sculpt types on and every GLB loaded
   const q = G.quality || { name: 'high' }, lite = q.mobile || q.name === 'low';
   const lodN = lite ? 1 : 0, lodF = 2;
-  const FACET = ['tor_a', 'tor_b', 'quarry', 'spoil'].map(groundId).concat(['field', 'split', 'shelf', 'crag', 'cobble'].map(rockId));
+  const FACET = ['tor_a', 'tor_b', 'quarry', 'spoil', 'quarry_face_a', 'quarry_face_b', 'quarry_half'].map(groundId).concat(['field', 'split', 'shelf', 'crag', 'cobble'].map(rockId));
   const facet = !!(G.sculpt?.on?.('ground') && G.sculpt?.on?.('rockfam') && FACET.every((id) => G.assets?.raw?.(id)));
   const NEAR = q.mobile ? 90 : q.name === 'low' ? 110 : q.name === 'med' ? 140 : 170;
   let facetMat = null;
@@ -157,6 +157,85 @@ export function buildSetpieces(G, root) {
       _m.multiply(_t.makeTranslation(-(bx.max.x + bx.min.x) / 2, 0, -(bx.max.z + bx.min.z) / 2));
       B.near.add(pn, _m, shade); B.far.add(pf, _m, shade);
     }
+  }
+  /** one facet stone fitted into w x h x d (foot at y0, centred on x, z), turned by euler (rx, ry, rz) */
+  function putFacet(B, shade, id, x, y0, z, w, h, d, rx, ry, rz, lod = lodN) {
+    const pn = facetProto(id, lod), pf = facetProto(id, lodF);
+    if (!pn || !pf) return;
+    const bx = pn.box, bw = bx.max.x - bx.min.x, bd = bx.max.z - bx.min.z, bh = bx.max.y - Math.max(0, bx.min.y);
+    _e.set(rx, ry, rz); _q.setFromEuler(_e);
+    _m.compose(_p.set(x, y0, z), _q, _s.set(w / bw, h / bh, d / bd));
+    _m.multiply(_t.makeTranslation(-(bx.max.x + bx.min.x) / 2, 0, -(bx.max.z + bx.min.z) / 2));
+    B.near.add(pn, _m, shade); B.far.add(pf, _m, shade);
+  }
+  /**
+   * The old quarry as a cut rock face (round art-ground review). The bench columns keep their places, colliders and the
+   * random draws of the old build, but each bench is drawn as one wall of weathered bedded rock in a few long segments of
+   * uneven length, height and set-back (not a grid of blocks): a fresh sawn segment with drill marks low on the face,
+   * half-won blocks on two bench tops, one segment collapsed into fallen blocks and spoil at the foot, soil and grass on
+   * the bench tops, boulders softening the ends. Its own random stream (qr).
+   */
+  function quarryFace(l, B, shade) {
+    const qr = mulberry32((Math.round(l.x * 7 + l.z * 3) >>> 0) + 991), a = l.angle, fx = Math.sin(a), fz = Math.cos(a), sx = -fz, sz = fx;
+    const old = [groundId('quarry_face_a'), groundId('quarry_face_b')];
+    const cols = [];
+    return {
+      column(k, tier, x, z, gg, hgt) { cols.push({ k, tier, gg, hgt }); },
+      finish() {
+        const at = (u, t) => [l.x + sx * u - fx * t * 2.4, l.z + sz * u - fz * t * 2.4];
+        const hgtAt = (u, t) => {   // the old columns' heights, interpolated along the bench
+          const c = cols.filter((o) => o.tier === t).sort((p, q) => p.k - q.k), f = Math.max(-3, Math.min(3, u / 4.3));
+          const i = Math.min(c.length - 2, Math.floor(f + 3)), w = f + 3 - i;
+          return c[i].hgt * (1 - w) + c[i + 1].hgt * w;
+        };
+        const collapse = { tier: 1 + Math.floor(qr() * 2), seg: -1, x: 0, z: 0 };
+        const half = [Math.floor(qr() * 3), Math.floor(qr() * 3)];
+        let freshDone = false;
+        for (let t = 0; t < 3; t++) {
+          // cut the bench into segments 6.5-10.5 m long
+          const U0 = -3 * 4.3 - 2.3, U1 = 3 * 4.3 + 2.3, cuts = [U0];
+          while (cuts[cuts.length - 1] < U1 - 0.1) { let u = cuts[cuts.length - 1] + 6.5 + 4 * qr(); if (U1 - u < 4) u = U1; cuts.push(Math.min(u, U1)); }
+          if (collapse.tier === t) collapse.seg = Math.floor(qr() * (cuts.length - 1));
+          for (let i = 0; i + 1 < cuts.length; i++) {
+            const u0 = cuts[i], u1 = cuts[i + 1], uc = (u0 + u1) / 2, Wd = u1 - u0 + 0.6;
+            const sb = (qr() - 0.5) * 0.7, [x0, z0] = at(uc, t), x = x0 - fx * sb, z = z0 - fz * sb;
+            let g = Infinity; for (const du of [-0.45, 0, 0.45]) { const [px, pz] = at(uc + du * (u1 - u0), t); g = Math.min(g, W.heightAt(px, pz)); }
+            const gg = W.heightAt(x0, z0), hg = hgtAt(uc, t), collapsed = t === collapse.tier && i === collapse.seg;
+            const top = gg + hg * (collapsed ? 0.5 : 0.884) + (qr() - 0.5) * 1.4, foot = g - 0.7, H = top - foot;
+            const fresh = !freshDone && t === 0 && i === 1 && (freshDone = true);
+            const n = Math.max(1, Math.ceil(H / (1.25 * Wd))), yaw = a + (qr() - 0.5) * 0.06;
+            for (let j = 0; j < n; j++) {
+              const y0 = foot + (H * j) / n - (j ? 0.05 : 0), h = H / n + (j ? 0.05 : 0), id = fresh && j === n - 1 ? groundId('quarry') : old[(i + t + j) % 2];
+              const fwd = (n - 1 - j) * 0.12;
+              putFacet(B, shade, id, x + fx * fwd, y0, z + fz * fwd, Wd * (0.97 + 0.06 * qr()), h, 4.4 * (0.92 + 0.12 * qr()), (qr() - 0.5) * 0.02, yaw, (qr() - 0.5) * 0.02);
+            }
+            if (collapsed) { collapse.x = x; collapse.z = z; collapse.W = Wd; }
+            // a block half won from the face on this bench top
+            if (t < 2 && i === half[t] + (t ? 0 : 1)) {
+              const back = 1.0 + 0.6 * qr(), along = (qr() - 0.5) * Wd * 0.5;
+              putFacet(B, shade, groundId('quarry_half'), x - fx * back + sx * along, top - 0.35, z - fz * back + sz * along, 2.4 + 0.6 * qr(), 1.6 + 0.5 * qr(), 2.4, 0, yaw + (qr() - 0.5) * 0.1, 0);
+            }
+          }
+        }
+        // the collapse: fallen blocks and a spoil heap below the broken segment, out in front of the lowest bench
+        if (collapse.W) {
+          const n = lite ? 3 : 6;
+          for (let i = 0; i < n; i++) {
+            const along = (qr() - 0.5) * collapse.W * 0.8, out = 2.4 * collapse.tier + 2.5 + qr() * 5, x = collapse.x + sx * along + fx * out, z = collapse.z + sz * along + fz * out, g = W.heightAt(x, z);
+            const s = 1.4 + qr() * 1.6, id = i === 0 ? groundId('quarry') : old[i % 2];
+            putFacet(B, shade, id, x, g - 0.45 * s, z, s * (1 + 0.3 * qr()), s * (0.7 + 0.3 * qr()), s, (qr() - 0.5) * 0.9, qr() * 6.28, (qr() - 0.5) * 0.9);
+          }
+          const x = collapse.x + fx * (2.4 * collapse.tier + 3.4), z = collapse.z + fz * (2.4 * collapse.tier + 3.4);
+          putFacet(B, shade, groundId('spoil'), x, W.heightAt(x, z) - 0.1, z, 5.2, 1.6, 4.4, 0, qr() * 6.28, 0, lite ? lodN : 1);
+        }
+        // boulders and cobbles where the face runs out into the hill
+        for (const e of [-1, 1]) for (let i = 0; i < 2; i++) {
+          const [x0, z0] = at(e * (3 * 4.3 + 3.2 + i * 2.4), i);
+          const x = x0 + fx * (1.2 - i), z = z0 + fz * (1.2 - i), g = W.heightAt(x, z);
+          putFacet(B, shade, rockId(i ? 'shelf' : 'field'), x, g - 0.35, z, 3.4 - i * 0.6, 2.4 + qr() - i * 0.6, 3, 0, qr() * 6.28, 0);
+        }
+      },
+    };
   }
   function rock(B, shade, x, y, z, sx, sy, sz, ry, kind, seed, tilt = 0.08, role = '') {
     if (facet) return facetRock(B, shade.facet, x, y, z, sx, sy, sz, ry, kind, seed, tilt, role);
@@ -248,12 +327,16 @@ export function buildSetpieces(G, root) {
     } else if (l.kind === 'quarry') {
       const B = newBake();
       const a = l.angle, fx = Math.sin(a), fz = Math.cos(a), sx = -fz, sz = fx; // face looks along (fx,fz)
+      const QF = facet ? quarryFace(l, B, shade.facet) : null;
       for (let k = -3; k <= 3; k++) for (let tier = 0; tier < 3; tier++) {
         const x = l.x + sx * k * 4.3 - fx * tier * 2.4, z = l.z + sz * k * 4.3 - fz * tier * 2.4, gg = W.heightAt(x, z);
         const hgt = 5 + tier * 4.5 - Math.abs(k) * 0.6 + r() * 1.5;
-        rock(B, shade, x, gg + hgt * 0.42, z, 2.4 + r() * 0.4, hgt * 0.58, 2.6, a + (r() - 0.5) * 0.15, 'block', k * 3 + tier + 20, 0.02, 'face');
+        const w0 = 2.4 + r() * 0.4, yaw = a + (r() - 0.5) * 0.15;   // (drawn in this order by the old build too)
+        if (QF) QF.column(k, tier, x, z, gg, hgt);
+        else rock(B, shade, x, gg + hgt * 0.42, z, w0, hgt * 0.58, 2.6, yaw, 'block', k * 3 + tier + 20, 0.02, 'face');
         if (tier === 0) col(x, z, 2.3, gg - 1, gg + hgt);
       }
+      QF?.finish();
       for (let k = 0; k < 10; k++) { const x = l.x + fx * (4 + r() * 6) + sx * (r() - 0.5) * 20, z = l.z + fz * (4 + r() * 6) + sz * (r() - 0.5) * 20; rock(B, shade, x, W.heightAt(x, z) + 0.2, z, 0.6 + r() * 0.6, 0.4 + r() * 0.3, 0.6 + r() * 0.5, r() * 6, 'block', k, 0.08, 'rubble'); }
       finish(l, B);
     } else if (l.kind === 'tarn') {
