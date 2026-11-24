@@ -22,7 +22,7 @@ const ST = {
   lime: mat.stone(0xbab29c), grey: mat.stone(0xa5a199), sand: mat.stone(0xc8b090), dark: mat.stone(0x7f7a71),
   mossy: mat.stone(0x98a084), old: mat.stone(0x9e978a), white: mat.stone(0xe6e1d4),
 };
-const WD = { wood: mat.wood(0x7d5e44), dark: mat.wood(0x4f3f31), old: mat.wood(0x8e7c66), light: mat.wood(0xa58660) };
+const WD = { wood: mat.wood(0x7d5e44), dark: mat.wood(0x4f3f31), old: mat.wood(0x8e7c66), light: mat.wood(0xa58660), bark: mat.wood(0x6e5843) };
 const RF = { tile: mat.tile(0xb9634b), tileDark: mat.tile(0x94503f), slate: mat.tile(0x60707c), thatch: mat.thatch(0xc6a464), moss: mat.tile(0x7d8a5c) };
 const plaster = mat.plaster(0xece2c9), plasterWarm = mat.plaster(0xe6cfa9), glass = mat.paint(0x3f4b56), iron = mat.metal(0x3d3b3a);
 const red = mat.paint(0xb5473d), cream = mat.paint(0xf1eadb), straw = mat.thatch(0xd6b768), canvas = mat.cloth(0xe3d6b4);
@@ -119,80 +119,235 @@ function pitched(site, w, d, rise, m, x, y, z, ry = 0, over = 0.45, t = 0.16) {
   g.add(box(0.22, 0.2, d + over * 2 + 0.05, m, 0, rise + 0.05, 0));
   return site.add(g);
 }
-/** cottage / farmhouse: walls, gable ends, roof, door, windows, chimney. Returns the eave height. */
+// ---------------------------------------------------------------- built pieces (map round 2: real joinery and masonry)
+// Every piece is its own mesh, so the baked vertex shading gives each stone, board and tile row its own tone. Counts
+// follow the quality tier (lmTier): 0 everything, 1 no rafter tails / flower boxes, 2 plain plinth, fewer rows.
+/** a board / beam lying on a wall face: centre (x, y, z), length along its own x, `hgt` up the wall, `th` proud; the
+ *  face it lies on looks along heading ry (0 = +z); rz turns it in the wall plane (braces); top edges chamfered */
+function plank(g, m, x, y, z, len, hgt, th, ry = 0, rz = 0, b = 0.018) {
+  const o = bevelBox(len, th, hgt, m, x, y, z, b);
+  o.rotation.set(Math.PI / 2, ry, rz, 'YZX');
+  g.add(o);
+  return o;
+}
+/** a dressed stone (top edges chamfered) */
+function block(g, m, x, y, z, w, h, d, ry = 0, b = 0.03) { const o = bevelBox(w, h, d, m, x, y, z, b); o.rotation.y = ry; g.add(o); return o; }
+/** wall faces of a w x d footprint: [heading, half-length along the face, distance of the face from the centre] */
+const faces = (w, d) => [[0, w / 2, d / 2], [Math.PI, w / 2, d / 2], [Math.PI / 2, d / 2, w / 2], [-Math.PI / 2, d / 2, w / 2]];
+/** point on face (heading a, distance f from the centre) at u along the face, `out` in front of it */
+const onFace = (a, f, u, out = 0) => [Math.sin(a) * (f + out) + Math.cos(a) * u, Math.cos(a) * (f + out) - Math.sin(a) * u];
+const isWood = (m) => m?.userData?.surface === 'wood';
+
+/** the plinth's top course: dressed stones round the footprint (w x d), top at gy */
+function plinthStones(g, w, d, gy, m, seed) {
+  const r = mulberry32(seed * 7 + 3), h = 0.3;
+  for (const [a, half, f] of faces(w, d)) {
+    let u = -half + (a === 0 || a === Math.PI ? 0 : 0.3);
+    const end = half - (a === 0 || a === Math.PI ? 0 : 0.3);
+    while (u < end - 0.05) {
+      const l = Math.min(end - u, 0.45 + r() * 0.5), [px, pz] = onFace(a, f, u + l / 2, -0.15);
+      block(g, m, px, gy - h / 2 + 0.01, pz, l - 0.03, h * (0.92 + r() * 0.08), 0.32, a, 0.035);
+      u += l;
+    }
+  }
+}
+/** dressed corner stones up a wall, alternating long and short along each face */
+function quoins(g, w, d, gy, wallH, m) {
+  const hq = 0.3, n = Math.floor(wallH / hq);
+  for (const [sx, sz] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) for (let k = 0; k < n; k++) {
+    const long = (k + (sx * sz > 0 ? 0 : 1)) % 2 === 0, y = gy + k * hq + hq / 2;
+    const lx = long ? 0.55 : 0.3, lz = long ? 0.3 : 0.55;
+    block(g, m, sx * (w / 2 - lx / 2 + 0.03), y, sz * (d / 2 - lz / 2 + 0.03), lx, hq - 0.025, lz, 0, 0.025);
+  }
+}
+/** half-timbering on all four walls: sill, wall plate, posts, a mid rail and braces in the end bays */
+function halfTimber(g, w, d, gy, wallH, T) {
+  const m = WD.dark, t = 0.07, b = 0.17;
+  for (const [a, half, f] of faces(w, d)) {
+    const front = a === 0 || a === Math.PI, at = (u, y, len, hgt, rz = 0) => { const [px, pz] = onFace(a, f, u, t / 2 - 0.012); plank(g, m, px, y, pz, len, hgt, t, a, rz); };
+    at(0, gy + b / 2, 2 * half, b);                         // sill beam
+    at(0, gy + wallH - b / 2, 2 * half, b);                 // wall plate
+    const bays = front ? 4 : 2, mid = gy + wallH * 0.52;
+    for (let k = 0; k <= bays; k++) at(-half + (2 * half * k) / bays + (k === 0 ? b / 2 : k === bays ? -b / 2 : 0), gy + wallH / 2, wallH, b * 0.9, Math.PI / 2);
+    at(0, mid, 2 * half - 0.1, b * 0.85);                   // mid rail
+    if (T < 2) for (const s of [-1, 1]) {                   // braces from the sill to the rail in the end bays
+      const bw = (2 * half) / bays, u0 = s * (half - b), u1 = s * (half - bw + b * 0.6), y0 = gy + b, y1 = mid;
+      at((u0 + u1) / 2, (y0 + y1) / 2, Math.hypot(u1 - u0, y1 - y0), b * 0.75, Math.atan2(y1 - y0, u1 - u0));
+    }
+  }
+}
+/** board-and-batten: battens proud on every wall of a timber barn / shed */
+function battens(g, w, d, gy, wallH, m, T) {
+  const step = T < 2 ? 0.34 : 0.68;
+  for (const [a, half, f] of faces(w, d)) for (let u = -half + step / 2; u < half; u += step) {
+    const [px, pz] = onFace(a, f, u, 0.02);
+    plank(g, m, px, gy + wallH / 2, pz, wallH, 0.07, 0.035, a, Math.PI / 2, 0.012);
+  }
+}
+/**
+ * Tiled / slated roof over a w x d body, ridge along x, eave at y = ey: a deck slab per side, then real courses (each
+ * row laid a little flatter than the slope, so its lower edge stands proud), half-round ridge tiles, barge boards and a
+ * fascia. Thatch: a thick coat with a rolled eave and ridge instead of courses.
+ */
+function roofOver(g, w, d, rise, ey, m, T) {
+  const half = d / 2 + 0.5, len = Math.hypot(half, rise) + 0.1, a = Math.atan2(rise, half), L = w + 0.9;
+  const thatch = m.userData?.surface === 'thatch', slate = m === RF.slate;
+  const deckT = thatch ? 0.32 : 0.12;
+  for (const s of [-1, 1]) {
+    const deck = box(L, deckT, len, m, 0, ey + rise / 2, s * half / 2); deck.rotation.x = s * a; g.add(deck);
+    if (thatch) {
+      // the rolled eave and a stepped course line half way up
+      const eave = cyl(0.2, 0.2, L + 0.05, m, 0, ey - 0.02, s * (half + 0.02), 8); eave.rotation.z = Math.PI / 2; g.add(eave);
+      const c2 = box(L + 0.04, 0.12, len * 0.45, m, 0, 0, 0);
+      c2.position.set(0, ey + rise * 0.3 + Math.cos(a) * (deckT / 2 + 0.05), s * (half * 0.7 + Math.sin(a) * 0.05)); c2.rotation.x = s * a; g.add(c2);
+      continue;
+    }
+    const exp = slate ? 0.24 : 0.34, n = Math.max(3, Math.round(len / exp / (T === 2 ? 2 : 1))), step = len / n, t = 0.05;
+    for (let k = 0; k < n; k++) {
+      // row k from the eave: centre along the slope (from the ridge) and out of the deck
+      const u = len - (k + 0.5) * step, lay = step * 1.35, out = deckT / 2 + t / 2 + 0.005;
+      const row = box(L + (k % 2 ? 0.04 : 0), t, lay, m, 0, 0, 0);
+      const cy = ey + rise - Math.sin(a) * u + Math.cos(a) * out, cz = s * (Math.cos(a) * u + Math.sin(a) * out);
+      row.position.set(0, cy, cz); row.rotation.x = s * (a - t * 0.9 / lay); g.add(row);
+    }
+  }
+  if (thatch) { const rg = cyl(0.26, 0.26, L + 0.1, m, 0, ey + rise + 0.06, 0, 8); rg.rotation.z = Math.PI / 2; g.add(rg); }
+  else if (T < 2) {
+    const n = Math.max(3, Math.round(L / 0.42));
+    for (let k = 0; k < n; k++) { const rt = cyl(0.12, 0.12, L / n - 0.015, m, -L / 2 + (k + 0.5) * L / n, ey + rise + 0.1, 0, 8); rt.rotation.z = Math.PI / 2; g.add(rt); }
+  } else g.add(box(L + 0.05, 0.22, 0.26, m, 0, ey + rise + 0.06, 0));
+  // barge boards up the verges and a fascia along each eave
+  for (const sx of [-1, 1]) for (const s of [-1, 1]) g.add(beam(sx * (L / 2 + 0.03), ey - 0.06, s * (half + 0.02), sx * (L / 2 + 0.03), ey + rise - 0.02, 0, 0.06, 0.2, WD.dark));
+  if (!thatch) for (const s of [-1, 1]) g.add(box(L, 0.16, 0.05, WD.dark, 0, ey - 0.1, s * (half + 0.06)));
+  // rafter tails under the eaves
+  if (T === 0 && !thatch) for (const s of [-1, 1]) for (let xx = -w / 2 + 0.3; xx <= w / 2 - 0.2; xx += 0.6) {
+    const rt = box(0.08, 0.11, 0.55, WD.dark, xx, ey + rise * (0.23 / half) - (deckT / 2 + 0.055) / Math.cos(a), s * (half - 0.23)); rt.rotation.x = s * a; g.add(rt);
+  }
+}
+/** a window on a wall face: casing, glass set back, glazing bars, sill; shutters (open) on the front */
+function windowOn(g, cx, cy, fz, ww, wh, shutters, flowers, T) {
+  const cas = WD.wood, tb = 0.09;
+  g.add(box(ww, wh, 0.06, glass, cx, cy, fz + 0.01));
+  for (const s of [-1, 1]) plank(g, cas, cx + s * (ww / 2 + tb / 2), cy, fz + 0.035, wh + tb * 2, tb, 0.07, 0, Math.PI / 2);
+  plank(g, cas, cx, cy + wh / 2 + tb / 2, fz + 0.035, ww + tb * 2, tb, 0.07);
+  if (T < 2) { g.add(box(0.035, wh, 0.03, cas, cx, cy, fz + 0.05)); g.add(box(ww, 0.035, 0.03, cas, cx, cy + wh * 0.08, fz + 0.05)); }
+  block(g, ST.lime, cx, cy - wh / 2 - 0.05, fz + 0.07, ww + 0.3, 0.09, 0.2, 0, 0.02);       // stone sill
+  if (shutters) for (const s of [-1, 1]) {
+    const sh = new THREE.Group(); sh.position.set(cx + s * (ww / 2 + tb), cy, fz + 0.06); sh.rotation.y = -s * 0.35; g.add(sh);
+    const sw = ww / 2 + 0.06, nb = 3;
+    for (let k = 0; k < nb; k++) sh.add(box(sw / nb - 0.012, wh + 0.12, 0.04, red, s * (sw * (k + 0.5) / nb), 0, 0));
+    if (T < 2) for (const hy of [-0.32, 0.32]) sh.add(box(sw, 0.08, 0.03, red, s * sw / 2, hy * wh, 0.035));
+  }
+  if (flowers && T === 0) {
+    g.add(box(ww + 0.1, 0.18, 0.2, WD.wood, cx, cy - wh / 2 - 0.2, fz + 0.18));
+    for (let k = 0; k < 5; k++) g.add(sphere(0.09, k % 2 ? red : ivy, cx - ww / 2 + 0.05 + k * (ww - 0.1) / 4, cy - wh / 2 - 0.08, fz + 0.19, 6, 4));
+  }
+}
+/** a plank door with frame, strap hinges, latch and a step stone */
+function doorOn(g, cx, gy, fz, dw = 1.0, dh = 2.0, T = 0) {
+  const nb = 4;
+  for (let k = 0; k < nb; k++) g.add(box(dw / nb - 0.012, dh, 0.06, WD.dark, cx - dw / 2 + (k + 0.5) * dw / nb, gy + dh / 2, fz + 0.02));
+  for (const s of [-1, 1]) plank(g, WD.wood, cx + s * (dw / 2 + 0.06), gy + dh / 2 + 0.04, fz + 0.04, dh + 0.1, 0.12, 0.08, 0, Math.PI / 2);
+  plank(g, WD.wood, cx, gy + dh + 0.1, fz + 0.05, dw + 0.36, 0.16, 0.1);
+  if (T < 2) { for (const hy of [0.3, dh - 0.3]) g.add(box(dw * 0.6, 0.05, 0.02, iron, cx - dw * 0.18, gy + hy, fz + 0.06)); g.add(box(0.05, 0.14, 0.04, iron, cx + dw * 0.33, gy + dh * 0.5, fz + 0.07)); }
+  block(g, ST.grey, cx, gy - 0.07, fz + 0.3, dw + 0.4, 0.16, 0.55, 0, 0.03);
+}
+/** cottage / farmhouse: plinth, walls (quoins or half-timbering or battens), gables, roof, door, windows, chimney.
+ *  Footprint, colliders and the returned eave height are those of the first map round. */
 function house(site, o) {
   const { x, z, w, d, wallH, rise, ry = 0, walls = plaster, roof = RF.tile, base = ST.grey, chimney = true, timber = false, seed = 1 } = o;
-  const r = mulberry32(seed);
-  const g = new THREE.Group(); g.rotation.y = ry;
+  const r = mulberry32(seed), T = lmTier();
   let y0 = Infinity;
-  for (const [a, b] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) {
-    const lx = x + (a * w / 2) * Math.cos(ry) + (b * d / 2) * Math.sin(ry), lz = z - (a * w / 2) * Math.sin(ry) + (b * d / 2) * Math.cos(ry);
-    y0 = Math.min(y0, site.h(lx, lz));
-  }
+  const corner = (a, b) => [x + (a * w / 2) * Math.cos(ry) + (b * d / 2) * Math.sin(ry), z - (a * w / 2) * Math.sin(ry) + (b * d / 2) * Math.cos(ry)];
+  for (const [a, b] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) y0 = Math.min(y0, site.h(...corner(a, b)));
   const yb = y0 - 0.3;
-  let gy = 0;
-  const hi = Math.max(...[[-1, -1], [1, -1], [-1, 1], [1, 1]].map(([a, b]) => site.h(x + (a * w / 2) * Math.cos(ry) + (b * d / 2) * Math.sin(ry), z - (a * w / 2) * Math.sin(ry) + (b * d / 2) * Math.cos(ry))));
-  gy = hi + 0.25;
-  g.position.set(x, 0, z);
-  g.add(box(w + 0.3, gy - yb, d + 0.3, base, 0, (gy + yb) / 2, 0));
+  const hi = Math.max(...[[-1, -1], [1, -1], [-1, 1], [1, 1]].map(([a, b]) => site.h(...corner(a, b))));
+  const gy = hi + 0.25;
+  const g = new THREE.Group(); g.position.set(x, 0, z); g.rotation.y = ry; site.add(g);
+  // plinth: a recessed core, its top course of dressed stones
+  g.add(box(w + 0.22, gy - yb, d + 0.22, base, 0, (gy + yb) / 2, 0));
+  if (T < 2) plinthStones(g, w + 0.3, d + 0.3, gy, base, seed);
   g.add(box(w, wallH, d, walls, 0, gy + wallH / 2, 0));
-  if (timber) for (const s of [-1, 1]) {
-    for (let k = -2; k <= 2; k++) g.add(box(0.14, wallH, 0.06, WD.dark, k * w / 5, gy + wallH / 2, s * (d / 2 + 0.02)));
-    g.add(box(w, 0.14, 0.06, WD.dark, 0, gy + wallH * 0.52, s * (d / 2 + 0.02)));
-  }
-  site.add(g);
-  const ge = new THREE.Group(); ge.position.set(x, 0, z); ge.rotation.y = ry; site.add(ge);
+  const wood = isWood(walls);
+  if (timber) halfTimber(g, w, d, gy, wallH, T);
+  else if (wood) battens(g, w, d, gy, wallH, walls === WD.dark ? WD.old : WD.dark, T);
+  else if (T < 2) quoins(g, w, d, gy, wallH, walls === ST.lime ? ST.white : ST.lime);   // never the wall's own material: its crevice term would darken the whole face
+  // gable ends (ridge along local x)
   for (const s of [-1, 1]) {
     const tri = new THREE.Shape(); tri.moveTo(-d / 2, 0); tri.lineTo(d / 2, 0); tri.lineTo(0, rise); tri.lineTo(-d / 2, 0);
     const tg = new THREE.ExtrudeGeometry(tri, { depth: 0.2, bevelEnabled: false }); tg.translate(0, 0, -0.1);
-    const m = new THREE.Mesh(tg, walls); m.position.set(s * (w / 2 - 0.1), gy + wallH, 0); m.rotation.y = Math.PI / 2; m.castShadow = m.receiveShadow = true; ge.add(m);
+    const m = new THREE.Mesh(tg, walls); m.position.set(s * (w / 2 - 0.1), gy + wallH, 0); m.rotation.y = Math.PI / 2; m.castShadow = m.receiveShadow = true; g.add(m);
+    if (timber) {   // collar beam and king post in the gable
+      plank(g, WD.dark, s * (w / 2 + 0.02), gy + wallH + rise * 0.42, 0, d * 0.56, 0.15, 0.07, s * Math.PI / 2);
+      plank(g, WD.dark, s * (w / 2 + 0.02), gy + wallH + rise * 0.21, 0, rise * 0.42, 0.15, 0.07, s * Math.PI / 2, Math.PI / 2);
+    }
   }
-  // roof: ridge along local x (long side)
-  const half = d / 2 + 0.5, len = Math.hypot(half, rise), a = Math.atan2(rise, half);
-  for (const s of [-1, 1]) { const slab = box(w + 0.9, 0.18, len + 0.1, roof, 0, gy + wallH + rise / 2, s * half / 2); slab.rotation.x = s * a; ge.add(slab); }
-  ge.add(box(w + 0.95, 0.22, 0.26, roof, 0, gy + wallH + rise + 0.04, 0));
-  // door + windows on the +z side
-  ge.add(box(1.0, 2.0, 0.12, WD.dark, -w * 0.18, gy + 1.0, d / 2 + 0.04));
-  for (const wx of [w * 0.12, w * 0.34]) if (wx + 0.5 < w / 2) {
-    ge.add(box(0.85, 0.95, 0.1, glass, wx, gy + wallH * 0.58, d / 2 + 0.04));
-    ge.add(box(1.0, 0.1, 0.16, WD.wood, wx, gy + wallH * 0.58 - 0.52, d / 2 + 0.08));
-    ge.add(box(0.26, 1.0, 0.06, red, wx - 0.6, gy + wallH * 0.58, d / 2 + 0.05)); ge.add(box(0.26, 1.0, 0.06, red, wx + 0.6, gy + wallH * 0.58, d / 2 + 0.05));
+  roofOver(g, w, d, rise, gy + wallH, roof, T);
+  // door + windows on the front (+z), windows on the back
+  doorOn(g, -w * 0.18, gy, d / 2, 1.0, Math.min(2.0, wallH - 0.35), T);
+  for (const wx of [w * 0.12, w * 0.34]) if (wx + 0.5 < w / 2) windowOn(g, wx, gy + wallH * 0.58, d / 2, 0.8, 0.9, true, r() < 0.6, T);
+  for (const wx of [-w * 0.25, w * 0.25]) { g.add(box(0.8, 0.9, 0.1, glass, wx, gy + wallH * 0.58, -d / 2 - 0.04)); if (T < 2) block(g, ST.lime, wx, gy + wallH * 0.58 - 0.5, -d / 2 - 0.07, 1.0, 0.09, 0.2, 0, 0.02); }
+  if (chimney) {
+    const cx = w * 0.32 * (r() < 0.5 ? -1 : 1), ch = rise + 1.4, cy = gy + wallH + rise * 0.6;
+    g.add(box(0.7, ch, 0.7, ST.grey, cx, cy, 0));
+    const top = cy + ch / 2;
+    block(g, ST.lime, cx, top + 0.06, 0, 0.86, 0.12, 0.86, 0, 0.02);
+    block(g, ST.grey, cx, top + 0.2, 0, 0.74, 0.16, 0.74, 0, 0.03);
+    if (T < 2) for (const s of [-1, 1]) g.add(cyl(0.09, 0.11, 0.32, mat.tile(0xa8654c), cx + s * 0.16, top + 0.42, 0, 8));
   }
-  for (const wx of [-w * 0.25, w * 0.25]) ge.add(box(0.8, 0.9, 0.1, glass, wx, gy + wallH * 0.58, -d / 2 - 0.04));
-  if (chimney) ge.add(box(0.7, rise + 1.4, 0.7, ST.grey, w * 0.32 * (r() < 0.5 ? -1 : 1), gy + wallH + rise * 0.6, 0));
   site.colBox(x, z, w / 2 + 0.1, d / 2 + 0.1, ry, yb, gy + wallH + rise);
   site.footprint(x, z, ry, w / 2, d / 2, gy + wallH);
   return gy;
 }
 function barn(site, x, z, w, d, h, ry, seed) {
   const gy = house(site, { x, z, w, d, wallH: h, rise: d * 0.42, ry, walls: WD.old, roof: RF.slate, chimney: false, seed });
-  const g = new THREE.Group(); g.position.set(x, 0, z); g.rotation.y = ry; site.add(g);
-  g.add(box(2.6, 2.8, 0.14, WD.dark, w * 0.15, gy + 1.4, d / 2 + 0.06));
-  for (let k = -3; k <= 3; k++) g.add(box(0.06, h, 0.05, WD.dark, k * w / 7, gy + h / 2, d / 2 + 0.03));
+  const T = lmTier(), g = new THREE.Group(); g.position.set(x, 0, z); g.rotation.y = ry; site.add(g);
+  // the great double door: two leaves of boards, a Z of ledges and braces on each, the frame and a hay-loft hatch above
+  const dw = 2.6, dh = 2.8, cx = w * 0.15, fz = d / 2 + 0.06;
+  for (const s of [-1, 1]) {
+    const lx = cx + s * dw / 4;
+    g.add(box(dw / 2 - 0.02, dh, 0.08, WD.dark, lx, gy + dh / 2, fz));
+    for (const hy of [0.35, dh - 0.35]) plank(g, WD.wood, lx, gy + hy, fz + 0.04, dw / 2 - 0.1, 0.16, 0.05);
+    if (T < 2) plank(g, WD.wood, lx, gy + dh / 2, fz + 0.04, Math.hypot(dw / 2 - 0.2, dh - 0.9), 0.14, 0.05, 0, -s * Math.atan2(dh - 0.9, dw / 2 - 0.2));
+  }
+  plank(g, WD.dark, cx, gy + dh + 0.1, fz + 0.05, dw + 0.4, 0.2, 0.1);
+  g.add(box(1.2, 1.0, 0.08, WD.dark, cx, gy + h - 0.8, fz));   // hay-loft hatch
   return gy;
 }
 function fenceRun(site, x0, z0, x1, z1, m = WD.old, post = 2.4) {
-  const L = Math.hypot(x1 - x0, z1 - z0), n = Math.max(1, Math.round(L / post));
-  const ry = Math.atan2(x1 - x0, z1 - z0);
+  const L = Math.hypot(x1 - x0, z1 - z0), n = Math.max(1, Math.round(L / post)), T = lmTier();
   for (let k = 0; k <= n; k++) {
     const x = x0 + (x1 - x0) * k / n, z = z0 + (z1 - z0) * k / n, y = site.h(x, z);
-    site.add(box(0.13, 1.15, 0.13, m, x, y + 0.5, z));
+    // split post with a weathered, sloped top
+    const p = bevelBox(0.14, 1.12, 0.13, m, x, y + 0.48, z, 0.04); p.rotation.y = k * 1.3; site.add(p);
     if (k < n) {
       const xn = x0 + (x1 - x0) * (k + 1) / n, zn = z0 + (z1 - z0) * (k + 1) / n, yn = site.h(xn, zn);
-      for (const hy of [0.45, 0.88]) site.add(beam(x, y + hy, z, xn, yn + hy, zn, 0.07, 0.09, m));
+      // split rails: rough six-sided poles, a little sag and twist each
+      for (const hy of [0.45, 0.88]) site.add(T < 2 ? rod(x, y + hy, z, xn, yn + hy - 0.02, zn, 0.055, m, 6) : beam(x, y + hy, z, xn, yn + hy, zn, 0.07, 0.09, m));
     }
   }
 }
-function stack(site, x, z, ry, n, len, m = WD.wood) { // log pile
-  const y = site.h(x, z);
+function stack(site, x, z, ry, n, len) { // log pile: bark-dark logs, pale cut ends, two stakes
+  const y = site.h(x, z), T = lmTier(), r = mulberry32(Math.round(x * 13 + z * 7) >>> 0);
   const g = new THREE.Group(); g.position.set(x, y, z); g.rotation.y = ry; site.add(g);
-  let k = 0;
   for (let row = 0; row < 3; row++) for (let i = 0; i < n - row; i++) {
-    const log = cyl(0.17, 0.19, len, m, (i - (n - row - 1) / 2) * 0.38, 0.19 + row * 0.33, 0, 7); log.rotation.x = Math.PI / 2; g.add(log); k++;
+    const rr = 0.16 + r() * 0.04, lx = (i - (n - row - 1) / 2) * 0.38, ly = 0.19 + row * 0.33, dz = (r() - 0.5) * 0.12;
+    const log = cyl(rr, rr * 1.05, len, WD.bark, lx, ly, dz, T < 2 ? 9 : 7); log.rotation.x = Math.PI / 2; g.add(log);
+    if (T < 2) for (const s of [-1, 1]) { const e = cyl(rr - 0.015, rr - 0.015, 0.02, WD.light, lx, ly, dz + s * (len / 2 + 0.005), 9); e.rotation.x = Math.PI / 2; g.add(e); }
   }
+  for (const s of [-1, 1]) g.add(rod(s * (n * 0.19 + 0.12), -0.2, 0, s * (n * 0.19 + 0.16), 1.0, 0, 0.05, WD.old, 5));
   return g;
 }
-function hay(site, x, z, s = 1) { const y = site.h(x, z); site.add(cone(1.6 * s, 2.6 * s, straw, x, y + 1.25 * s, z, 9)); site.add(cyl(1.6 * s, 1.5 * s, 1.0 * s, straw, x, y + 0.1, z, 9)); }
+/** haystack: a bellied rick on a low drum, a darker thatched cap, a pole through the top and two bands of rope */
+function hay(site, x, z, s = 1) {
+  const y = site.h(x, z), T = lmTier(), seg = T < 2 ? 14 : 9;
+  const prof = [[0, 0], [1.5, 0], [1.62, 0.5], [1.58, 1.1], [1.32, 1.65], [0.95, 2.15], [0.5, 2.55], [0.12, 2.75], [0, 2.78]].map(([a, b]) => new THREE.Vector2(a * s, b * s));
+  const body = new THREE.Mesh(new THREE.LatheGeometry(prof, seg), straw); body.position.set(x, y - 0.05, z); body.castShadow = body.receiveShadow = true; site.add(body);
+  const cap = [[0, 2.98], [0.72, 2.42], [1.06, 2.05], [1.0, 2.0], [0.6, 2.4], [0, 2.7]].map(([a, b]) => new THREE.Vector2(a * s, b * s));
+  const c = new THREE.Mesh(new THREE.LatheGeometry(cap, seg), RF.thatch); c.position.set(x, y - 0.05, z); c.castShadow = c.receiveShadow = true; site.add(c);
+  site.add(rod(x, y + 2.6 * s, z, x + 0.05, y + 3.4 * s, z, 0.05, WD.old, 5));
+  if (T < 2) for (const by of [1.1, 1.75]) site.add(torus((by < 1.5 ? 1.6 : 1.3) * s, 0.025, M.rope(), x, y - 0.05 + by * s, z, 4, 20)).rotation.x = Math.PI / 2;
+}
 
 // ---------------------------------------------------------------- large
 function watchtower(site, r) {
@@ -388,11 +543,26 @@ function farmstead(site, ctx, l, r) {
   fenceRun(site, -16, 10, 6, 14); fenceRun(site, 6, 14, 10, 24); fenceRun(site, -16, 10, -16, 24); fenceRun(site, -16, 24, 10, 24);
   for (let k = 0; k < 3; k++) hay(site, 20 + k * 3.8, 6 + r() * 3, 0.9);
   stack(site, -5.5, -5, 0.1, 4, 2.6);
-  // a cart by the barn
-  const cx = 8, cz = 4, cy = site.h(cx, cz);
-  B(site, 1.6, 0.14, 3.0, WD.wood, cx, cy + 0.85, cz, 0.4);
-  for (const s of [-1, 1]) for (const t of [-1, 1]) { const w = torus(0.55, 0.06, WD.dark, cx + Math.cos(0.4) * s * 0.95 + Math.sin(0.4) * t * 1.0, cy + 0.6, cz - Math.sin(0.4) * s * 0.95 + Math.cos(0.4) * t * 1.0); w.rotation.y = 0.4 + Math.PI / 2; site.add(w); }
-  site.add(cyl(0.9, 1.0, 0.9, ST.grey, -4, site.h(-4, 7) + 0.45, 7, 12)); // well
+  farmCart(site, 8, 4, 0.4);
+  // the yard well: a rubble wellhead with its plank lid half off (lm_well b)
+  put(site, 'sculpt_lm_well_b', -4, site.h(-4, 7), 7, 0.6) || site.add(cyl(0.9, 1.0, 0.9, ST.grey, -4, site.h(-4, 7) + 0.45, 7, 12));
+}
+/** a four-wheeled farm cart by the barn: plank bed with side boards, spoked wheels on axles, a drawbar down */
+function farmCart(site, cx, cz, ry) {
+  const cy = site.h(cx, cz), T = lmTier(), g = new THREE.Group(); g.position.set(cx, cy, cz); g.rotation.y = ry; site.add(g);
+  for (let k = -2; k <= 2; k++) g.add(box(0.3, 0.06, 3.0, WD.wood, k * 0.31, 0.86, 0));
+  for (const s of [-1, 1]) { plank(g, WD.wood, s * 0.8, 1.02, 0, 3.0, 0.26, 0.05, s * Math.PI / 2); g.add(box(0.12, 0.1, 3.1, WD.dark, s * 0.6, 0.78, 0)); }
+  for (const t of [-1, 1]) {
+    plank(g, WD.wood, 0, 1.02, t * 1.5, 1.6, 0.26, 0.05, t > 0 ? 0 : Math.PI);
+    g.add(rod(-1.0, 0.55, t * 1.0, 1.0, 0.55, t * 1.0, 0.05, WD.dark, 6));
+    for (const s of [-1, 1]) {
+      const wh = new THREE.Group(); wh.position.set(s * 0.95, 0.55, t * 1.0); wh.rotation.y = Math.PI / 2; g.add(wh);
+      wh.add(torus(0.53, 0.05, WD.dark, 0, 0, 0, 6, T < 2 ? 20 : 12));
+      const hub = cyl(0.09, 0.09, 0.2, WD.dark, 0, 0, 0, 8); hub.rotation.x = Math.PI / 2; wh.add(hub);
+      if (T < 2) for (let k = 0; k < 8; k++) { const a = k * Math.PI / 4; wh.add(rod(0, 0, 0, Math.cos(a) * 0.5, Math.sin(a) * 0.5, 0, 0.022, WD.wood, 5)); }
+    }
+  }
+  g.add(beam(0, 0.7, 1.55, 0, 0.05, 3.2, 0.09, 0.09, WD.dark));   // drawbar resting on the ground
 }
 function stoneCircle(site, r) {
   for (let k = 0; k < 13; k++) {
