@@ -409,8 +409,9 @@ function mudGeometry(crust) {
   g.setAttribute('position', new THREE.Float32BufferAttribute(P, 3));
   g.setAttribute('color', new THREE.Float32BufferAttribute(C, 3));
   g.setIndex(I);
-  g.computeVertexNormals();
-  return g;
+  const w = BGU.mergeVertices(g);   // the seam column (angle 0 = 2 pi) shares its normals with its neighbours
+  w.computeVertexNormals();
+  return w;
 }
 function smooth01(x) { const t = clamp(x, 0, 1); return t * t * (3 - 2 * t); }
 export function makeMudSpirit() {
@@ -655,7 +656,6 @@ const SCULPT = {
   mon_golem_big: { head: 1.0, eye: 1, inflate: 0, blocky: 0.15, round: 0.3, stone: true },
 };
 // bodies made by the offline sculpt kit (tools/sculpt): asset id -> [G.sculpt type, kit asset id]; createCreature swaps them in
-// (type null: no switch of its own, on unless ?sculpt=0)
 const KIT_BODY = { ani_chicken: ['hen', 'sculpt_ani_chicken'], ani_wolf: ['creatures', 'sculpt_wolf_wild'], mon_bat: ['creatures', 'sculpt_bat_star'] };
 // glow colours of kit bodies swapped in by KIT_BODY (TEXCOORD_0.x through the ramp): the wolves' amber eyes, the bat's stars
 const KIT_GLOW = { sculpt_wolf_wild: 0xff9a2a, sculpt_bat_star: 0xffcf6a };
@@ -1275,7 +1275,7 @@ export function createCreature(assetId, opts = {}) {
     if (ownKit && own.style) model.userData.creature = Object.assign({}, model.userData.creature, { style: own.style });
     if (ownKit && (own.glow != null || own.lift != null)) kitGlow(model, own.glow, own.lift);
     if (ownKit && own.eyes) addKitEyes(model, own.eyes);
-    if (ownKit) { let sm = null; model.traverse((o) => { if (!sm && o.isSkinnedMesh) sm = o; }); if (sm) kitFrame(model, sm); }
+    if (ownKit) { let sm = null; model.traverse((o) => { if (!sm && o.isSkinnedMesh && !o.userData.outline) sm = o; }); if (sm) kitFrame(model, sm); }
   }
   if (!missing && !opts.primitive && !old && !opts.tint && !SCULPT[assetId] && !kitId && !ownKit) mergeCreatureParts(model, model.userData.clips || G.assets?.clips(assetId));
   const cfg = model.userData.creature || null;
