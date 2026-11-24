@@ -6,6 +6,7 @@ import { addItem } from '../core/save.js';
 import { PAL } from '../core/mats.js';
 import { RACES } from '../data/placements.js';
 import { gp, isActive, sfx, toast } from './common.js';
+import { makeWitchRing } from './wilds-rings.js';
 
 const MEDALS = ['gold', 'silver', 'bronze'];
 
@@ -24,7 +25,7 @@ export function createRaces(api) {
       const def = RACES[id];
       const pts = def.rings.map(ringPos);
       const rings = pts.map((pos, i) => {
-        const h = make ? make(def.radius) : null;
+        const h = makeWitchRing(def.radius) || (make ? make(def.radius) : null);
         const normal = new THREE.Vector3();
         if (i < pts.length - 1) normal.subVectors(pts[i + 1], pos); else normal.subVectors(pos, pts[i - 1]);
         if (i > 0 && i < pts.length - 1) normal.normalize().add(_v.subVectors(pos, pts[i - 1]).normalize());

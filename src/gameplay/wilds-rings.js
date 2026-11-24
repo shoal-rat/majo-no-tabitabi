@@ -10,8 +10,66 @@ import { PAL } from '../core/mats.js';
 import { RINGS, RING_PAY } from '../data/wilds.js';
 import { LANDMARK_BY_ID } from '../data/landmarks.js';
 import { sfx, toast } from './common.js';
+import { sculptedProp, propMat } from './errands-props.js';
 
 const MEDALS = ['gold', 'silver', 'bronze'];
+
+// ---- the witch's ring gate (round art-props: tools/sculpt/assets/ring_willow.mjs) ------------------------------------
+// Twisted willow withies, brass bands, a star charm and ribbon streamers (one vertex-coloured, double-sided material,
+// three LODs), and a soft gold glow inside the hoop: a thin bright core with a halo fading inward, one additive mesh.
+// Same handle as the factory ring (world/builders/factories.js makeRaceRing): { group, radius, active, setActive(on),
+// pass() } — the next ring bright, the rest dim (0.15), a pass pulses the glow (x3) and swells it (x1.25) for ~0.7 s.
+// Used by the ring courses here and the broom races (races.js); null when the sculpt is off (?sculpt=0) or missing.
+const RING_R = 3.6;   // the sculpt's hoop radius (scaled to each course's radius)
+let _ringGlowGeo = null;
+function ringGlowGeo() {
+  if (_ringGlowGeo) return _ringGlowGeo;
+  const pos = [], col = [], idx = [], S = 72, gold = [1, 0.8, 0.46];
+  // the core: a thin torus just inside the willow bundle
+  const Rc = RING_R - 0.1, rc = 0.045, T = 6;
+  for (let i = 0; i <= S; i++) for (let j = 0; j <= T; j++) {
+    const a = (i / S) * Math.PI * 2, b = (j / T) * Math.PI * 2, rr = Rc + rc * Math.cos(b);
+    pos.push(Math.cos(a) * rr, Math.sin(a) * rr, rc * Math.sin(b)); col.push(...gold);
+  }
+  for (let i = 0; i < S; i++) for (let j = 0; j < T; j++) { const a = i * (T + 1) + j, c = a + T + 1; idx.push(a, c, a + 1, a + 1, c, c + 1); }
+  // the halo: a band fading from the core to nothing toward the middle of the hoop
+  const o = pos.length / 3, r0 = RING_R - 0.62, r1 = RING_R - 0.12;
+  for (let i = 0; i <= S; i++) {
+    const a = (i / S) * Math.PI * 2, c = Math.cos(a), sn = Math.sin(a);
+    pos.push(c * r0, sn * r0, 0, c * r1, sn * r1, 0);
+    col.push(0, 0, 0, gold[0] * 0.32, gold[1] * 0.32, gold[2] * 0.32);
+  }
+  for (let i = 0; i < S; i++) { const a = o + i * 2; idx.push(a, a + 2, a + 1, a + 1, a + 2, a + 3); }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
+  g.setIndex(idx); g.computeBoundingSphere();
+  return (_ringGlowGeo = g);
+}
+let _ringMats = null;
+const ringMats = () => (_ringMats ||= { WitchRing_none: propMat(0xa4824f, { side: THREE.DoubleSide, surface: 'none', look: { rim: 0.35, spec: 0.25, specPower: 30, wrap: 0.35 } }) });
+export function makeWitchRing(radius = 3) {
+  const body = sculptedProp('sculpt_ring_willow', ringMats(), { k: 2.5, name: 'witchRing', cast: false, recv: false });
+  if (!body) return null;
+  const s = radius / RING_R, STR = 2.2;
+  const g = new THREE.Group(); g.name = 'raceRing';
+  body.scale.setScalar(s); g.add(body);
+  const mat = new THREE.MeshBasicMaterial({ vertexColors: true, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide, toneMapped: false });
+  const glow = new THREE.Mesh(ringGlowGeo(), mat);
+  glow.name = 'raceRingGlow'; glow.castShadow = false; glow.receiveShadow = false; glow.renderOrder = 3; glow.scale.setScalar(s);
+  g.add(glow);
+  let pulse = 0, active = true, last = 0;
+  const apply = () => { const k = STR * ((active ? 1 : 0.15) + pulse * 2); mat.color.setRGB(k, k, k); glow.scale.setScalar(s * (1 + pulse * 0.25)); };
+  // the pass pulse decays while the glow is drawn (no ticker; nothing runs for a ring off screen)
+  glow.onBeforeRender = () => { if (pulse <= 0) return; const t = performance.now() / 1000; pulse = Math.max(0, pulse - (t - last) * 1.5); last = t; apply(); };
+  const h = {
+    group: g, radius, active: true,
+    setActive(on) { active = h.active = !!on; apply(); },
+    pass() { pulse = 1; last = performance.now() / 1000; apply(); },
+  };
+  apply();
+  return h;
+}
 
 export function createWildRings({ wstate, lmName, tt }) {
   const courses = [];
@@ -29,7 +87,7 @@ export function createWildRings({ wstate, lmName, tt }) {
         const normal = new THREE.Vector3();
         if (i < pts.length - 1) normal.subVectors(pts[i + 1], pos).normalize(); else normal.subVectors(pos, pts[i - 1]).normalize();
         if (i > 0 && i < pts.length - 1) normal.add(_a.subVectors(pos, pts[i - 1]).normalize()).normalize();
-        const h = make ? make(def.radius) : null;
+        const h = makeWitchRing(def.radius) || (make ? make(def.radius) : null);
         if (h) { h.group.position.copy(pos); h.group.lookAt(_a.copy(pos).add(normal)); h.group.visible = i === 0; G.scene.add(h.group); }
         return { pos, normal, h };
       });

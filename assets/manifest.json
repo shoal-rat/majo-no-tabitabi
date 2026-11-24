@@ -23450,5 +23450,39 @@
    }
   },
   "notes": "Iron-banded pack chest for the landmark puzzles (gameplay/wilds-puzzles.js makeChestAt): bevelled planks with gaps, corner posts, iron bands and rivets, brass caps, lock plate, ring handles; barrel lid of staves with bevelled gable ends. chest_pack = body (origin ground centre, front +Z), chest_pack_lid = lid (origin on the hinge line; the game mounts it at (0, 0.54, -0.31) and swings it about X). LOD tris 2652 / 1140 / 188. Vertex colour only (COLOR_0 linear rgb, written once)."
+ },
+ "sculpt_ring_willow": {
+  "file": "models/sculpt/ring_willow.glb",
+  "type": "model",
+  "license": "CC0 (original work)",
+  "author": "sculpted for this project",
+  "source": "tools/sculpt/assets/ring_willow.mjs (node tools/sculpt/assets/props_activity_lib.mjs)",
+  "scale": 1,
+  "size": [
+   7.412,
+   8.534,
+   0.28
+  ],
+  "tris": 11324,
+  "lods": [
+   11324,
+   4456,
+   584
+  ],
+  "materials": [
+   "WitchRing_none"
+  ],
+  "mats": {
+   "WitchRing_none": {
+    "surface": "none",
+    "look": {
+     "rim": 0.35,
+     "spec": 0.25,
+     "specPower": 30,
+     "wrap": 0.35
+    }
+   }
+  },
+  "notes": "Witch's ring gate for the broom courses (gameplay/wilds-rings.js, races.js): three twisted willow withies and a binding withy, eight brass bands with bead rims, a brass star charm, six ribbon streamers. Hoop radius 3.6 m in the XY plane (normal +Z), centre at the origin; the game scales it by radius / 3.6 and adds its own additive glow. One material (WitchRing, drawn double-sided for the ribbons). LOD tris 11324 / 4456 / 584. Vertex colour only (COLOR_0 linear rgb, written once)."
  }
 }
