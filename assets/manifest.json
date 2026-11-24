@@ -23781,6 +23781,426 @@
   },
   "notes": "Facet stone (quarry_half) for the landmark rock set pieces: exact planes with bevelled edges, beds / joints / drill marks as geometry, moss cushion as its own primitive (Moss_none). Vertex colour only (COLOR_0 linear rgb, neutral stone ~#9b9b9b). LOD tris 768 / 324 / 89. Origin = foot centre, ~1 m unit; src/world/landforms/setpieces.js fits it into each piece's box."
  },
+ "sculpt_briar_thicket": {
+  "file": "models/sculpt/briar_thicket.glb",
+  "type": "model",
+  "license": "CC0 (original work)",
+  "author": "sculpted for this project",
+  "source": "tools/sculpt/assets/briar_thicket.mjs (node tools/sculpt/assets/props_activity_lib.mjs)",
+  "scale": 1,
+  "size": [
+   3.652,
+   2.119,
+   4.235
+  ],
+  "tris": 21108,
+  "lods": [
+   21108,
+   6209,
+   1242
+  ],
+  "materials": [
+   "BriarCane_bark",
+   "BriarLeaf_none"
+  ],
+  "mats": {
+   "BriarCane_bark": {
+    "surface": "bark",
+    "look": {
+     "detail": 0.25,
+     "rim": 0.25,
+     "wrap": 0.35
+    }
+   },
+   "BriarLeaf_none": {
+    "surface": "none",
+    "look": {
+     "trans": 0.45,
+     "rim": 0.3,
+     "wrap": 0.5
+    }
+   }
+  },
+  "notes": "Briar thicket for the bramble puzzles (gameplay/wilds-puzzles.js): arching bramble canes with hooked prickles, three-leaflet leaves (green / bronze / dried), berry clusters, dead sticks. Origin = ground centre (the chest), dome ~3.4 m x ~2.1 m. Leaves are a single sheet: the game draws BriarLeaf double-sided. LOD tris 21108 / 6209 / 1242. Vertex colour only (COLOR_0 linear rgb, written once)."
+ },
+ "sculpt_rubble_heap": {
+  "file": "models/sculpt/rubble_heap.glb",
+  "type": "model",
+  "license": "CC0 (original work)",
+  "author": "sculpted for this project",
+  "source": "tools/sculpt/assets/rubble_heap.mjs (node tools/sculpt/assets/props_activity_lib.mjs)",
+  "scale": 1,
+  "size": [
+   4.834,
+   2.136,
+   3.846
+  ],
+  "tris": 3084,
+  "lods": [
+   3084,
+   1353,
+   349
+  ],
+  "materials": [
+   "Rubble_rock",
+   "Moss_none"
+  ],
+  "mats": {
+   "Rubble_rock": {
+    "surface": "rock",
+    "look": {
+     "rim": 0.22,
+     "wrap": 0.3
+    }
+   },
+   "Moss_none": {
+    "surface": "none",
+    "look": {
+     "rim": 0.3,
+     "wrap": 0.5
+    }
+   }
+  },
+  "notes": "Rubble heap for the rubble puzzles (gameplay/wilds-puzzles.js): a rockfall of split angular blocks built from exact planes (facet kit), bevelled weathered edges, paler fracture faces, talus chips, moss on the oldest low blocks. Neutral stone ~#9b9b9b (the game tints it per site). Origin = ground centre (the chest), ~3.6 m across, ~1.9 m tall. LOD tris 3084 / 1353 / 349. Vertex colour only (COLOR_0 linear rgb, written once)."
+ },
+ "sculpt_chest_pack": {
+  "file": "models/sculpt/chest_pack.glb",
+  "type": "model",
+  "license": "CC0 (original work)",
+  "author": "sculpted for this project",
+  "source": "tools/sculpt/assets/chest_pack.mjs (node tools/sculpt/assets/props_activity_lib.mjs)",
+  "scale": 1,
+  "size": [
+   1.091,
+   0.555,
+   0.7
+  ],
+  "tris": 4724,
+  "lods": [
+   4724,
+   3508,
+   360
+  ],
+  "materials": [
+   "ChestWood_wood",
+   "ChestIron_metal"
+  ],
+  "mats": {
+   "ChestWood_wood": {
+    "surface": "wood",
+    "look": {
+     "detail": 0.35,
+     "rim": 0.3
+    }
+   },
+   "ChestIron_metal": {
+    "surface": "metal",
+    "look": {
+     "spec": 0.6,
+     "specPower": 44,
+     "rim": 0.45
+    }
+   }
+  },
+  "notes": "Iron-banded pack chest for the landmark puzzles (gameplay/wilds-puzzles.js makeChestAt): bevelled planks with gaps, corner posts, iron bands and rivets, brass caps, lock plate, ring handles; barrel lid of staves with bevelled gable ends. chest_pack = body (origin ground centre, front +Z), chest_pack_lid = lid (origin on the hinge line; the game mounts it at (0, 0.54, -0.31) and swings it about X). LOD tris 4724 / 3508 / 360. Vertex colour only (COLOR_0 linear rgb, written once)."
+ },
+ "sculpt_chest_pack_lid": {
+  "file": "models/sculpt/chest_pack_lid.glb",
+  "type": "model",
+  "license": "CC0 (original work)",
+  "author": "sculpted for this project",
+  "source": "tools/sculpt/assets/chest_pack.mjs (node tools/sculpt/assets/props_activity_lib.mjs)",
+  "scale": 1,
+  "size": [
+   1,
+   0.377,
+   0.701
+  ],
+  "tris": 2652,
+  "lods": [
+   2652,
+   1140,
+   188
+  ],
+  "materials": [
+   "ChestWood_wood",
+   "ChestIron_metal"
+  ],
+  "mats": {
+   "ChestWood_wood": {
+    "surface": "wood",
+    "look": {
+     "detail": 0.35,
+     "rim": 0.3
+    }
+   },
+   "ChestIron_metal": {
+    "surface": "metal",
+    "look": {
+     "spec": 0.6,
+     "specPower": 44,
+     "rim": 0.45
+    }
+   }
+  },
+  "notes": "Iron-banded pack chest for the landmark puzzles (gameplay/wilds-puzzles.js makeChestAt): bevelled planks with gaps, corner posts, iron bands and rivets, brass caps, lock plate, ring handles; barrel lid of staves with bevelled gable ends. chest_pack = body (origin ground centre, front +Z), chest_pack_lid = lid (origin on the hinge line; the game mounts it at (0, 0.54, -0.31) and swings it about X). LOD tris 2652 / 1140 / 188. Vertex colour only (COLOR_0 linear rgb, written once)."
+ },
+ "sculpt_ring_willow": {
+  "file": "models/sculpt/ring_willow.glb",
+  "type": "model",
+  "license": "CC0 (original work)",
+  "author": "sculpted for this project",
+  "source": "tools/sculpt/assets/ring_willow.mjs (node tools/sculpt/assets/props_activity_lib.mjs)",
+  "scale": 1,
+  "size": [
+   7.412,
+   8.534,
+   0.28
+  ],
+  "tris": 11324,
+  "lods": [
+   11324,
+   4456,
+   584
+  ],
+  "materials": [
+   "WitchRing_none"
+  ],
+  "mats": {
+   "WitchRing_none": {
+    "surface": "none",
+    "look": {
+     "rim": 0.35,
+     "spec": 0.25,
+     "specPower": 30,
+     "wrap": 0.35
+    }
+   }
+  },
+  "notes": "Witch's ring gate for the broom courses (gameplay/wilds-rings.js, races.js): three twisted willow withies and a binding withy, eight brass bands with bead rims, a brass star charm, six ribbon streamers. Hoop radius 3.6 m in the XY plane (normal +Z), centre at the origin; the game scales it by radius / 3.6 and adds its own additive glow. One material (WitchRing, drawn double-sided for the ribbons). LOD tris 11324 / 4456 / 584. Vertex colour only (COLOR_0 linear rgb, written once)."
+ },
+ "sculpt_hat_felt": {
+  "file": "models/sculpt/hat_felt.glb",
+  "type": "model",
+  "license": "CC0 (original work)",
+  "author": "sculpted for this project",
+  "source": "tools/sculpt/assets/hat_felt.mjs (node tools/sculpt/assets/props_activity_lib.mjs)",
+  "scale": 1,
+  "size": [
+   0.634,
+   0.217,
+   0.716
+  ],
+  "tris": 2188,
+  "lods": [
+   2188,
+   1256,
+   592
+  ],
+  "materials": [
+   "HatFelt_cloth",
+   "HatFeather_none"
+  ],
+  "mats": {
+   "HatFelt_cloth": {
+    "surface": "cloth",
+    "look": {
+     "detail": 0.3,
+     "rim": 0.4,
+     "wrap": 0.45
+    }
+   },
+   "HatFeather_none": {
+    "surface": "none",
+    "look": {
+     "trans": 0.3,
+     "rim": 0.35,
+     "wrap": 0.5
+    }
+   }
+  },
+  "notes": "The painter's felt hat (gameplay/errands-props.js makeHat): rolled and waved brim, pinched crown with a top crease, red band with a bow, barred feather. Origin = brim centre, front +Z, brim r 0.31 m. The feather (HatFeather) is a single sheet: drawn double-sided. LOD tris 2188 / 1256 / 592. Vertex colour only (COLOR_0 linear rgb, written once)."
+ },
+ "sculpt_easel_painter": {
+  "file": "models/sculpt/easel_painter.glb",
+  "type": "model",
+  "license": "CC0 (original work)",
+  "author": "sculpted for this project",
+  "source": "tools/sculpt/assets/easel_painter.mjs (node tools/sculpt/assets/props_activity_lib.mjs)",
+  "scale": 1,
+  "size": [
+   1.122,
+   1.666,
+   0.767
+  ],
+  "tris": 3780,
+  "lods": [
+   3780,
+   2004,
+   204
+  ],
+  "materials": [
+   "EaselWood_wood",
+   "EaselPaint_none"
+  ],
+  "mats": {
+   "EaselWood_wood": {
+    "surface": "wood",
+    "look": {
+     "detail": 0.3,
+     "rim": 0.3
+    }
+   },
+   "EaselPaint_none": {
+    "surface": "none",
+    "look": {
+     "rim": 0.25,
+     "wrap": 0.35
+    }
+   }
+  },
+  "notes": "The painter's field easel (gameplay/errands-props.js makeEasel): bevelled legs, ledge, clamp; a canvas with a moor landscape painted in vertex colour; a paint box with pots, a jar of brushes and a palette at its foot. Faces +Z, origin on the ground; legs 1.65 m. LOD tris 3780 / 2004 / 204. Vertex colour only (COLOR_0 linear rgb, written once)."
+ },
+ "sculpt_stove_iron": {
+  "file": "models/sculpt/stove_iron.glb",
+  "type": "model",
+  "license": "CC0 (original work)",
+  "author": "sculpted for this project",
+  "source": "tools/sculpt/assets/stove_iron.mjs (node tools/sculpt/assets/props_activity_lib.mjs)",
+  "scale": 1,
+  "size": [
+   1.179,
+   2.26,
+   1.179
+  ],
+  "tris": 3926,
+  "lods": [
+   3926,
+   2562,
+   606
+  ],
+  "materials": [
+   "StoveIron_metal",
+   "StoveStone_stone",
+   "StoveWood_bark"
+  ],
+  "mats": {
+   "StoveIron_metal": {
+    "surface": "metal",
+    "look": {
+     "spec": 0.4,
+     "specPower": 36,
+     "rim": 0.4
+    }
+   },
+   "StoveStone_stone": {
+    "surface": "stone",
+    "look": {
+     "detail": 0.3,
+     "rim": 0.22,
+     "wrap": 0.3
+    }
+   },
+   "StoveWood_bark": {
+    "surface": "bark",
+    "look": {
+     "detail": 0.3,
+     "rim": 0.25
+    }
+   }
+  },
+  "notes": "The shepherd's cast-iron stove (gameplay/errands-props.js makeStove): bowed legs, ribs, rivets, framed and barred fire door (the game's glow behind it), ash drawer, top plate with rings, flue with collars, damper and rain cap, a pot with lid and bail, hearth slab, split logs. Origin on the ground, door +Z; flue mouth (-0.18, 2.1, -0.12). LOD tris 3926 / 2562 / 606. Vertex colour only (COLOR_0 linear rgb, written once)."
+ },
+ "sculpt_cart_hand": {
+  "file": "models/sculpt/cart_hand.glb",
+  "type": "model",
+  "license": "CC0 (original work)",
+  "author": "sculpted for this project",
+  "source": "tools/sculpt/assets/cart_hand.mjs (node tools/sculpt/assets/props_activity_lib.mjs)",
+  "scale": 1,
+  "size": [
+   1.46,
+   1.32,
+   2.842
+  ],
+  "tris": 8387,
+  "lods": [
+   8387,
+   6379,
+   2125
+  ],
+  "materials": [
+   "CartWood_wood",
+   "CartIron_metal",
+   "CartCrop_none"
+  ],
+  "mats": {
+   "CartWood_wood": {
+    "surface": "wood",
+    "look": {
+     "detail": 0.35,
+     "rim": 0.3
+    }
+   },
+   "CartIron_metal": {
+    "surface": "metal",
+    "look": {
+     "spec": 0.45,
+     "specPower": 40,
+     "rim": 0.4
+    }
+   },
+   "CartCrop_none": {
+    "surface": "none",
+    "look": {
+     "rim": 0.3,
+     "wrap": 0.4,
+     "spec": 0.15
+    }
+   }
+  },
+  "notes": "The carter's handcart (gameplay/errands-props.js makeCart): plank bed, side boards on stakes, tail board, shafts with a cross grip and a prop leg, two spoked wheels with iron tyres and turned hubs, ribbed pumpkins on straw. Faces +Z, origin on the ground between the wheels; bed 0.62 m, wheels r 0.43 m. LOD tris 8387 / 6379 / 2125. Vertex colour only (COLOR_0 linear rgb, written once)."
+ },
+ "sculpt_seat_stone": {
+  "file": "models/sculpt/seat_stone.glb",
+  "type": "model",
+  "license": "CC0 (original work)",
+  "author": "sculpted for this project",
+  "source": "tools/sculpt/assets/seat_stone.mjs (node tools/sculpt/assets/props_activity_lib.mjs)",
+  "scale": 1,
+  "size": [
+   0.98,
+   0.499,
+   0.774
+  ],
+  "tris": 305,
+  "lods": [
+   305,
+   158,
+   36
+  ],
+  "materials": [
+   "SeatStone_rock",
+   "Moss_none"
+  ],
+  "mats": {
+   "SeatStone_rock": {
+    "surface": "rock",
+    "look": {
+     "rim": 0.22,
+     "wrap": 0.3
+    }
+   },
+   "Moss_none": {
+    "surface": "none",
+    "look": {
+     "rim": 0.3,
+     "wrap": 0.5
+    }
+   }
+  },
+  "notes": "The sitting stone at the road shrine (gameplay/errands-props.js makeSeat): facet-kit stone with a worn flat seat at 0.44 m, bevelled edges, lichen bloom, moss along the back. Origin under the sitter's hips; neutral stone (the game tints it). LOD tris 305 / 158 / 36. Vertex colour only (COLOR_0 linear rgb, written once)."
+ },
  "sculpt_folk_basket": {
   "file": "models/sculpt/folk_basket.glb",
   "type": "model",

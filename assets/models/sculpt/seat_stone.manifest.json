@@ -1,0 +1,42 @@
+{
+ "sculpt_seat_stone": {
+  "file": "models/sculpt/seat_stone.glb",
+  "type": "model",
+  "license": "CC0 (original work)",
+  "author": "sculpted for this project",
+  "source": "tools/sculpt/assets/seat_stone.mjs (node tools/sculpt/assets/props_activity_lib.mjs)",
+  "scale": 1,
+  "size": [
+   0.98,
+   0.499,
+   0.774
+  ],
+  "tris": 305,
+  "lods": [
+   305,
+   158,
+   36
+  ],
+  "materials": [
+   "SeatStone_rock",
+   "Moss_none"
+  ],
+  "mats": {
+   "SeatStone_rock": {
+    "surface": "rock",
+    "look": {
+     "rim": 0.22,
+     "wrap": 0.3
+    }
+   },
+   "Moss_none": {
+    "surface": "none",
+    "look": {
+     "rim": 0.3,
+     "wrap": 0.5
+    }
+   }
+  },
+  "notes": "The sitting stone at the road shrine (gameplay/errands-props.js makeSeat): facet-kit stone with a worn flat seat at 0.44 m, bevelled edges, lichen bloom, moss along the back. Origin under the sitter's hips; neutral stone (the game tints it). LOD tris 305 / 158 / 36. Vertex colour only (COLOR_0 linear rgb, written once)."
+ }
+}

@@ -1,0 +1,44 @@
+{
+ "sculpt_briar_thicket": {
+  "file": "models/sculpt/briar_thicket.glb",
+  "type": "model",
+  "license": "CC0 (original work)",
+  "author": "sculpted for this project",
+  "source": "tools/sculpt/assets/briar_thicket.mjs (node tools/sculpt/assets/props_activity_lib.mjs)",
+  "scale": 1,
+  "size": [
+   3.652,
+   2.119,
+   4.235
+  ],
+  "tris": 21108,
+  "lods": [
+   21108,
+   6209,
+   1242
+  ],
+  "materials": [
+   "BriarCane_bark",
+   "BriarLeaf_none"
+  ],
+  "mats": {
+   "BriarCane_bark": {
+    "surface": "bark",
+    "look": {
+     "detail": 0.25,
+     "rim": 0.25,
+     "wrap": 0.35
+    }
+   },
+   "BriarLeaf_none": {
+    "surface": "none",
+    "look": {
+     "trans": 0.45,
+     "rim": 0.3,
+     "wrap": 0.5
+    }
+   }
+  },
+  "notes": "Briar thicket for the bramble puzzles (gameplay/wilds-puzzles.js): arching bramble canes with hooked prickles, three-leaflet leaves (green / bronze / dried), berry clusters, dead sticks. Origin = ground centre (the chest), dome ~3.4 m x ~2.1 m. Leaves are a single sheet: the game draws BriarLeaf double-sided. LOD tris 21108 / 6209 / 1242. Vertex colour only (COLOR_0 linear rgb, written once)."
+ }
+}

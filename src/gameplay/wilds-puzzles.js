@@ -14,13 +14,59 @@ import * as THREE from 'three';
 import { G } from '../core/game.js';
 import { mulberry32 } from '../core/util.js';
 import { box, cyl, cone, sphere, bakeStatic } from '../core/geo.js';
-import { toon, glow, glowDynamic } from '../core/mats.js';
+import { PAL, toon, glow, glowDynamic } from '../core/mats.js';
 import { LANDMARK_BY_ID } from '../data/landmarks.js';
 import { PUZZLES } from '../data/wilds.js';
 import { poolOf } from '../world/landforms/pools.js';
+import { NEUTRAL } from '../world/rock-family.js';
+import { sculptedProp, propMat } from './errands-props.js';
 import { sfx, toast } from './common.js';
 
 const rockGeo = new THREE.DodecahedronGeometry(1, 0);
+
+// ---- sculpted pieces (round art-props: tools/sculpt/assets/{briar_thicket,rubble_heap,chest_pack}.mjs) ---------------
+// Vertex-coloured LODs (errands-props.js sculptedProp); with the switch off (?sculpt=0) the old primitives are built.
+let _mats = null;
+function mats() {
+  if (_mats) return _mats;
+  _mats = {
+    briar: { BriarCane_bark: propMat(0x6e4537, { surface: 'bark', look: { detail: 0.25, rim: 0.25, wrap: 0.35 } }),
+      BriarLeaf_none: propMat(0x66763f, { side: THREE.DoubleSide, surface: 'none', look: { trans: 0.45, rim: 0.3, wrap: 0.5 } }) },
+    chest: { ChestWood_wood: propMat(0x8e4a32, { surface: 'wood', look: { detail: 0.35, rim: 0.3 } }),
+      ChestIron_metal: propMat(0x4f525c, { surface: 'metal', look: { spec: 0.6, specPower: 44, rim: 0.45 } }) },
+    moss: propMat(0x6c8a4a, { surface: 'none', look: { rim: 0.3, wrap: 0.5 } }),
+  };
+  return _mats;
+}
+// the rubble's stone per site (the GLB is neutral ~#9b9b9b): the pass's grey scree, the quarry's sandstone, the aqueduct's
+// limestone — a little lighter than the old heap's warm grey (the sculpt's own shading darkens)
+const RUBBLE_TINT = { pass_rockfall: 0x908b82, old_quarry: 0xa3977f, south_aqueduct: 0xa09a8e };
+const rubbleMats = (lm) => {
+  const t = new THREE.Color(RUBBLE_TINT[lm] || 0x968f84).multiplyScalar(1 / NEUTRAL);
+  return { Rubble_rock: propMat(0xa59c90, { surface: 'stone', look: { detail: 0.35, bump: 0.4, rim: 0.22, wrap: 0.3 } }, t), Moss_none: mats().moss };
+};
+/** the sculpted pack chest: body + lid on its hinge + the gold glow inside; same handle as the factory chest (+ tick) */
+function sculptChest() {
+  const body = sculptedProp('sculpt_chest_pack', mats().chest, { k: 0.5, name: 'chestBody' });
+  const lid = body && sculptedProp('sculpt_chest_pack_lid', mats().chest, { k: 0.5, name: 'chestLid' });
+  if (!body || !lid) return null;
+  const g = new THREE.Group(); g.name = 'chest';
+  g.add(body);
+  const hinge = new THREE.Group(); hinge.position.set(0, 0.54, -0.31); hinge.add(lid); g.add(hinge);
+  const innerMat = glowDynamic(PAL.gold, 1.5);   // a warm glow from the open mouth (the factory chest's 3 burns white here)
+  const inner = box(0.88, 0.02, 0.5, innerMat, 0, 0.49, 0); inner.castShadow = false; g.add(inner);
+  let v = -1, want = 0;
+  const set = (x) => { v = x; hinge.rotation.x = -1.9 * v; innerMat.userData.setGlow(0.05 + v); };
+  const h = {
+    group: g, opened: false,
+    open(instant = false) { h.opened = true; want = 1; if (instant) set(1); },
+    close(instant = false) { h.opened = false; want = 0; if (instant) set(0); },
+    /** the lid swings over ~0.25 s (wilds-puzzles update) */
+    tick(dt) { if (v !== want) set(want > v ? Math.min(want, v + dt * 4) : Math.max(want, v - dt * 4)); },
+  };
+  set(0);
+  return h;
+}
 
 export function createWildPuzzles({ resolveAt, grant, wstate, tt }) {
   const list = [];            // runtime puzzle records
@@ -35,7 +81,7 @@ export function createWildPuzzles({ resolveAt, grant, wstate, tt }) {
 
   // ---- shared pieces -----------------------------------------------------------------------------------------------
   function makeChestAt(pos, yaw, solid = true) {
-    let h = G.structures?.factories?.makeChest?.() || null;
+    let h = sculptChest() || G.structures?.factories?.makeChest?.() || null;
     if (!h) {
       const g = new THREE.Group();
       g.add(box(0.9, 0.55, 0.6, toon(0x7a5232), 0, 0.28, 0));
@@ -101,6 +147,30 @@ export function createWildPuzzles({ resolveAt, grant, wstate, tt }) {
     return g;
   }
 
+  // ---- the old primitive thicket and heap (sculpt switch off) --------------------------------------------------------
+  function oldThicket(r) {
+    const g = new THREE.Group();
+    const cane = toon(0x5a4634), dry = toon(0x7a6a48), leaf = toon(0x56603a);
+    for (let k = 0; k < 26; k++) {
+      const a = r() * 6.283, d0 = 0.6 + r() * 1.1, h = 1.2 + r() * 1.1;
+      const c = cyl(0.025, 0.05, h, k % 3 ? cane : dry, Math.sin(a) * d0, h * 0.42, Math.cos(a) * d0, 4);
+      c.rotation.set((r() - 0.5) * 1.6, r() * 3, (r() - 0.5) * 1.6); g.add(c);
+    }
+    for (let k = 0; k < 9; k++) { const a = r() * 6.283, d0 = 0.5 + r() * 1.2; const s = sphere(0.3 + r() * 0.25, k % 2 ? leaf : dry, Math.sin(a) * d0, 0.4 + r() * 1.1, Math.cos(a) * d0, 5, 4); s.scale.y = 0.6; g.add(s); }
+    return bakeStatic(g);
+  }
+  function oldPile(r) {
+    const g = new THREE.Group(), m1 = toon(0x8f8a80), m2 = toon(0x7d776c);
+    for (let k = 0; k < 11; k++) {
+      const a = k / 11 * 6.283 + r() * 0.4, d0 = k < 8 ? 0.95 + r() * 0.5 : 0.25 * r();
+      const o = new THREE.Mesh(rockGeo, k % 2 ? m1 : m2);
+      const s = k < 8 ? 0.55 + r() * 0.35 : 0.75 + r() * 0.2;
+      o.scale.set(s, s * (0.7 + r() * 0.3), s); o.position.set(Math.sin(a) * d0, k < 8 ? s * 0.5 : 1.0 + r() * 0.3, Math.cos(a) * d0); o.rotation.set(r() * 3, r() * 3, r() * 3);
+      g.add(o);
+    }
+    return bakeStatic(g);
+  }
+
   // ---- kinds -------------------------------------------------------------------------------------------------------
   const KINDS = {
     beacon(p) {
@@ -134,15 +204,10 @@ export function createWildPuzzles({ resolveAt, grant, wstate, tt }) {
       p.chest = makeChestAt(p.pos, yawTo(p.pos, d.lm) + Math.PI);
       // the thicket: a dome of dry, crooked canes round the chest
       const r = mulberry32(Math.round(p.pos.x * 7 + p.pos.z * 13) >>> 0);
-      const g = new THREE.Group();
-      const cane = toon(0x5a4634), dry = toon(0x7a6a48), leaf = toon(0x56603a);
-      for (let k = 0; k < 26; k++) {
-        const a = r() * 6.283, d0 = 0.6 + r() * 1.1, h = 1.2 + r() * 1.1;
-        const c = cyl(0.025, 0.05, h, k % 3 ? cane : dry, Math.sin(a) * d0, h * 0.42, Math.cos(a) * d0, 4);
-        c.rotation.set((r() - 0.5) * 1.6, r() * 3, (r() - 0.5) * 1.6); g.add(c);
-      }
-      for (let k = 0; k < 9; k++) { const a = r() * 6.283, d0 = 0.5 + r() * 1.2; const s = sphere(0.3 + r() * 0.25, k % 2 ? leaf : dry, Math.sin(a) * d0, 0.4 + r() * 1.1, Math.cos(a) * d0, 5, 4); s.scale.y = 0.6; g.add(s); }
-      p.thicket = bakeStatic(g); p.thicket.position.copy(p.pos); G.scene.add(p.thicket);
+      p.thicket = sculptedProp('sculpt_briar_thicket', mats().briar, { name: 'wilds_briar' });
+      if (p.thicket) { p.thicket.rotation.y = r() * 6.283; p.thicketK = 0.95 + r() * 0.1; p.thicket.scale.setScalar(p.thicketK); }
+      else p.thicket = oldThicket(r);
+      p.thicket.position.copy(p.pos); G.scene.add(p.thicket);
       p.col = G.world.addCollider({ x: p.pos.x, z: p.pos.z, r: 1.55, y0: p.pos.y - 1, y1: p.pos.y + 2.2, tag: 'wilds_bramble', climb: false });
       p.reactor = register({ owner: p, kind: 'prop', material: 'wood', pos: p.pos.clone(), center: false, radius: 1.7, height: 2.0, flammable: 1, burnTime: 6,
         on: { burnout: () => solve(p) } });
@@ -156,15 +221,11 @@ export function createWildPuzzles({ resolveAt, grant, wstate, tt }) {
       p.pos = resolveAt(d.lm, d.at, new THREE.Vector3());
       p.chest = makeChestAt(p.pos, yawTo(p.pos, d.lm) + Math.PI);
       const r = mulberry32(Math.round(p.pos.x * 11 + p.pos.z * 5) >>> 0);
-      const g = new THREE.Group(), m1 = toon(0x8f8a80), m2 = toon(0x7d776c);
-      for (let k = 0; k < 11; k++) {
-        const a = k / 11 * 6.283 + r() * 0.4, d0 = k < 8 ? 0.95 + r() * 0.5 : 0.25 * r();
-        const o = new THREE.Mesh(rockGeo, k % 2 ? m1 : m2);
-        const s = k < 8 ? 0.55 + r() * 0.35 : 0.75 + r() * 0.2;
-        o.scale.set(s, s * (0.7 + r() * 0.3), s); o.position.set(Math.sin(a) * d0, k < 8 ? s * 0.5 : 1.0 + r() * 0.3, Math.cos(a) * d0); o.rotation.set(r() * 3, r() * 3, r() * 3);
-        g.add(o);
-      }
-      p.pile = bakeStatic(g); p.pile.position.copy(p.pos); G.scene.add(p.pile);
+      // a rockfall of split blocks over the chest (sculpted), each heap turned its own way
+      p.pile = sculptedProp('sculpt_rubble_heap', rubbleMats(d.lm), { name: 'wilds_rubble' });
+      if (p.pile) p.pile.rotation.y = r() * 6.283;
+      else p.pile = oldPile(r);
+      p.pile.position.copy(p.pos); G.scene.add(p.pile);
       p.col = G.world.addCollider({ x: p.pos.x, z: p.pos.z, r: 1.6, y0: p.pos.y - 1, y1: p.pos.y + 1.9, tag: 'wilds_rubble', climb: false });
       const smash = () => { solve(p); return true; };
       p.reactor = register({ owner: p, kind: 'prop', material: 'stone', pos: p.pos.clone(), center: false, radius: 1.8, height: 1.8,
@@ -477,8 +538,9 @@ export function createWildPuzzles({ resolveAt, grant, wstate, tt }) {
         if (near && p.flame?.visible) p.flame.userData.tick(time);
         if (near && p.flames) for (const f of p.flames) if (f.visible) f.userData.tick(time);
         if (p.sweep?.visible) p.sweep.rotation.y = time * 0.5;
-        if (p.shrink !== undefined && p.thicket?.visible) { p.shrink -= dt * 0.8; p.thicket.scale.set(1, Math.max(0.01, p.shrink), 1); if (p.shrink <= 0) p.thicket.visible = false; }
+        if (p.shrink !== undefined && p.thicket?.visible) { p.shrink -= dt * 0.8; const k0 = p.thicketK || 1; p.thicket.scale.set(k0, k0 * Math.max(0.01, p.shrink), k0); if (p.shrink <= 0) p.thicket.visible = false; }
         p.tick?.(dt, near);
+        p.chest?.tick?.(dt);
         if (playing && P && !p.seen && ref && Math.abs(P.pos.x - ref.x) < 40 && Math.abs(P.pos.z - ref.z) < 40) { p.seen = true; const w = wstate(); if (w && !w.seen[p.def.id]) { w.seen[p.def.id] = 1; G.wilds && (G.wilds.markersDirty = true); } }
       }
     },

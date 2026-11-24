@@ -1,0 +1,44 @@
+{
+ "sculpt_hat_felt": {
+  "file": "models/sculpt/hat_felt.glb",
+  "type": "model",
+  "license": "CC0 (original work)",
+  "author": "sculpted for this project",
+  "source": "tools/sculpt/assets/hat_felt.mjs (node tools/sculpt/assets/props_activity_lib.mjs)",
+  "scale": 1,
+  "size": [
+   0.634,
+   0.217,
+   0.716
+  ],
+  "tris": 2188,
+  "lods": [
+   2188,
+   1256,
+   592
+  ],
+  "materials": [
+   "HatFelt_cloth",
+   "HatFeather_none"
+  ],
+  "mats": {
+   "HatFelt_cloth": {
+    "surface": "cloth",
+    "look": {
+     "detail": 0.3,
+     "rim": 0.4,
+     "wrap": 0.45
+    }
+   },
+   "HatFeather_none": {
+    "surface": "none",
+    "look": {
+     "trans": 0.3,
+     "rim": 0.35,
+     "wrap": 0.5
+    }
+   }
+  },
+  "notes": "The painter's felt hat (gameplay/errands-props.js makeHat): rolled and waved brim, pinched crown with a top crease, red band with a bow, barred feather. Origin = brim centre, front +Z, brim r 0.31 m. The feather (HatFeather) is a single sheet: drawn double-sided. LOD tris 2188 / 1256 / 592. Vertex colour only (COLOR_0 linear rgb, written once)."
+ }
+}

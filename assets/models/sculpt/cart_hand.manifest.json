@@ -1,0 +1,52 @@
+{
+ "sculpt_cart_hand": {
+  "file": "models/sculpt/cart_hand.glb",
+  "type": "model",
+  "license": "CC0 (original work)",
+  "author": "sculpted for this project",
+  "source": "tools/sculpt/assets/cart_hand.mjs (node tools/sculpt/assets/props_activity_lib.mjs)",
+  "scale": 1,
+  "size": [
+   1.46,
+   1.32,
+   2.842
+  ],
+  "tris": 8387,
+  "lods": [
+   8387,
+   6379,
+   2125
+  ],
+  "materials": [
+   "CartWood_wood",
+   "CartIron_metal",
+   "CartCrop_none"
+  ],
+  "mats": {
+   "CartWood_wood": {
+    "surface": "wood",
+    "look": {
+     "detail": 0.35,
+     "rim": 0.3
+    }
+   },
+   "CartIron_metal": {
+    "surface": "metal",
+    "look": {
+     "spec": 0.45,
+     "specPower": 40,
+     "rim": 0.4
+    }
+   },
+   "CartCrop_none": {
+    "surface": "none",
+    "look": {
+     "rim": 0.3,
+     "wrap": 0.4,
+     "spec": 0.15
+    }
+   }
+  },
+  "notes": "The carter's handcart (gameplay/errands-props.js makeCart): plank bed, side boards on stakes, tail board, shafts with a cross grip and a prop leg, two spoked wheels with iron tyres and turned hubs, ribbed pumpkins on straw. Faces +Z, origin on the ground between the wheels; bed 0.62 m, wheels r 0.43 m. LOD tris 8387 / 6379 / 2125. Vertex colour only (COLOR_0 linear rgb, written once)."
+ }
+}
