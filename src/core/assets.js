@@ -81,7 +81,8 @@ export const SCULPT_TYPES = {
   earth_column: ['sculpt_earth_column_a', 'sculpt_earth_column_b', 'sculpt_earth_column_c', 'sculpt_earth_rubble'],
   // figures (round art-figures): the City of Magic residents' carried props (builders/mage-folk.js, tools/sculpt/assets/folk_*.mjs),
   // the page-trial steles and mechanisms (gameplay/wilds-pages.js, tools/sculpt/assets/stele_page.mjs, mech_*.mjs)
-  figures: ['sculpt_folk_basket', 'sculpt_folk_hat_straw', 'sculpt_folk_cap', ...FIGURE_SITES],
+  // and the crystal golem's body (combat/golem-body.js, tools/sculpt/assets/golem_rock.mjs)
+  figures: ['sculpt_folk_basket', 'sculpt_folk_hat_straw', 'sculpt_folk_cap', ...FIGURE_SITES, 'sculpt_golem_rock'],
 };
 export const SCULPT_DEFAULT = ['stone_lantern', 'komainu', 'kitsune', 'great_lantern', 'rockfam', 'drywall', 'mill', 'landmarks', 'pot', 'barrel', 'bucket', 'pumpkin',
   'jar', 'cart', 'hen', 'gohei', 'broom', 'hip_lantern', 'earth_column', 'figures'];
@@ -89,9 +90,9 @@ export const SCULPT_DEFAULT = ['stone_lantern', 'komainu', 'kitsune', 'great_lan
 // --post: sRGB paint -> linear once) — measured single-encoded, so fixSculptColours must leave them alone
 // facet-kit GLBs (tools/sculpt/assets/rock_facet.mjs) write linear COLOR_0 once as well, and so does the landmark driver
 // (tools/sculpt/assets/landmarks_lib.mjs vcAll: the kit's bakeVertexColors, sRGB paint -> linear once), and the page-trial
-// sites (mech_lib.mjs on the facet kit's writer)
+// sites and the rock golem (mech_lib.mjs on the facet kit)
 const SCULPT_VC_OK = new Set(['sculpt_dango', 'sculpt_prop_gohei', 'sculpt_hip_lantern', ...SCULPT_TYPES.rockfam, ...SCULPT_TYPES.drywall, ...SCULPT_TYPES.mill,
-  ...SCULPT_TYPES.landmarks, ...FIGURE_SITES]);
+  ...SCULPT_TYPES.landmarks, ...FIGURE_SITES, 'sculpt_golem_rock']);
 function sculptSwitch(G) {
   const p = G.params?.sculpt;
   const types = new Set(p === '0' ? [] : p === 'all' ? Object.keys(SCULPT_TYPES) : !p || p === '1' ? SCULPT_DEFAULT : String(p).split(',').map((s) => s.trim()).filter((s) => SCULPT_TYPES[s]));

@@ -12,6 +12,7 @@ import { PAL, glow, toon } from '../core/mats.js';
 import { t } from '../core/i18n.js';
 import { clamp, TAU, angleDiff } from '../core/util.js';
 import { makeJelly, makeHitogata, makeWispFlame } from '../actors/creature.js';
+import { makeRockGolem, rockGolemOn } from './golem-body.js';
 import { warnAt, melee, shockwave, darkOrb, skyFall, after, flatDir, inArc, hurtPlayer, playerAlive, DARK, campK } from './attacks.js';
 
 const _v = new THREE.Vector3(), _w = new THREE.Vector3(), _d = new THREE.Vector3(), _o = new THREE.Vector3();
@@ -255,11 +256,16 @@ export const TYPES = {
   },
 
   golem: {
+    // body: the sculpted rock golem on this skeleton (combat/golem-body.js) while it is in use, else the pack golem in 'stone'
+    get primitive() { return rockGolemOn() ? makeRockGolem : null; },
     asset: 'mon_golem_big', scale: 0.72, tint: 'stone', eyeColor: PAL.glowCyan, material: 'stone', hp: 220, radius: 1.0, height: 2.6, speed: 2.0, sight: 16,
     brave: true, heavy: true, armor: 110, drops: { stardust: [5, 8], heart: 0.5 }, mult: { wind: 0.4 },
     clips: { idle: 'Idle', move: 'Walk', run: 'Run', attack: 'Attack', hit: 'HitRecieve', death: 'Death' },
     onSpawn(e) {
       e.armor = e.def.armor;
+      // the sculpted body carries its crystal crown (pooled bodies come back with it hidden by the last armour break)
+      const crown = e.view?.getObjectByName?.('GolemShards');
+      if (crown) { crown.visible = true; e.data.shards = crown; return; }
       const g = new THREE.Group();
       const m = glow(0x9fd8ff, 2.2), m2 = toon(0x5a7dff, { emissive: 0x1b2a6a });
       for (let i = 0; i < 7; i++) {

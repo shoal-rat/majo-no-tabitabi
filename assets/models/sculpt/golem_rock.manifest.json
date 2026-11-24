@@ -1,0 +1,31 @@
+{
+ "sculpt_golem_rock": {
+  "file": "models/sculpt/golem_rock.glb",
+  "type": "model",
+  "license": "CC0 (original work)",
+  "author": "sculpted for this project",
+  "source": "tools/sculpt/assets/golem_rock.mjs (node, facet kit on the mon_golem_big skeleton and clips)",
+  "scale": 1,
+  "size": [
+   5.181,
+   3.378,
+   1.928
+  ],
+  "tris": 6423,
+  "materials": [
+   "Stone_rock",
+   "Eye",
+   "Crystal"
+  ],
+  "clips": [
+   "EnemyArmature|EnemyArmature|EnemyArmature|Attack",
+   "EnemyArmature|EnemyArmature|EnemyArmature|Death",
+   "EnemyArmature|EnemyArmature|EnemyArmature|HitRecieve",
+   "EnemyArmature|EnemyArmature|EnemyArmature|Idle",
+   "EnemyArmature|EnemyArmature|EnemyArmature|Jump",
+   "EnemyArmature|EnemyArmature|EnemyArmature|Run",
+   "EnemyArmature|EnemyArmature|EnemyArmature|Walk"
+  ],
+  "notes": "Crystal golem (combat golem / earth guardian): facet-kit boulders rigid on the mon_golem_big bones (legs, hunched chest, brow-rock head with glowing eye slits, three-stone arms with fist boulders), moss on the tops, a crown of cyan crystals (GolemShards, hidden when the armour breaks). Same joints, inverse binds and clips as mon_golem_big."
+ }
+}
