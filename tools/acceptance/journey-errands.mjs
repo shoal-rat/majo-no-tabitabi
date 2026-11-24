@@ -49,6 +49,11 @@ try {
     async function talk(id){
       if(P.onBroom){await press('KeyF');await sec(1.5);}
       N.home(id);const n=N.get(id);const f=n.def.face||0;
+      // the actor's model loads in wall-clock time (fetch + parse) while this test steps a virtual clock that also holds
+      // every page timer: start the load, then alternate a tiny virtual step (lets the loader's timers fire) with a real
+      // frame (lets the network and decoder run) until it is ready, so a busy machine cannot run the wait out first
+      if(n.def.asset&&G.assets?.load&&!G.assets.ready?.(n.def.asset)){G.assets.load(n.def.asset).catch(()=>{});
+        for(let k=0;k<4000&&!G.assets.ready(n.def.asset);k++){await clock.step(4);await clock.present();}}
       for(let k=0;k<3&&!n.actor;k++){T.teleport(n.pos.x+Math.sin(f)*1.6,n.pos.z+Math.cos(f)*1.6);await sec(1.5);}
       for(let k=0;k<60&&!n.actor;k++)await tick(5);
       if(!n.actor)fail('traveller never appeared: '+id,{pos:n.pos.toArray(),on:n.on});
