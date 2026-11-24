@@ -42,7 +42,8 @@ export function laundryLine(g, ax, az, bx, bz, y, seed, lite) {
     const o = new THREE.Mesh(geo, m);
     o.position.set(px, py, pz);
     o.rotation.y = yaw + Math.PI / 2;
-    o.castShadow = o.receiveShadow = true;
+    o.castShadow = false; // thin cloth: no shadow pass (one draw fewer per cascade)
+    o.receiveShadow = true;
     g.add(o);
   }
 }

@@ -104,13 +104,14 @@ export function awning(B, x, y, zf, w, depth, colA, colB, lite) {
   for (const s of [-1, 1]) I.tube([[x + (s * w) / 2, y, zf], [x + (s * w) / 2, y - 0.55, zf + depth]], 0.016, 4);
 }
 /** The trade's emblem hung under its signboard, centred (x, y, z), facing +z (seen from both sides of the street). */
-function emblem(B, t, x, y, z) {
+function emblem(B, t, x, y, z, lite = false) {
+  const sd = lite ? 4 : 6, np = lite ? 14 : 28;
   const [a, b] = t.em.map((m) => B.get(m));
   if (t.id === 'bakery') {
     // a pretzel
     const pts = [];
-    for (let i = 0; i <= 28; i++) { const u = (i / 28) * Math.PI * 2; pts.push([x + 0.26 * Math.sin(u) * (1 + 0.35 * Math.cos(u)), y + 0.2 * Math.sin(2 * u) * 0.9 - 0.06 * Math.cos(u), z + 0.04 * Math.cos(3 * u)]); }
-    a.tube(pts, 0.045, 6);
+    for (let i = 0; i <= np; i++) { const u = (i / np) * Math.PI * 2; pts.push([x + 0.26 * Math.sin(u) * (1 + 0.35 * Math.cos(u)), y + 0.2 * Math.sin(2 * u) * 0.9 - 0.06 * Math.cos(u), z + 0.04 * Math.cos(3 * u)]); }
+    a.tube(pts, 0.045, sd);
   } else if (t.id === 'apothecary') {
     a.lathe([[0.001, -0.22], [0.15, -0.2], [0.18, -0.08], [0.12, 0.06], [0.05, 0.1], [0.05, 0.2], [0.001, 0.2]], 8, x, y, z);
     b.lathe([[0.065, 0.18], [0.07, 0.26], [0.001, 0.28]], 6, x, y, z);
@@ -163,17 +164,19 @@ export function shopFront(g, t, wx, ww, doorX, zf, seed, lite) {
   const sx = doorX + Math.sign(doorX || 1) * 0.82, I = B.get(C.iron);
   I.box(sx - 0.05, 3.25, zf - 0.02, sx + 0.05, 3.75, zf + 0.04);
   I.tube([[sx, 3.62, zf], [sx, 3.66, zf + 0.5], [sx, 3.62, zf + 1.05]], 0.022, 4, true);
-  const sc = [];
-  for (let i = 0; i <= 10; i++) { const a = (i / 10) * Math.PI * 1.6; sc.push([sx, 3.48 + Math.sin(a) * 0.12, zf + 0.25 + Math.cos(a) * 0.12]); }
-  I.tube(sc, 0.014, 4);
-  for (const dz of [0.6, 1.0]) I.tube([[sx, 3.62, zf + dz], [sx, 3.42, zf + dz]], 0.008, 3);
+  if (!lite) {
+    const sc = [];
+    for (let i = 0; i <= 10; i++) { const a = (i / 10) * Math.PI * 1.6; sc.push([sx, 3.48 + Math.sin(a) * 0.12, zf + 0.25 + Math.cos(a) * 0.12]); }
+    I.tube(sc, 0.014, 4);
+    for (const dz of [0.6, 1.0]) I.tube([[sx, 3.62, zf + dz], [sx, 3.42, zf + dz]], 0.008, 3);
+  }
   const Sg = B.get(t.sign), sb = new GeoBuilder();
   sb.slab(-0.04, -0.34, -0.26, 0.04, 0.0, 0.26, 0.012, false);
   sb.box(-0.04, -0.34, -0.26, 0.04, -0.33, 0.26);
   Sg.append(sb, new THREE.Matrix4().makeTranslation(sx, 3.42, zf + 0.8));
   B.get(C.board).box(sx - 0.05, 3.36, zf + 0.52, sx + 0.05, 3.42, zf + 1.08);
   const em = new ByMat();
-  emblem(em, t, 0, 0, 0);
+  emblem(em, t, 0, 0, 0, lite);
   for (const [m, gb] of em.map) B.get(m).append(gb, new THREE.Matrix4().makeRotationY(Math.PI / 2).setPosition(sx, 2.78, zf + 0.8));
   // goods by the door
   if (!lite) goods(B, t, wx, ww, zf, seed);

@@ -122,7 +122,7 @@ export function modelGable(g, w, d, h, rise, roofM, bodyM, alongX, ov = 0.5, see
   // gable walls: the attic triangle in the body's plaster
   B.get(bodyM).prism([[-half + 0.01, h], [half - 0.01, h], [0, h + rise]], -D / 2 + 0.01, D / 2 - 0.01);
   // an attic light in the street gable (and the back one on high): stone surround, cross bars, a sill
-  if (!alongX && rise > 2.2)
+  if (tier > 0 && !alongX && rise > 2.2)
     for (const e of [1]) {
       const ww = Math.min(0.82, W * 0.15),
         wh = ww * 1.3,

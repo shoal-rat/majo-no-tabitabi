@@ -257,15 +257,10 @@ function build() {
   const T = tier(), D = CITY_DRESS, g = new THREE.Group();
   g.name = 'city-ambient';
   const pick = (arr, k) => arr.filter((_, i) => i % k === 0);
-  const parts = [
-    smoke(T ? D.smoke : pick(D.smoke, 2), T === 2 ? 6 : T === 1 ? 4 : 3),
-    lanterns(T ? D.lanterns : pick(D.lanterns, 2)),
-    pigeons(D.pigeons, T === 2 ? 18 : T === 1 ? 12 : 6),
-    cats(D.cats),
-    glints(D.glints, T ? 5 : 2),
-    bookCarts(D.books),
-    (S.wm = warmWindows(D.windows))
-  ];
+  // phones and the low tier: smoke from a third of the chimneys and the pigeons only (two draws)
+  const parts = T
+    ? [smoke(D.smoke, T === 2 ? 6 : 4), lanterns(D.lanterns), pigeons(D.pigeons, T === 2 ? 18 : 12), cats(D.cats), glints(D.glints, 5), bookCarts(D.books), (S.wm = warmWindows(D.windows))]
+    : [smoke(pick(D.smoke, 3), 3), pigeons(D.pigeons, 6)];
   for (const p of parts) if (p) g.add(p);
   G.scene.add(g);
   S.group = g;

@@ -421,7 +421,7 @@ one mesh each), so the site bake merges them like primitives.
   crow-stepped street gable with `opt.stepped`), `modelHip` (the 'cone' houses), `chimney(…, flues)`. Tile meshes go
   out pre-shaded in vertex colours on `kit.js sculptVcMat` copies (`flushRoof`): the bake skips their vertex shading
   and the draw-call pass still merges them into the tile family. `CHIMNEY_TOPS` for the smoke.
-- `builders/city-bays.js` — modelled window bays laid over the painted ones within `bayRange()` m (50 high, 34 med, 0
+- `builders/city-bays.js` — modelled window bays laid over the painted ones within `bayRange()` m (40 high, 28 med, 0
   low / phones): eight-plus instanced meshes refilled from a 24 m grid when the camera moves 2.5 m; facades facing
   away are skipped; the bays rise out of the wall over the last 9 m. Registry `addBay()` filled by
   `mage-city.js registerBays()` (the painted cell under each bay decides arch / shutters; per-house style seeds

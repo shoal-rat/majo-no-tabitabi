@@ -12,7 +12,7 @@ import { toon, own } from '../../core/mats.js';
 import { GeoBuilder, hash01, frontRing, fixWinding } from './city-geo.js';
 
 /** Modelled bays within this many metres of the camera: by tier (phones and low: none). */
-export const bayRange = () => (G.quality?.mobile || G.quality?.name === 'low' ? 0 : G.quality?.name === 'med' ? 34 : 50);
+export const bayRange = () => (G.quality?.mobile || G.quality?.name === 'low' ? 0 : G.quality?.name === 'med' ? 28 : 40);
 const FH = 3.15;
 const lin = (hex) => new THREE.Color(hex);
 
@@ -114,7 +114,7 @@ function shutterLeaf() {
   const k = 0.82;
   b.colour(k, k, k);
   for (const [ya, yb] of [[y0 + 0.12, 1.58], [1.7, y1 - 0.12]]) {
-    const n = Math.round((yb - ya) / 0.11);
+    const n = Math.round((yb - ya) / 0.16);
     for (let i = 0; i < n; i++) {
       const s0 = ya + ((yb - ya) * i) / n, s1 = ya + ((yb - ya) * (i + 1)) / n;
       b.colour(0.78, 0.78, 0.78);

@@ -364,9 +364,9 @@ export function townhouse(site, o) {
   // house type (art round 2, builders/city-styles.js): seeded, several can mix on one house
   const hs = (k) => hash01(seed, 90 + k),
     arcaded = !!o.shop && !o.cap && !lite && o.arcade !== false && hs(1) < 0.34,
-    stepped = kind === 'gable' && hs(2) < 0.42,
-    timber = st > 3 && hs(3) < 0.3,
-    turret = !o.cap && st >= 4 && w >= 5.6 && hs(4) < 0.16;
+    stepped = !lite && kind === 'gable' && hs(2) < 0.42, // phones and the low tier keep the plainer houses
+    timber = !lite && st > 3 && hs(3) < 0.3,
+    turret = !lite && !o.cap && st >= 4 && w >= 5.6 && hs(4) < 0.16;
   const ti = stepped ? 2 : timber ? 0 : (seed * 3 + 1) % 4,
     roofM = o.roof || ROOFMIX[(seed * 5 + 3) % ROOFMIX.length];
   const c = Math.cos(yaw),
@@ -1373,9 +1373,9 @@ export async function layoutHouses(ctx, site, taken) {
         }
       // washing strung across the side streets between facing fronts (builders/city-dressing.js; no rand() draws,
       // so the layout stays as it was)
-      if (ri > 2)
+      if (ri > 2 && !lite)
         for (const a of rows[1]) {
-          if (a.bridged || hash01(a.u * 3.1, ri + i * 0.37) > (lite ? 0.18 : 0.42)) continue;
+          if (a.bridged || hash01(a.u * 3.1, ri + i * 0.37) > 0.42) continue;
           const q = rows['-1'].find((bq) => Math.abs(bq.u - a.u) < 1.6);
           if (!q) continue;
           const y = 7.2 + Math.floor(hash01(a.u, i) * 4) * 3.15,

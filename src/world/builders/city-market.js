@@ -46,11 +46,12 @@ function flower(b, centre, x, y, z, r, tilt = 0) {
 /** Street lamp: turned iron base and shaft, brass collars and cup, a four-post lantern cage and roof round the orb. */
 export function streetLamp(g, iron, brass, lite) {
   const B = new ByMat(), I = B.get(iron), Br = B.get(brass);
-  I.lathe([[0.3, 0], [0.3, 0.1], [0.26, 0.16], [0.24, 0.4], [0.17, 0.5], [0.15, 0.62], [0.1, 0.7], [0.085, 0.8]], 8, 0, 0, 0, 0, Math.PI / 8, true);
-  I.lathe([[0.085, 0.8], [0.068, 3.42]], 8);
+  const sg = lite ? 6 : 8;
+  I.lathe(lite ? [[0.28, 0], [0.24, 0.4], [0.1, 0.7], [0.085, 0.8]] : [[0.3, 0], [0.3, 0.1], [0.26, 0.16], [0.24, 0.4], [0.17, 0.5], [0.15, 0.62], [0.1, 0.7], [0.085, 0.8]], sg, 0, 0, 0, 0, Math.PI / 8, true);
+  I.lathe([[0.085, 0.8], [0.068, 3.42]], sg);
   Br.lathe([[0.07, 1.12], [0.12, 1.16], [0.12, 1.26], [0.07, 1.3]], 8);
   Br.lathe([[0.068, 3.38], [0.14, 3.52], [0.2, 3.7], [0.25, 3.78], [0.08, 3.82]], 10);
-  for (let k = 0; k < 4; k++) {
+  for (let k = 0; k < (lite ? 0 : 4); k++) {
     const a = Math.PI / 4 + (k * Math.PI) / 2, px = Math.sin(a) * 0.34, pz = Math.cos(a) * 0.34;
     I.box(px - 0.018, 3.78, pz - 0.018, px + 0.018, 4.58, pz + 0.018, 'nypy');
   }
