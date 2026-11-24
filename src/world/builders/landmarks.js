@@ -491,21 +491,51 @@ function trilithons(site, r) {
   put(site, LINTEL, 0, y + 0.12, 0, 0.3, 0, 0, 3.2 / 4.6, 0.55, 1) || B(site, 3.2, 0.5, 1.2, ST.grey, 0, y + 0.15, 0, 0.3);   // altar stone
 }
 function lighthouse(site, ctx, r) {
-  const y = site.h(0, 0) - 0.5, H = 18;
-  site.add(cyl(3.4, 3.7, 1.6, ST.grey, 0, y + 0.7, 0, 16));
+  const y = site.h(0, 0) - 0.5, H = 18, T = lmTier(), seg = T < 2 ? 24 : 16;
+  // stone foot in two steps, a door with a round-headed surround and steps on the landward side
+  site.add(cyl(3.4, 3.7, 1.6, ST.grey, 0, y + 0.7, 0, seg));
+  if (T < 2) site.add(cyl(3.55, 3.55, 0.25, ST.lime, 0, y + 1.42, 0, seg));
   const bands = 6;
   for (let k = 0; k < bands; k++) {
     const r0 = 2.9 - k * 0.12, h = H / bands;
-    site.add(cyl(r0 - 0.12, r0, h, k % 2 ? red : ST.white, 0, y + 1.4 + h * (k + 0.5), 0, 16));
+    site.add(cyl(r0 - 0.12, r0, h, k % 2 ? red : ST.white, 0, y + 1.4 + h * (k + 0.5), 0, seg));
+    // a proud string course where the colours change
+    if (T < 2 && k > 0) site.add(torus(r0 + 0.01, 0.07, ST.lime, 0, y + 1.4 + h * k, 0, 5, seg)).rotation.x = Math.PI / 2;
+  }
+  // door and little windows up the tower, each in a raised frame with a sill
+  const dz = 2.9 + 0.05;
+  if (T < 2) {
+    for (let k = 0; k < 3; k++) site.add(box(1.6 - k * 0.2, 0.18, 0.5, ST.grey, 0, y + 1.5 + k * 0.18 - 0.4, dz + 0.9 - k * 0.32));
+    site.add(box(1.0, 2.0, 0.12, WD.dark, 0, y + 2.4, dz + 0.02));
+    for (const s of [-1, 1]) site.add(box(0.2, 2.1, 0.2, ST.lime, s * 0.6, y + 2.45, dz));
+    const head = new THREE.Mesh(new THREE.TorusGeometry(0.6, 0.11, 4, 10, Math.PI), ST.lime); head.position.set(0, y + 3.45, dz); site.add(head);
+    for (const [a, wy] of [[0.4, 6.2], [2.6, 9.4], [4.4, 12.6], [1.5, 15.6]]) {
+      const rr = 2.9 - (wy - 1.4) / H * 0.72 + 0.03, wx = Math.sin(a) * rr, wz = Math.cos(a) * rr;
+      plank(site.root, ST.lime, wx, y + wy, wz, 0.7, 1.0, 0.1, a);
+      plank(site.root, glass, wx + Math.sin(a) * 0.05, y + wy + 0.05, wz + Math.cos(a) * 0.05, 0.4, 0.62, 0.04, a);
+      block(site.root, ST.lime, wx + Math.sin(a) * 0.08, y + wy - 0.55, wz + Math.cos(a) * 0.08, 0.8, 0.1, 0.25, a, 0.02);
+    }
   }
   const top = y + 1.4 + H;
-  site.add(cyl(2.6, 2.4, 0.35, ST.grey, 0, top + 0.15, 0, 16));
+  // the gallery: corbels under a stone slab, posts and two rails
+  site.add(cyl(2.6, 2.4, 0.35, ST.grey, 0, top + 0.15, 0, seg));
+  if (T < 2) for (let k = 0; k < 16; k++) { const a = k / 16 * Math.PI * 2; block(site.root, ST.lime, Math.sin(a) * 2.25, top - 0.25, Math.cos(a) * 2.25, 0.32, 0.45, 0.6, a, 0.04); }
   site.add(torus(2.45, 0.05, iron, 0, top + 1.2, 0));
-  for (let k = 0; k < 12; k++) { const a = k / 12 * 6.283; site.add(cyl(0.04, 0.04, 1.0, iron, Math.sin(a) * 2.45, top + 0.75, Math.cos(a) * 2.45, 4)); }
+  if (T < 2) site.add(torus(2.45, 0.035, iron, 0, top + 0.75, 0, 5, 24));
+  for (let k = 0; k < (T < 2 ? 16 : 12); k++) { const a = k / (T < 2 ? 16 : 12) * 6.283; site.add(cyl(0.04, 0.04, 1.0, iron, Math.sin(a) * 2.45, top + 0.75, Math.cos(a) * 2.45, 4)); }
+  // the lantern room: an iron drum, glazing between mullions, a cornice ring, an ogee red roof, ball, rod and vane
+  if (T < 2) site.add(cyl(1.5, 1.55, 0.5, iron, 0, top + 0.6, 0, seg));
   site.add(cyl(1.35, 1.35, 2.2, glass, 0, top + 1.45, 0, 12));
   lamp = lamp || M.lampWarm(1.6);
   site.add(cyl(0.7, 0.7, 1.2, lamp, 0, top + 1.45, 0, 10));
-  site.add(cone(1.7, 1.6, red, 0, top + 3.35, 0, 12));
+  if (T < 2) {
+    for (let k = 0; k < 10; k++) { const a = k / 10 * Math.PI * 2; site.add(box(0.07, 1.75, 0.07, iron, Math.sin(a) * 1.37, top + 1.7, Math.cos(a) * 1.37)).rotation.y = a; }
+    site.add(torus(1.45, 0.08, iron, 0, top + 2.58, 0, 5, seg)).rotation.x = Math.PI / 2;
+    const prof = [[1.7, 0], [1.62, 0.12], [1.2, 0.55], [0.7, 1.0], [0.38, 1.45], [0.2, 1.7], [0.12, 1.85], [0, 1.9]].map(([a, b]) => new THREE.Vector2(a, b));
+    const roof = new THREE.Mesh(new THREE.LatheGeometry(prof, seg), red); roof.position.set(0, top + 2.6, 0); roof.castShadow = roof.receiveShadow = true; site.add(roof);
+    site.add(cyl(0.025, 0.025, 1.2, iron, 0, top + 4.9, 0, 4));
+    site.add(box(0.6, 0.18, 0.02, iron, 0.22, top + 5.25, 0));
+  } else site.add(cone(1.7, 1.6, red, 0, top + 3.35, 0, 12));
   site.add(sphere(0.3, iron, 0, top + 4.3, 0, 8, 6));
   site.colCyl(0, 0, 3.0, y - 1, top + 4);
   site.platDisc(0, 0, 2.35, top + 0.35, 0.8);
