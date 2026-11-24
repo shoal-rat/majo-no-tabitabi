@@ -709,13 +709,26 @@ function bridgeRuin(site, r) {
   if (T < 2) for (const s of [-1, 1]) { const cw = cyl(0.01, 1.7, top + 2.6, ST.grey, 0, (top - 3) / 2 + 1.3 - 0.01, s * 1.6, 4); cw.scale.set(1, 1, 0.75); cw.rotation.y = Math.PI / 4; site.add(cw); }
   site.colBox(-6, 0, 6, 1.5, 0, top - 3.2, top);
 }
+/** a coopered barrel / water butt standing at (x, y, z): bellied staves, two iron hoops */
+function barrel(site, x, y, z, rad, h, m = WD.wood) {
+  const T = lmTier(), seg = T < 2 ? 12 : 8;
+  const prof = [[0, 0], [rad * 0.88, 0], [rad, h * 0.5], [rad * 0.88, h], [0, h]].map(([a, b]) => new THREE.Vector2(a, b));
+  const b = new THREE.Mesh(new THREE.LatheGeometry(prof, seg), m); b.position.set(x, y, z); b.castShadow = b.receiveShadow = true; site.add(b);
+  if (T < 2) for (const t of [0.18, 0.82]) site.add(torus(rad * (0.88 + 0.12 * Math.sin(t * Math.PI)) + 0.01, 0.025, iron, x, y + h * t, z, 4, seg)).rotation.x = Math.PI / 2;
+}
+/** a clay flower pot with a clump of herbs or flowers */
+function pot(site, x, y, z, k) {
+  site.add(new THREE.Mesh(new THREE.LatheGeometry([[0, 0], [0.2, 0], [0.27, 0.36], [0.31, 0.37], [0.31, 0.43], [0, 0.43]].map(([a, b]) => new THREE.Vector2(a, b)), 8), mat.tile(0xb5694a))).position.set(x, y, z);
+  for (let j = 0; j < 3; j++) { const c = sphere(0.16, ivy, x + Math.sin(j * 2.1 + k) * 0.1, y + 0.5 + j * 0.06, z + Math.cos(j * 2.1 + k) * 0.1, 6, 4); site.add(c); }
+  if (k % 2) for (let j = 0; j < 3; j++) site.add(sphere(0.05, j % 2 ? cream : red, x + Math.sin(j * 2.3) * 0.15, y + 0.66, z + Math.cos(j * 2.3) * 0.15, 5, 3));
+}
 function hermitCottage(site, r) {
   const gy = house(site, { x: 0, z: 0, w: 5.4, d: 4.2, wallH: 2.5, rise: 2.3, walls: ST.mossy, roof: RF.thatch, timber: false, seed: 11 });
   fenceRun(site, -6, 4, 4, 7.5); fenceRun(site, 4, 7.5, 6.5, 3);
   stack(site, -4.2, -3.2, 0.2, 5, 2.4);
-  for (let k = 0; k < 6; k++) { const x = -3 + k * 1.3, z = 5.2; site.add(cyl(0.3, 0.24, 0.4, ST.sand, x, site.h(x, z) + 0.2, z, 7)); }
-  B(site, 1.6, 0.45, 0.5, WD.old, 3.5, site.h(3.5, 3.2) + 0.45, 3.2, 0.3); // bench
-  site.add(cyl(0.6, 0.6, 0.7, ST.grey, -5.5, site.h(-5.5, 1) + 0.35, 1, 10)); // water butt
+  for (let k = 0; k < 6; k++) { const x = -3 + k * 1.3, z = 5.2; lmTier() < 2 ? pot(site, x, site.h(x, z), z, k) : site.add(cyl(0.3, 0.24, 0.4, ST.sand, x, site.h(x, z) + 0.2, z, 7)); }
+  put(site, 'sculpt_lm_bench', 3.5, site.h(3.5, 3.2), 3.2, 0.3, 0, 0, 1.6 / 1.9, 1, 1) || B(site, 1.6, 0.45, 0.5, WD.old, 3.5, site.h(3.5, 3.2) + 0.45, 3.2, 0.3); // bench
+  barrel(site, -5.5, site.h(-5.5, 1), 1, 0.6, 0.75, WD.old); // water butt
 }
 function farmstead(site, ctx, l, r) {
   house(site, { x: 0, z: 0, w: 9, d: 6, wallH: 4.6, rise: 3.0, walls: r() < 0.5 ? plaster : plasterWarm, roof: RF.tile, timber: r() < 0.5, seed: 21 + l.x });
@@ -818,27 +831,58 @@ function chapelRuin(site, r) {
   block(site.root, ST.lime, 0, y + 1.43, -L / 2 + 1.4, 1.75, 0.14, 0.92, 0, 0.04);
 }
 function charcoalCamp(site, r) {
-  const y = site.h(0, 0);
-  site.add(sphere(3.2, earth, 0, y - 1.2, 0, 14, 8)).scale.set(1, 0.62, 1);
+  const y = site.h(0, 0), T = lmTier(), jr = mulberry32(5151);
+  // the clamp: an earth mound under a skin of turf sods, smoking vents, a ladder up its side
+  site.add(sphere(3.2, earth, 0, y - 1.2, 0, T < 2 ? 20 : 14, T < 2 ? 10 : 8)).scale.set(1, 0.62, 1);
+  if (T < 2) for (let ring = 0; ring < 2; ring++) for (let k = 0; k < 16 - ring * 4; k++) {
+    const a = (k + ring * 0.5) / (16 - ring * 4) * Math.PI * 2, rr = 3.0 - ring * 0.9, sy = y - 1.2 + 0.62 * Math.sqrt(Math.max(0, 3.2 * 3.2 - rr * rr));
+    const sod = block(site.root, mat.paint(0x6f8247), Math.sin(a) * rr, sy, Math.cos(a) * rr, 0.75, 0.16, 0.5, a, 0.04); sod.rotation.x = -0.35 - ring * 0.25; sod.rotation.order = 'YXZ';
+  }
   for (let k = 0; k < 5; k++) site.add(cyl(0.15, 0.2, 0.5, ember, Math.sin(k * 1.3) * 1.8, y + 0.4, Math.cos(k * 1.3) * 1.8, 5));
+  if (T < 2) { for (const sd of [-1, 1]) site.add(beam(2.9 + sd * 0.22, y, -1.2, 1.2 + sd * 0.22, y + 1.7, -0.5, 0.07, 0.07, WD.old)); for (let k = 1; k < 6; k++) { const t = k / 6; site.add(box(0.5, 0.05, 0.06, WD.old, 2.9 - 1.7 * t, y + 1.7 * t, -1.2 + 0.7 * t)); } }
   stack(site, 5.5, -2, 0.3, 6, 2.6); stack(site, 6.2, 2.5, -0.2, 5, 2.4); stack(site, -6, 1.2, 1.4, 6, 2.6);
-  // lean-to of poles and bark
+  // lean-to of poles roofed with overlapping slabs of bark
   const lx = -3, lz = 6, ly = site.h(lx, lz);
   for (let k = 0; k < 6; k++) site.add(beam(lx - 2 + k * 0.8, ly, lz + 1.4, lx - 2 + k * 0.8, ly + 2.2, lz - 0.6, 0.1, 0.1, WD.dark));
-  B(site, 4.4, 0.08, 2.8, WD.old, lx, ly + 1.2, lz + 0.4, 0, 0.95);
-  site.add(cyl(0.38, 0.42, 0.6, WD.wood, 2.5, site.h(2.5, 5) + 0.3, 5, 8));
+  if (T < 2) for (let k = 0; k < 4; k++) { const t = (k + 0.5) / 4, sl = box(4.5, 0.06, 0.95, WD.bark, lx, ly + 2.25 - 2.0 * t + 0.08, lz - 0.6 + 2.2 * t * 0.92); sl.rotation.x = 0.95 - 0.04 * k; site.add(sl); }
+  else B(site, 4.4, 0.08, 2.8, WD.old, lx, ly + 1.2, lz + 0.4, 0, 0.95);
+  // chopping block with an axe in it
+  site.add(cyl(0.38, 0.42, 0.6, WD.wood, 2.5, site.h(2.5, 5) + 0.3, 5, T < 2 ? 10 : 8));
+  if (T < 2) { site.add(cyl(0.36, 0.36, 0.02, WD.light, 2.5, site.h(2.5, 5) + 0.61, 5, 10)); site.add(rod(2.45, site.h(2.5, 5) + 0.62, 5, 2.2, site.h(2.5, 5) + 1.25, 5.2, 0.025, WD.light, 5)); site.add(box(0.2, 0.14, 0.03, iron, 2.47, site.h(2.5, 5) + 0.66, 5, 0)); }
 }
 function shepherdHut(site, r) {
-  const y = site.h(0, 0) - 0.3;
-  site.add(cyl(2.4, 2.6, 2.2, ST.grey, 0, y + 1.1, 0, 14));
-  site.add(cone(3.0, 2.6, RF.thatch, 0, y + 3.4, 0, 14));
+  const y = site.h(0, 0) - 0.3, T = lmTier(), jr = mulberry32(6161);
+  // a round hut of dry-laid stone under a thick thatch with a rolled eave
+  site.add(cyl(2.35, 2.55, 2.2, ST.grey, 0, y + 1.1, 0, T < 2 ? 20 : 14));
+  if (T < 2) for (let c = 0, yy = y + 0.35; yy < y + 2.15; c++, yy += 0.3) {
+    const rr = 2.55 - (yy - y) / 2.2 * 0.2 + 0.02, n = 24, off = jr() * 0.3;
+    for (let k = 0; k < n; k++) { if (T === 1 && k % 2) continue; const a = off + k / n * Math.PI * 2; if (Math.abs(Math.atan2(Math.sin(a), Math.cos(a))) < 0.22 && yy < y + 1.75) continue; plank(site.root, ST.old, Math.sin(a) * rr, yy, Math.cos(a) * rr, 0.5 + jr() * 0.12, 0.24 + jr() * 0.04, 0.07, a, (jr() - 0.5) * 0.1, 0.03); }
+  }
+  if (T < 2) {
+    const prof = [[3.05, 0], [3.15, 0.18], [2.85, 0.42], [1.7, 1.45], [0.6, 2.35], [0.18, 2.7], [0, 2.75]].map(([a, b]) => new THREE.Vector2(a, b));
+    const th = new THREE.Mesh(new THREE.LatheGeometry(prof, 20), RF.thatch); th.position.set(0, y + 2.1, 0); th.castShadow = th.receiveShadow = true; site.add(th);
+    site.add(torus(0.22, 0.07, M.rope(), 0, y + 4.75, 0, 4, 12)).rotation.x = Math.PI / 2;
+  } else site.add(cone(3.0, 2.6, RF.thatch, 0, y + 3.4, 0, 14));
   B(site, 0.9, 1.6, 0.4, WD.dark, 0, y + 0.8, 2.45);
+  if (T < 2) { block(site.root, ST.lime, 0, y + 1.72, 2.5, 1.5, 0.24, 0.5, 0, 0.04); for (const sd of [-1, 1]) site.add(box(0.28, 1.6, 0.42, ST.lime, sd * 0.6, y + 0.8, 2.5)); }
   site.colCyl(0, 0, 2.6, y - 1, y + 4);
-  // the fold: a ring of low wall
+  // the fold: a ring of dry-stone wall, the field walls' sculpted segment (wall_drystone) fitted to each old segment;
+  // without it, a wall laid stone by stone with a cope of stones set on edge
+  const wall = G.sculpt?.on?.('drywall') ? familyParts('sculpt_wall_drystone', T === 2 ? 1 : 0) : null, WM = wall && siteRockMats();
   for (let k = 0; k < 22; k++) {
     if (k === 3) continue;
     const a = k / 22 * Math.PI * 2, R = 7.5, x = 4 + Math.sin(a) * R, z = Math.cos(a) * R, g = site.h(x, z);
-    B(site, 2.2, 0.9, 0.6, ST.old, x, g + 0.35, z, a + Math.PI / 2);
+    if (wall) {
+      const seg = new THREE.Group();
+      for (const [geo, m] of [[wall.stone, WM.stone], [wall.moss, WM.moss]]) if (geo) { const mesh = new THREE.Mesh(geo, m); mesh.castShadow = m === WM.stone; mesh.receiveShadow = true; seg.add(mesh); }
+      seg.scale.set(2.2 / 2.4, 1, 1); site.add(seg, x, g - 0.1, z, a + Math.PI / 2);
+      continue;
+    }
+    if (T === 2) { B(site, 2.2, 0.9, 0.6, ST.old, x, g + 0.35, z, a + Math.PI / 2); continue; }
+    const w = new THREE.Group(); w.position.set(x, g - 0.1, z); w.rotation.y = a + Math.PI / 2; site.add(w);
+    w.add(box(2.15, 0.7, 0.42, ST.old, 0, 0.35, 0));
+    for (let c = 0; c < 3; c++) { let u = -1.1 + (c % 2) * 0.3; while (u < 1.05) { const l = Math.min(1.1 - u, 0.45 + jr() * 0.35); if (l > 0.12) block(w, ST.old, u + l / 2, 0.12 + c * 0.22, (jr() - 0.5) * 0.05, l - 0.03, 0.2 + jr() * 0.03, 0.6 - c * 0.06, (jr() - 0.5) * 0.12, 0.04); u += l; } }
+    for (let j = 0; j < 7; j++) { const cs = block(w, ST.old, -0.95 + j * 0.32, 0.86, 0, 0.12, 0.32 + jr() * 0.06, 0.4, 0, 0.03); cs.rotation.z = (jr() - 0.5) * 0.3; }
   }
 }
 function dolmen(site, r) {
@@ -858,19 +902,34 @@ function quarryKit(site, r) {
   for (let k = 0; k < 6; k++) B(site, 1.4, 0.8, 0.9, ST.lime, -6 + (k % 3) * 1.5, site.h(-6, 12) + 0.4 + Math.floor(k / 3) * 0.8, 12 + (r() - 0.5) * 0.2, (r() - 0.5) * 0.1);
 }
 function pier(site, r) {
-  // deck from the shore out over the water along local +z
-  const y = 1.6;
+  // deck from the shore out over the water along local +z: boards across two stringers, piles with caps and braces
+  const y = 1.6, T = lmTier();
   for (let k = 0; k < 18; k++) {
-    const z = k * 1.2;
-    B(site, 2.6, 0.12, 1.1, WD.old, 0, y, z, 0, 0, (r() - 0.5) * 0.04);
-    if (k % 3 === 0) for (const s of [-1, 1]) site.add(cyl(0.12, 0.14, 4.5, WD.dark, s * 1.2, y - 2.0, z, 6));
+    const z = k * 1.2, tilt = (r() - 0.5) * 0.04;
+    if (T === 2) B(site, 2.6, 0.12, 1.1, WD.old, 0, y, z, 0, 0, tilt);
+    else for (let j = 0; j < 4; j++) B(site, 2.6 - (j % 2) * 0.08, 0.1, 0.26, WD.old, (j % 2) * 0.04, y + 0.01, z - 0.42 + j * 0.28, 0, 0, tilt);
+    if (k % 3 === 0) for (const s of [-1, 1]) {
+      site.add(cyl(0.12, 0.14, 4.5, WD.dark, s * 1.2, y - 2.0, z, 6));
+      if (T < 2) site.add(cyl(0.15, 0.13, 0.12, WD.wood, s * 1.2, y + 0.3, z, 6));
+    }
+    if (T < 2 && k % 3 === 0 && k < 16) site.add(beam(-1.2, y - 0.3, z, 1.2, y - 1.6, z, 0.08, 0.1, WD.dark)).position.z = z;
   }
+  if (T < 2) for (const s of [-1, 1]) site.add(box(0.14, 0.18, 21.6, WD.dark, s * 0.9, y - 0.14, 10.2));
   site.platBox(0, 10.5, 1.3, 11, 0, y + 0.06, 0.4);
-  B(site, 3.2, 2.4, 2.6, WD.old, -2.8, site.h(-2.8, -3) + 1.2, -3, 0.2);
-  B(site, 3.6, 0.15, 3.0, RF.slate, -2.8, site.h(-2.8, -3) + 2.5, -3, 0.2, 0.15);
+  // the boat shed: boards and battens under a pent roof of slate rows (no collider, as before)
+  const sy = site.h(-2.8, -3);
+  B(site, 3.2, 2.4, 2.6, WD.old, -2.8, sy + 1.2, -3, 0.2);
+  if (T < 2) {
+    const sh = new THREE.Group(); sh.position.set(-2.8, sy, -3); sh.rotation.y = 0.2; site.add(sh);
+    battens(sh, 3.2, 2.6, 0, 2.4, WD.dark, T);
+    for (let k = 0; k < 5; k++) { const rw = box(3.7, 0.05, 0.7, RF.slate, 0, 2.62 - k * 0.09, -1.35 + k * 0.62); rw.rotation.x = 0.15 - 0.03; sh.add(rw); }
+    for (let k = 0; k < 4; k++) sh.add(box(0.24, 1.9, 0.05, WD.dark, -0.4 + k * 0.26, 0.95, 1.33));
+  } else B(site, 3.6, 0.15, 3.0, RF.slate, -2.8, sy + 2.5, -3, 0.2, 0.15);
   const boat = G.assets?.model?.('bld_boat_rowing');
   if (boat) { boat.position.set(2.4, 0.1, 16); boat.rotation.y = 0.3; site.add(boat); }
-  for (let k = 0; k < 3; k++) site.add(cyl(0.25, 0.25, 0.7, WD.wood, -1 + k * 0.6, y + 0.4, 20, 8));
+  for (let k = 0; k < 3; k++) barrel(site, -1 + k * 0.6, y + 0.05, 20, 0.25, 0.7);
+  if (T < 2) for (const s of [-1, 1]) { site.add(cyl(0.16, 0.18, 0.55, WD.dark, s * 1.05, y + 0.3, 21.0, 8)); site.add(torus(0.17, 0.035, M.rope(), s * 1.05, y + 0.42, 21.0, 4, 12)).rotation.x = Math.PI / 2; }
+  if (T < 2) { for (const s of [-1, 1]) site.add(box(0.06, 2.4, 0.06, WD.dark, s * 0.25, y - 1.0, 21.75)); for (let k = 0; k < 6; k++) site.add(box(0.5, 0.05, 0.06, WD.dark, 0, y - 2.0 + k * 0.38, 21.75)); }
 }
 function boathouse(site, r) {
   const gy = house(site, { x: 0, z: 0, w: 5, d: 7, wallH: 2.6, rise: 2.2, walls: WD.old, roof: RF.slate, chimney: false, seed: 31 });
@@ -893,7 +952,7 @@ function apiary(site, r) {
     else { B(site, 0.6, 0.65, 0.55, cream, x, y + 0.42, z, a); B(site, 0.75, 0.08, 0.7, RF.slate, x, y + 0.8, z, a); }
     B(site, 0.6, 0.12, 0.6, WD.old, x, y + 0.06, z, a);
   }
-  put(site, 'sculpt_lm_bench', 0, site.h(0, 3), 3, Math.PI + 0.1, 0, 0, 0.95, 1, 1) || B(site, 1.8, 0.45, 0.5, WD.old, 0, site.h(0, 3) + 0.45, 3, 0.1);
+  put(site, 'sculpt_lm_bench', 0, site.h(0, 3), 3, Math.PI + 0.1, 0, 0, 1.1 / 1.9, 1, 1) || B(site, 1.8, 0.45, 0.5, WD.old, 0, site.h(0, 3) + 0.45, 3, 0.1);   // short: clear of the hive beside it
 }
 // ---------------------------------------------------------------- small
 function swing(site, ctx, r) {
