@@ -23131,5 +23131,160 @@
    }
   },
   "notes": "Sculpted bee hive box (landmarks apiary). Vertex colours on every LOD. Straw -> straw (thatch, no map), Wood -> wood, Paint -> cream (paint), Moss -> ivy."
+ },
+ "sculpt_lm_upright": {
+  "file": "models/sculpt/lm_upright.glb",
+  "type": "model",
+  "license": "CC0 (original work)",
+  "author": "sculpted for this project",
+  "source": "tools/sculpt/assets/lm_upright.mjs (node tools/sculpt/assets/landmarks_lib.mjs)",
+  "scale": 1,
+  "size": [
+   1.629,
+   7.13,
+   1.131
+  ],
+  "tris": 3200,
+  "lods": [
+   3200,
+   1000,
+   300
+  ],
+  "materials": [
+   "Sandstone"
+  ],
+  "mats": {
+   "Sandstone": {
+    "surface": "stone",
+    "look": {}
+   }
+  },
+  "notes": "Sculpted trilithon upright (landmarks trilithons). Vertex colours on every LOD. Material Sandstone merges into the carved-stone family. Scaled in y per upright."
+ },
+ "sculpt_lm_lintel": {
+  "file": "models/sculpt/lm_lintel.glb",
+  "type": "model",
+  "license": "CC0 (original work)",
+  "author": "sculpted for this project",
+  "source": "tools/sculpt/assets/lm_lintel.mjs (node tools/sculpt/assets/landmarks_lib.mjs)",
+  "scale": 1,
+  "size": [
+   4.729,
+   1.071,
+   1.497
+  ],
+  "tris": 2400,
+  "lods": [
+   2400,
+   800,
+   260
+  ],
+  "materials": [
+   "Sandstone",
+   "Moss"
+  ],
+  "mats": {
+   "Sandstone": {
+    "surface": "stone",
+    "look": {}
+   },
+   "Moss": {
+    "surface": "none",
+    "look": {}
+   }
+  },
+  "notes": "Sculpted trilithon lintel (landmarks trilithons; also the fallen lintel and the altar stone, scaled). Vertex colours on every LOD. Sandstone -> carved-stone family, Moss -> ivy."
+ },
+ "sculpt_lm_standing_a": {
+  "file": "models/sculpt/lm_standing_a.glb",
+  "type": "model",
+  "license": "CC0 (original work)",
+  "author": "sculpted for this project",
+  "source": "tools/sculpt/assets/lm_standing_a.mjs (node tools/sculpt/assets/landmarks_lib.mjs)",
+  "scale": 1,
+  "size": [
+   1.242,
+   3.129,
+   0.874
+  ],
+  "tris": 2000,
+  "lods": [
+   2000,
+   700,
+   220
+  ],
+  "materials": [
+   "Stone"
+  ],
+  "mats": {
+   "Stone": {
+    "surface": "stone",
+    "look": {}
+   }
+  },
+  "notes": "Sculpted standing stone a (landmarks outer ring, stone circle, tree kerb; also lying as a fallen stone). Vertex colours on every LOD. Stone -> carved-stone family. Scaled per stone."
+ },
+ "sculpt_lm_standing_b": {
+  "file": "models/sculpt/lm_standing_b.glb",
+  "type": "model",
+  "license": "CC0 (original work)",
+  "author": "sculpted for this project",
+  "source": "tools/sculpt/assets/lm_standing_b.mjs (node tools/sculpt/assets/landmarks_lib.mjs)",
+  "scale": 1,
+  "size": [
+   1.236,
+   3.062,
+   0.854
+  ],
+  "tris": 2000,
+  "lods": [
+   2000,
+   700,
+   220
+  ],
+  "materials": [
+   "Stone"
+  ],
+  "mats": {
+   "Stone": {
+    "surface": "stone",
+    "look": {}
+   }
+  },
+  "notes": "Sculpted standing stone b (landmarks outer ring, stone circle, tree kerb; also lying as a fallen stone). Vertex colours on every LOD. Stone -> carved-stone family. Scaled per stone."
+ },
+ "sculpt_lm_dolmen": {
+  "file": "models/sculpt/lm_dolmen.glb",
+  "type": "model",
+  "license": "CC0 (original work)",
+  "author": "sculpted for this project",
+  "source": "tools/sculpt/assets/lm_dolmen.mjs (node tools/sculpt/assets/landmarks_lib.mjs)",
+  "scale": 1,
+  "size": [
+   4.941,
+   3.224,
+   4.309
+  ],
+  "tris": 5000,
+  "lods": [
+   5000,
+   1600,
+   500
+  ],
+  "materials": [
+   "Stone",
+   "Moss"
+  ],
+  "mats": {
+   "Stone": {
+    "surface": "stone",
+    "look": {}
+   },
+   "Moss": {
+    "surface": "none",
+    "look": {}
+   }
+  },
+  "notes": "Sculpted dolmen (landmarks west_dolmen): three supports + capstone, the old supports placed exactly and the capstone top at the old platform height. Vertex colours on every LOD. Stone -> carved-stone family, Moss -> ivy."
  }
 }

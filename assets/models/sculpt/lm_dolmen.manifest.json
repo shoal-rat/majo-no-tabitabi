@@ -1,0 +1,36 @@
+{
+ "sculpt_lm_dolmen": {
+  "file": "models/sculpt/lm_dolmen.glb",
+  "type": "model",
+  "license": "CC0 (original work)",
+  "author": "sculpted for this project",
+  "source": "tools/sculpt/assets/lm_dolmen.mjs (node tools/sculpt/assets/landmarks_lib.mjs)",
+  "scale": 1,
+  "size": [
+   4.941,
+   3.224,
+   4.309
+  ],
+  "tris": 5000,
+  "lods": [
+   5000,
+   1600,
+   500
+  ],
+  "materials": [
+   "Stone",
+   "Moss"
+  ],
+  "mats": {
+   "Stone": {
+    "surface": "stone",
+    "look": {}
+   },
+   "Moss": {
+    "surface": "none",
+    "look": {}
+   }
+  },
+  "notes": "Sculpted dolmen (landmarks west_dolmen): three supports + capstone, the old supports placed exactly and the capstone top at the old platform height. Vertex colours on every LOD. Stone -> carved-stone family, Moss -> ivy."
+ }
+}

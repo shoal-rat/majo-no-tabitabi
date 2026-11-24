@@ -1,0 +1,31 @@
+{
+ "sculpt_lm_upright": {
+  "file": "models/sculpt/lm_upright.glb",
+  "type": "model",
+  "license": "CC0 (original work)",
+  "author": "sculpted for this project",
+  "source": "tools/sculpt/assets/lm_upright.mjs (node tools/sculpt/assets/landmarks_lib.mjs)",
+  "scale": 1,
+  "size": [
+   1.629,
+   7.13,
+   1.131
+  ],
+  "tris": 3200,
+  "lods": [
+   3200,
+   1000,
+   300
+  ],
+  "materials": [
+   "Sandstone"
+  ],
+  "mats": {
+   "Sandstone": {
+    "surface": "stone",
+    "look": {}
+   }
+  },
+  "notes": "Sculpted trilithon upright (landmarks trilithons). Vertex colours on every LOD. Material Sandstone merges into the carved-stone family. Scaled in y per upright."
+ }
+}

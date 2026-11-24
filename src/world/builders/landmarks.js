@@ -7,13 +7,15 @@
 // Style: the anime's European countryside — limestone and granite, lime-washed plaster, red tile and grey slate,
 // thatch, weathered timber. Nothing is placed on a road or near a story anchor (the data keeps them clear).
 import * as THREE from 'three';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { G } from '../../core/game.js';
 import { toon } from '../../core/mats.js';
 import { box, cyl, cone, torus, sphere } from '../../core/geo.js';
 import { mulberry32 } from '../../core/util.js';
-import { Site, mat, M, beam, rod, bevelBox } from './kit.js';
+import { Site, mat, M, beam, rod, bevelBox, sculptVcMat } from './kit.js';
 import { sculptGroup, sculptAsset } from './sculpt.js';
 import { LANDMARKS } from '../../data/landmarks.js';
+import { siteRock, rockLod, familyParts, siteRockMats, pieces } from '../rock-family.js';
 
 // ---------------------------------------------------------------- materials (shared by every landmark)
 const ST = {
@@ -274,19 +276,24 @@ function trilithons(site, r) {
   for (let k = 0; k < 5; k++) { // horseshoe of three-stone gates
     const a = -1.3 + k * 0.65, R = 9.5, x = Math.sin(a) * R, z = Math.cos(a) * R, g = site.h(x, z) - 0.5;
     const h = 6.2 + r() * 1.4;
-    for (const s of [-1, 1]) B(site, 1.6, h, 1.1, ST.sand, x + Math.cos(a) * s * 1.35, g + h / 2, z - Math.sin(a) * s * 1.35, a, (r() - 0.5) * 0.04, (r() - 0.5) * 0.05);
-    if (k !== 3) B(site, 4.6, 1.0, 1.2, ST.sand, x, g + h + 0.45, z, a + Math.PI / 2, 0, (r() - 0.5) * 0.06);
-    else stone(site, x + 3, site.h(x + 3, z) + 0.4, z + 1, 2.2, 0.5, 0.65, ST.sand, a, 0, 0.1);
+    // sculpted uprights (lm_upright: 7 m, scaled to h; the cup-marked face inward) and lintels (lm_lintel, curved with
+    // the horseshoe and laid along it: the first round's box lintels lay across the gates by mistake)
+    for (const s of [-1, 1]) {
+      const ux = x + Math.cos(a) * s * 1.35, uz = z - Math.sin(a) * s * 1.35, tx = (r() - 0.5) * 0.04, tz = (r() - 0.5) * 0.05;
+      put(site, UPRIGHT, ux, g, uz, a + Math.PI, tx, tz, 1, h / 7, 1) || B(site, 1.6, h, 1.1, ST.sand, ux, g + h / 2, uz, a, tx, tz);
+    }
+    if (k !== 3) { const tz = (r() - 0.5) * 0.06; put(site, LINTEL, x, g + h + 0.45, z, a, 0, tz) || B(site, 4.6, 1.0, 1.2, ST.sand, x, g + h + 0.45, z, a + Math.PI / 2, 0, tz); }
+    else put(site, LINTEL, x + 3, site.h(x + 3, z) + 0.3, z + 1, a, 0.04, 0.1, 0.96, 1, 1.05) || stone(site, x + 3, site.h(x + 3, z) + 0.4, z + 1, 2.2, 0.5, 0.65, ST.sand, a, 0, 0.1);
     site.colBox(x, z, 0.7, 2.2, a + Math.PI / 2, g - 1, g + h);
   }
   for (let k = 0; k < 16; k++) { // outer ring
     const a = k / 16 * Math.PI * 2, R = 17, x = Math.sin(a) * R, z = Math.cos(a) * R, g = site.h(x, z) - 0.4;
-    if (k % 5 === 2) { stone(site, x, g + 0.5, z, 1.4, 0.45, 0.6, ST.sand, a, 0, 0.08); continue; }
-    const h = 2.6 + r() * 1.6;
-    B(site, 1.1, h, 0.75, ST.sand, x, g + h / 2, z, a, (r() - 0.5) * 0.08, (r() - 0.5) * 0.08);
+    if (k % 5 === 2) { putLying(site, STAND[k & 1], x, g + 0.55, z, a, 2.8, 0.9, 1.1, 0.06) || stone(site, x, g + 0.5, z, 1.4, 0.45, 0.6, ST.sand, a, 0, 0.08); continue; }
+    const h = 2.6 + r() * 1.6, tx = (r() - 0.5) * 0.08, tz = (r() - 0.5) * 0.08;
+    putStanding(site, k, x, g, z, 1.1, h, 0.75, a, tx, tz) || B(site, 1.1, h, 0.75, ST.sand, x, g + h / 2, z, a, tx, tz);
     site.colCyl(x, z, 0.7, g - 1, g + h);
   }
-  B(site, 3.2, 0.5, 1.2, ST.grey, 0, y + 0.15, 0, 0.3);
+  put(site, LINTEL, 0, y + 0.12, 0, 0.3, 0, 0, 3.2 / 4.6, 0.55, 1) || B(site, 3.2, 0.5, 1.2, ST.grey, 0, y + 0.15, 0, 0.3);   // altar stone
 }
 function lighthouse(site, ctx, r) {
   const y = site.h(0, 0) - 0.5, H = 18;
@@ -390,12 +397,13 @@ function farmstead(site, ctx, l, r) {
 function stoneCircle(site, r) {
   for (let k = 0; k < 13; k++) {
     const a = k / 13 * Math.PI * 2 + (r() - 0.5) * 0.1, R = 11 + (r() - 0.5), x = Math.sin(a) * R, z = Math.cos(a) * R, g = site.h(x, z) - 0.4;
-    if (k === 7) { stone(site, x, g + 0.45, z, 1.3, 0.4, 0.55, ST.grey, a); continue; }
-    const h = 1.8 + r() * 1.5;
-    stone(site, x, g + h / 2, z, 0.6, h / 2, 0.42, ST.grey, a, (r() - 0.5) * 0.12, (r() - 0.5) * 0.12);
+    if (k === 7) { putLying(site, STAND[1], x, g + 0.5, z, a, 2.6, 0.8, 1.1, -0.05) || stone(site, x, g + 0.45, z, 1.3, 0.4, 0.55, ST.grey, a); continue; }
+    const h = 1.8 + r() * 1.5, tx = (r() - 0.5) * 0.12, tz = (r() - 0.5) * 0.12;
+    putStanding(site, k, x, g, z, 1.15, h, 0.8, a, tx, tz) || stone(site, x, g + h / 2, z, 0.6, h / 2, 0.42, ST.grey, a, tx, tz);
     site.colCyl(x, z, 0.55, g - 1, g + h);
   }
-  stone(site, 0, site.h(0, 0) + 0.3, 0, 1.4, 0.5, 0.9, ST.mossy, 0.4);
+  // the recumbent stone in the middle
+  putLying(site, STAND[0], 0, site.h(0, 0) + 0.3, 0, 0.4, 2.6, 0.95, 1.6, 0.04) || stone(site, 0, site.h(0, 0) + 0.3, 0, 1.4, 0.5, 0.9, ST.mossy, 0.4);
 }
 function chapelRuin(site, r) {
   const y = site.h(0, 0) - 0.5, L = 13, Wd = 7, H = 6;
@@ -446,8 +454,10 @@ function shepherdHut(site, r) {
 }
 function dolmen(site, r) {
   const y = site.h(0, 0) - 0.3;
-  for (const [x, z, h] of [[-1.4, -0.9, 2.2], [1.5, -0.7, 2.3], [0, 1.4, 2.1]]) { B(site, 0.9, h, 1.6, ST.grey, x, y + h / 2, z, x * 0.5); site.colCyl(x, z, 0.7, y - 1, y + h); }
-  stone(site, 0, y + 2.6, 0, 2.6, 0.45, 2.0, ST.grey, 0.3, 0.06, -0.08);
+  // sculpted as one piece (lm_dolmen: the same supports, the capstone's top at the platform)
+  const carved = put(site, 'sculpt_lm_dolmen', 0, y, 0);
+  for (const [x, z, h] of [[-1.4, -0.9, 2.2], [1.5, -0.7, 2.3], [0, 1.4, 2.1]]) { if (!carved) B(site, 0.9, h, 1.6, ST.grey, x, y + h / 2, z, x * 0.5); site.colCyl(x, z, 0.7, y - 1, y + h); }
+  if (!carved) stone(site, 0, y + 2.6, 0, 2.6, 0.45, 2.0, ST.grey, 0.3, 0.06, -0.08);
   site.platDisc(0, 0, 1.9, y + 2.95, 0.6);
 }
 function quarryKit(site, r) {
@@ -548,7 +558,14 @@ function well(site, r) {
   site.add(cyl(0.18, 0.15, 0.3, WD.wood, 0.2, y + 1.3, 0, 8));
   site.colCyl(0, 0, 1.05, y - 1, y + 1);
 }
-function stoneRing(site, R, n, r) { for (let k = 0; k < n; k++) { const a = k / n * 6.283, x = Math.sin(a) * R, z = Math.cos(a) * R; stone(site, x, site.h(x, z) + 0.15, z, 0.5, 0.3, 0.45, ST.mossy, r() * 3); } }
+function stoneRing(site, R, n, r) {
+  for (let k = 0; k < n; k++) {
+    const a = k / n * 6.283, x = Math.sin(a) * R, z = Math.cos(a) * R, ry = r() * 3;
+    // mossy field stones of the countryside rock family (world/rock-family.js), else the old blobs
+    const g = siteRock(k % 3 ? 'field' : 'cobble', { w: 1.0, h: 0.55, d: 0.9, tint: ST.mossy.color.toArray(), lod: rockLod(false) });
+    if (g) site.add(g, x, site.h(x, z), z, ry); else stone(site, x, site.h(x, z) + 0.15, z, 0.5, 0.3, 0.45, ST.mossy, ry);
+  }
+}
 
 /** yaw (local +z) toward the deepest water within 40 m, or `fallback` */
 function seaward(x, z, fallback) {

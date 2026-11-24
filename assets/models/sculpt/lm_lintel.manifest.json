@@ -1,0 +1,36 @@
+{
+ "sculpt_lm_lintel": {
+  "file": "models/sculpt/lm_lintel.glb",
+  "type": "model",
+  "license": "CC0 (original work)",
+  "author": "sculpted for this project",
+  "source": "tools/sculpt/assets/lm_lintel.mjs (node tools/sculpt/assets/landmarks_lib.mjs)",
+  "scale": 1,
+  "size": [
+   4.729,
+   1.071,
+   1.497
+  ],
+  "tris": 2400,
+  "lods": [
+   2400,
+   800,
+   260
+  ],
+  "materials": [
+   "Sandstone",
+   "Moss"
+  ],
+  "mats": {
+   "Sandstone": {
+    "surface": "stone",
+    "look": {}
+   },
+   "Moss": {
+    "surface": "none",
+    "look": {}
+   }
+  },
+  "notes": "Sculpted trilithon lintel (landmarks trilithons; also the fallen lintel and the altar stone, scaled). Vertex colours on every LOD. Sandstone -> carved-stone family, Moss -> ivy."
+ }
+}

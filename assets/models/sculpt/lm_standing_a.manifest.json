@@ -1,0 +1,31 @@
+{
+ "sculpt_lm_standing_a": {
+  "file": "models/sculpt/lm_standing_a.glb",
+  "type": "model",
+  "license": "CC0 (original work)",
+  "author": "sculpted for this project",
+  "source": "tools/sculpt/assets/lm_standing_a.mjs (node tools/sculpt/assets/landmarks_lib.mjs)",
+  "scale": 1,
+  "size": [
+   1.242,
+   3.129,
+   0.874
+  ],
+  "tris": 2000,
+  "lods": [
+   2000,
+   700,
+   220
+  ],
+  "materials": [
+   "Stone"
+  ],
+  "mats": {
+   "Stone": {
+    "surface": "stone",
+    "look": {}
+   }
+  },
+  "notes": "Sculpted standing stone a (landmarks outer ring, stone circle, tree kerb; also lying as a fallen stone). Vertex colours on every LOD. Stone -> carved-stone family. Scaled per stone."
+ }
+}
