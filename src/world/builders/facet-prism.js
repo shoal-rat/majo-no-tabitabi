@@ -60,7 +60,8 @@ function inset(P, N, w) {
  *   dome          the top's middle raised by this much (worn, slightly cushioned face); 0 = flat
  *   skipBottom    leave out the bottom face (buried)
  *   m             THREE.Matrix4 local → output frame (positions; normals by its normal matrix)
- *   paint(part, p, n) → linear [r, g, b]; part 'top' | 'edge' | 'side' | 'bottom'; p, n local; p[1] relative (0 foot .. 1 top)
+ *   paint(part, p, n, pOut, nOut) → linear [r, g, b]; part 'top' | 'edge' | 'side' | 'bottom'; p, n local (p[1] relative:
+ *                 0 foot .. 1 top); pOut, nOut in the output frame
  * Returns the number of triangles written.
  */
 export function prism(T, poly, o) {
@@ -111,10 +112,9 @@ export function prism(T, poly, o) {
   const dropT = P.map((_, i) => dropK * 0.5 * (tops[(i + n - 1) % n] + tops[i]));
   const dropB = bottom > 0 ? P.map(() => dropK * bottom) : P.map(() => 0);
   const out = (p, nn, part) => {
-    const c = paint(part, [p[0], (p[1] - y0) / H, p[2]], nn);
     let q = p, r = nn;
     if (m) { _v.set(p[0], p[1], p[2]).applyMatrix4(m); q = [_v.x, _v.y, _v.z]; _v.set(nn[0], nn[1], nn[2]).applyMatrix3(_nm).normalize(); r = [_v.x, _v.y, _v.z]; }
-    return T.v(q, r, c);
+    return T.v(q, r, paint(part, [p[0], (p[1] - y0) / H, p[2]], nn, q, r));
   };
   if (m) _nm.getNormalMatrix(m);
   const t0 = T.tris;
@@ -159,6 +159,17 @@ export function prism(T, poly, o) {
   return T.tris - t0;
 }
 
+/** clip a convex polygon [[x, z], ...] by the half-plane p·u <= c */
+export function clipPoly(P, u, c) {
+  const out = [];
+  for (let i = 0; i < P.length; i++) {
+    const a = P[i], b = P[(i + 1) % P.length];
+    const da = a[0] * u[0] + a[1] * u[1] - c, db = b[0] * u[0] + b[1] * u[1] - c;
+    if (da <= 0) out.push(a);
+    if ((da < 0 && db > 0) || (da > 0 && db < 0)) { const t = da / (da - db); out.push([a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t]); }
+  }
+  return out;
+}
 /** rectangle w x d (x, z) centred at the origin, as a prism polygon */
 export const rect = (w, d) => [[-w / 2, -d / 2], [w / 2, -d / 2], [w / 2, d / 2], [-w / 2, d / 2]];
 
