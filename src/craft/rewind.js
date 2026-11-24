@@ -31,7 +31,7 @@ function tickRing() {
 }
 
 export function createRewind(G, H) {
-  const R = { mode: 'off', target: null, run: null, cd: 0, scanT: 0, broken: [], ring: null, shards: null, spin: 0, glow: 0, stats: { runs: 0, kinds: {} } };
+  const R = { mode: 'off', target: null, run: null, cd: 0, scanT: 0, broken: [], sites: [], ring: null, shards: null, spin: 0, glow: 0, stats: { runs: 0, kinds: {} } };
   const T = { kind: '', id: -1, x: 0, y: 0, z: 0, r: 1, h: 1, rec: null };   // the aimed target (reused)
   const keep = () => REWIND.KEEP[G.quality?.name] || REWIND.KEEP.med;
 
@@ -97,7 +97,8 @@ export function createRewind(G, H) {
       const d = Math.hypot(f.x - A.x, f.z - A.z) - (f.bits & 2 ? 2 : 0.5);
       if (d < best) { best = d; T.kind = 'flora'; T.id = id; T.x = f.x; T.y = f.y; T.z = f.z; T.r = Math.max(1.2, f.r * 3 + 0.8); T.h = f.h; T.rec = null; }
     }
-    for (const b of R.broken) {
+    for (let k = 0; k < R.broken.length + R.sites.length; k++) {
+      const b = k < R.broken.length ? R.broken[k] : R.sites[k - R.broken.length];
       const d = Math.hypot(b.x - A.x, b.z - A.z) - 0.4;
       if (d < best) { best = d; T.kind = 'prop'; T.rec = b; T.x = b.x; T.y = b.y; T.z = b.z; T.r = 1.1; T.h = 1; }
     }
@@ -134,6 +135,7 @@ export function createRewind(G, H) {
       if (!run.logs.length && res.kind !== 'unchar' && res.kind !== 'uncrack') shardsFrom(t.x, t.y + 0.4, t.z, res.tree ? 2 : t.r * 0.6, res.tree ? WOOD : STONE, res.tree ? 10 : 16);
     } else if (t.kind === 'prop') {
       const i = R.broken.indexOf(t.rec); if (i >= 0) R.broken.splice(i, 1);
+      const j = R.sites.indexOf(t.rec); if (j >= 0) R.sites.splice(j, 1);
       shardsFrom(t.x, t.y, t.z, 1.2, G.props?.catalog?.[t.rec.type]?.debrisColor || WOOD, 12);
     } else if (t.kind === 'crater') {
       shardsFrom(t.x, t.y, t.z, t.r * 0.7, EARTH, 18);
@@ -188,7 +190,7 @@ export function createRewind(G, H) {
       if (run.kind === 'crater') { G.destruction?.uncarve?.(run.x, run.z, 0.8, 0); G.destruction?.unburn?.(run.x, run.z, run.r, 0); }
       G.fx?.ring?.(_v.set(run.x, run.y + 0.1, run.z), { color: BLUE, radius: run.r * 1.2, dur: 0.6, y: run.y + 0.1 });
       G.audio?.sfx?.('bell_small', { pos: _v, vol: 0.6, pitch: 1.25 });
-      G.events.emit('craft:restored', { kind: run.kind, sub: run.sub || null });
+      G.events.emit('craft:restored', { kind: run.kind, sub: run.sub || null, rec: run.rec || null });
       R.run = null;
       drawShards(1);
     }
@@ -234,6 +236,12 @@ export function createRewind(G, H) {
       if (R.run) ringAt(R.run.x, R.run.y, R.run.z, R.run.r, 1, dt);
       else if (t) ringAt(t.x, t.y, t.z, t.r, 0.45 + 0.15 * Math.sin((G.time?.t ?? 0) * 5), dt);
       else ringAt(R.ring?.position.x ?? 0, (R.ring?.position.y ?? 0) - 0.08, R.ring?.position.z ?? 0, R.ring?.scale.x ?? 1, 0, dt);
+    },
+    /** A break the world remembers without anyone having broken it this session (a craft site's ruined post). */
+    remember(rec) {
+      if (!rec || R.sites.some((s) => s.site && s.site === rec.site)) return null;
+      R.sites.push(rec);
+      return rec;
     },
     stats: () => ({ mode: R.mode, running: !!R.run, broken: R.broken.length, ...R.stats }),
   };

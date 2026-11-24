@@ -1,55 +1,37 @@
-// First-use hints for climbing, stamina, swimming, diving and sliding (BotW method: say it once, the moment it matters).
-// Each shows once per save (G.state.flags.moveHint_<id>), never in a fight or a conversation; a hint that comes up at a bad
-// moment waits a little and is dropped if the moment has passed.
+// First-use beats for climbing, stamina, swimming, diving and sliding, queued on the journal's notes (G.onboarding,
+// src/gameplay/onboarding.js): one card at a time on the coach card, never during dialogue, story beats or fights, ticked
+// off by doing it. Text: player.move.<id>.line / .task. Done flags keep their first names (moveHint_<id>), so a save that
+// saw the earlier toast hints does not see them again.
 import { G } from '../core/game.js';
 import { t } from '../core/i18n.js';
 
-const HINTS = {
-  climb: { key: 'player.move.climb', dur: 7 },
-  winded: { key: 'player.move.winded', dur: 5 },
-  swim: { key: 'player.move.swim', dur: 7 },
-  dive: { key: 'player.move.dive', dur: 5 },
-  slide: { key: 'player.move.slide', dur: 5 },
-  eave: { key: 'player.move.eave', dur: 4.5, repeat: 90 },
-};
+const P = () => G.player;
+let eaveT = -99, slideOk = false;
 
-/** {action} placeholders → the key (or the touch button's name). */
-export function keys(text) {
-  return String(text ?? '').replace(/\{(\w+)\}/g, (m, k) => (G.input?.bindings?.[k] ? G.input.keyLabel(k) || k : m));
-}
+const BEATS = [
+  { id: 'climb', ctx: () => P().state === 'climb', ev: 'player:mantle', max: 20, calm: true },
+  { id: 'winded', ctx: () => P().winded, check: () => !P().winded, shownOnly: true, max: 12 },
+  { id: 'swim', ctx: () => P().state === 'swim' && !P().winded, check: () => P().state === 'swim' && P().speed > 4.4, max: 16, calm: true },
+  { id: 'water_dive', ctx: () => P().onBroom && (P().broom?.skim ?? 0) > 0.6 && G.world.isWater(P().pos.x, P().pos.z), ev: ['player:dive', (e) => e.from === 'broom'], max: 14 },
+  { id: 'slide', ctx: () => slideOk, ev: ['player:slide', (e) => e.on], max: 12, calm: true },
+  { id: 'eave', ctx: () => P().state === 'climb' && (G.time?.t ?? 0) - eaveT < 3, max: 8, shownOnly: true, check: () => P().onBroom },
+];
 
+/** Queue the beats (G.onboarding exists from gameplay init on); returns a per-frame updater for the slide context. */
 export function installMoveHints() {
-  const lastT = {};
-  let pending = null, pendingT = 0;
-  const free = () => G.mode === 'play' && !G.dialogue?.active && !G.combat?.inCombat && !G.story?.busy;
-  function hint(id) {
-    const h = HINTS[id], f = G.state?.flags;
-    if (!h || !f) return false;
-    const now = G.time?.t ?? 0;
-    if (h.repeat ? now - (lastT[id] ?? -1e9) < h.repeat : f['moveHint_' + id]) return false;
-    if (!free()) { pending = id; pendingT = 6; return false; }
-    if (h.repeat) lastT[id] = now; else f['moveHint_' + id] = true;
-    G.ui?.toast?.(keys(t(h.key)), { dur: h.dur });
-    return true;
+  for (const b of BEATS) {
+    try { G.onboarding?.add?.({ ...b, key: 'player.move.' + b.id, flag: 'moveHint_' + b.id }); } catch (e) { G.reportError('player:hints', e); }
   }
-  G.events.on('player:climb', (e) => {
-    if (e?.on) hint('climb');
-    else if (e?.why === 'winded') hint('winded');
-  });
-  G.events.on('player:stamina', (e) => { if (e?.winded) hint('winded'); });
-  G.events.on('player:dive', () => hint('swim'));
+  G.events.on('player:eave', () => { eaveT = G.time?.t ?? 0; });
   G.events.on('player:drowned', () => G.ui?.toast?.(t('player.move.drowned'), { dur: 3 }));
-  G.events.on('player:slide', (e) => { if (e?.on) hint('slide'); });
-  G.events.on('player:eave', () => hint('eave'));
+  let scanT = 0;
   return {
-    hint,
-    /** Per frame: water hints from where she is, and a hint that had to wait for a quiet moment. */
-    update(dt, P) {
-      if (pending && (pendingT -= dt) > 0 && free()) { const id = pending; pending = null; hint(id); }
-      else if (pendingT <= 0) pending = null;
-      if (!P || !G.state?.flags) return;
-      if (P.state === 'swim' && !G.state.flags.moveHint_swim) hint('swim');
-      if (P.onBroom && !G.state.flags.moveHint_dive && P.broom?.skim > 0.6 && G.world?.isWater?.(P.pos.x, P.pos.z)) hint('dive');
+    /** The slide beat's moment: running downhill on a slope she could slide down (checked twice a second). */
+    update(dt, p) {
+      if ((scanT -= dt) > 0 || !p) return;
+      scanT = 0.5;
+      const W = G.world;
+      slideOk = p.state === 'ground' && p.speed > 3.5 && W.slopeAt(p.pos.x, p.pos.z) > 0.35 && !W.isWater(p.pos.x, p.pos.z);
     },
   };
 }

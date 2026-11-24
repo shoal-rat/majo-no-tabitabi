@@ -56,5 +56,40 @@ export const REWIND = {
   KEEP: { mobile: 8, low: 10, med: 16, high: 24 },   // broken props remembered this session
 };
 
+/**
+ * Where the arts are learned (checked on every load and every second, so an old save past the beat learns at once):
+ * after: { quest, step } = that quest's step is done (or the quest is). The star thread is Fran's: after her chores
+ * she shows that a witch carries firewood on a thread. The back-light comes with the roof-tile mending in the City
+ * of Magic: putting the tiles back taught her the shape of it.
+ */
+export const LEARN = [
+  { art: 'thread', after: { quest: 'apprentice', step: 'chores' } },
+  { art: 'rewind', after: { quest: 'mages', step: 'repair' } },
+];
+
+/**
+ * First-use beats on the journal's notes (G.onboarding): id, the event that ticks it off, seconds shown, beats first.
+ * Their moments are in src/craft/lessons.js (a part near her, a part on the thread, a sail, damage near her).
+ */
+export const BEATS = [
+  { id: 'catch', ev: 'craft:grab', max: 40 },
+  { id: 'tie', ev: 'craft:tie', max: 40, after: ['catch'] },
+  { id: 'sail', ev: 'craft:sail', max: 24, after: ['tie'] },
+  { id: 'rewind', ev: 'craft:restored', max: 40 },
+];
+
+/**
+ * Craft sites in the open country (one list for every episode: a future country adds rows with its episode).
+ *   woodpile: loose parts for the first thread lesson, near Fran's cottage.
+ *   mend:     a broken roadside lantern post; the back-light makes it whole; reward: a stamina level (and stardust).
+ * x, z world; parts: [[prop type, dx, dz, yaw]]; episode: the episode it belongs to (1-based, for the 12-episode plan).
+ */
+export const SITES = [
+  { id: 'fran_woodpile', kind: 'woodpile', episode: 1, x: 2088, z: -58, parts: [['log', 0, 0, 0.3], ['log', 1.2, 0.4, 0.2], ['log_short', -1.3, 0.8, 1.4], ['plank', 0.4, -1.4, 1.1], ['plank', -0.8, -1.6, 1.2]] },
+  { id: 'mend_lake_road', kind: 'mend', episode: 2, x: 1690, z: -228, type: 'lantern_post', reward: { stamina: 1, stardust: 40 } },
+  { id: 'mend_moor_road', kind: 'mend', episode: 2, x: 1336, z: -126, type: 'lantern_post', reward: { stamina: 1, stardust: 40 } },
+  { id: 'mend_wilds_road', kind: 'mend', episode: 2, x: 196, z: -222, type: 'lantern_post', reward: { stamina: 1, stardust: 40 } },
+];
+
 /** Wind on a sail: impulse per second = wind (m/s) × area × SAIL.K, capped; her own gust gives one shove. */
 export const SAIL = { K: 4, MAX: 160, GUST: 2.5, GUST_RANGE: 16 };

@@ -96,6 +96,8 @@ export function createQuests(story, DEFS) {
     /** Current step id of a quest (or null). */
     stepId(id) { const s = st(id); return s && s.state === 'active' ? def(id)?.steps?.[s.step]?.id ?? null : null; },
     stepIndex(id) { return st(id)?.step ?? -1; },
+    /** Has quest `id` gone past its step `stepId` (or finished)? (craft learning rules, src/data/craft.js LEARN) */
+    passed(id, stepId) { const s = st(id); if (!s) return false; if (s.state === 'done') return true; const k = def(id)?.steps?.findIndex((x) => x.id === stepId) ?? -1; return k >= 0 && s.step > k; },
     /** Is quest `id` active and at step `stepId`? */
     at(id, stepId) { return api.stepId(id) === stepId; },
     /** The quest whose objective is shown (tracked side quest, else the main quest). */

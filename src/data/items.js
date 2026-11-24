@@ -48,6 +48,8 @@ export const UPGRADES = {
   mana:  { max: 5, icon: 'spirit', price: [120, 200, 300, 430, 600] },
   broom: { max: 5, icon: 'broom', price: [100, 170, 260, 380, 520] },
   charm: { max: 5, icon: 'charm', price: [80, 140, 220, 320, 450] },
+  // 气力 (player/stamina.js): +20 per level; earned at the craft sites (src/data/craft.js SITES), never sold
+  stamina: { max: 5, icon: 'wings', price: [] },
 };
 /** 月之泪: this many tears buy one hp / mana point at an altar. */
 export const TEARS_PER_POINT = 4;

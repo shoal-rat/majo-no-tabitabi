@@ -152,6 +152,7 @@ export default {
     mana: { name: '魔力水晶', desc: '握在手心微微发凉。最大魔力 +20。' },
     broom: { name: '新扎的扫帚穗', desc: '换上一束更轻的穗子，扫帚飞得更快。' },
     charm: { name: '杖尖宝石', desc: '镶在魔杖尖上，魔力弹更有劲。' },
+    stamina: { name: '气力', desc: '走得更久，攀得更高。最大气力 +20。' },
   },
   item: {
     stardust: { name: '旅费', desc: '旅途中攒下的星屑，在魔法使之国的旅馆柜台可以换东西。' },

@@ -90,3 +90,28 @@ New APIs: `G.flora.wreck.near(x, z, r)`, `.info(i)`, `.restore(i, dur)`, `.logsO
 `G.destruction.unburn(x, z, r, level)`, `.uncarve(x, z, r, k)`; `'prop:broken'` now carries `quat`. `G.craft.rewind`
 = `{ busy, running, target, toggle(on), restoreAt(pos), stats() }`; events `'craft:rewind' { kind, sub, pos }`,
 `'craft:restored' { kind, sub }`. Flora instance state 5 = rising / re-forming (no hits, no recovery clock).
+
+## Integration round (move-craft PR 4, 2026-11-24)
+
+**Learning** (`LEARN` in `src/data/craft.js`, `src/craft/lessons.js`; checked every second and on every load):
+- 牵星线 once `apprentice` is past its `chores` step (Fran's chores: a witch carries firewood on a thread);
+- 溯光 once `mages` is past `repair` (the roof tiles she mends in the City of Magic).
+
+The reveal is the story's banner (「习得本事」 + the art's name) and a toast with what it does, not the modal spell ceremony: the story goes straight on to the next beat with Fran (and onto the roofs in the city), and a modal there stopped it. A loaded save already past the beat learns quietly with a toast. The rule uses the new `G.quests.passed(quest, step)`.
+
+**First-use beats** go through the journal's notes (`G.onboarding.add`, `src/gameplay/onboarding.js`, #25), so they share its rules: one card at a time, ≥ 20 s apart, never in dialogue, story beats or fights (all are `calm`), {interact} dismisses, settings.hints off hides them, and doing it first means the card never shows.
+
+| beat | text | its moment | done by |
+| --- | --- | --- | --- |
+| `craft_catch` | `craft.tips.catch` | a catchable part within 14 m | `craft:grab` |
+| `craft_tie` | `craft.tips.tie` | a part on the thread | `craft:tie` |
+| `craft_sail` | `craft.tips.sail` | a sail within 14 m | `craft:sail` |
+| `craft_rewind` | `craft.tips.rewind` | damage within 25 m (wreck or a site) | `craft:restored` |
+
+The movement hints from PR 1 (`src/player/move-hints.js`) moved onto the same queue. They are climb, winded, swim, water_dive, slide and eave (`player.move.<id>.line/.task`), and keep their `moveHint_<id>` flags, so saves that already saw the toasts don't see the cards. Drowning still says its line as a toast.
+
+**Sites** (`SITES`, one list for all episodes, each row tagged with its `episode`):
+- `fran_woodpile` (ep 1): two logs, a short log and two planks appear beside Fran's cottage while she is within 70 m and knows the thread. They are physics and not saved.
+- `mend_lake_road`, `mend_moor_road`, `mend_wilds_road` (ep 2): broken lantern posts beside the road, each a remembered break (`G.craft.rewind.remember`) with a stone at its foot. A toast within 22 m points them out. The back-light makes them whole. Each gives +1 `upgrades.stamina` (new `UPGRADES.stamina`, max 5, never sold) and 40 stardust.
+
+Save: `G.state.craft = { sites: { id: 1 } }` (default in `save.js`). Events: `'craft:site' { id }`; `'craft:restored'` now carries `rec`.

@@ -116,10 +116,12 @@ The design core of the city: **tall buildings, a tall gate, dim street canyons b
     **溯光** comes in the City of Magic with the roof-tile mending (`mages.repair`): putting the tiles back taught her the
     shape of it. Each is taught BotW-style on first use: a short toast with the key, then a small place where it is the
     only way forward (a log over a ravine east of the lake; a fallen footbridge to a balcony in the city).
-  - **Wilds and errands** (integration PR): data-driven craft sites in `src/data/wilds.js` (`CRAFT_SITES`: gap bridges,
-    log ramps to a ledge, a raft crossing with a sail, broken bridges and statues to restore) and two errands; every site
-    also accepts the broom or climbing where that is honest (exploration rewards stay as they are). The 12-episode plan:
-    each future country adds sites as data with `episode` set; no system code per country.
+  - **Sites** (as built, `SITES` in `src/data/craft.js`, `docs/api/craft.md` "Integration round"): a woodpile beside
+    Fran's cottage for the first thread lesson, and three broken lantern posts along the episode-2 road that the
+    back-light makes whole, each worth a stamina level (the only source of `upgrades.stamina`). First-use lessons are
+    beats on the journal's notes (`G.onboarding`), like the rest of the onboarding. Still to come as data rows: gap
+    bridges, log ramps to a ledge, a raft crossing, broken bridges in the City of Magic. The 12-episode plan: each
+    future country adds rows with its `episode` set; no system code per country.
 
 ## 6. Acceptance and maintenance tools
 

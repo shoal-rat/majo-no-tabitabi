@@ -12,6 +12,7 @@ import { clamp } from '../core/util.js';
 import { THREAD, KNOT, CAPS, PARTS, SAIL, REWIND } from '../data/craft.js';
 import { createKnots } from './knots.js';
 import { createRewind } from './rewind.js';
+import { createLessons } from './lessons.js';
 
 const _v = new THREE.Vector3(), _w = new THREE.Vector3(), _h = new THREE.Vector3(), _c = new THREE.Vector3();
 const _q = new THREE.Quaternion(), _q2 = new THREE.Quaternion(), _qi = new THREE.Quaternion();
@@ -325,6 +326,10 @@ export const craftSystem = {
         else rw.toggle(false);
       }
       rw.update(dt, inp);
+      // learning beats, first-use lessons and craft sites (a load or a new game swaps G.state: catch up quietly)
+      const ls = S.lessons || (S.lessons = createLessons(G, G.craft));
+      if (S.seenState !== G.state && G.state && G.quests) { S.seenState = G.state; rw.R.sites.length = 0; ls.resync(); }
+      ls.update(dt);
       if (inp?.pressed('thread') && G.mode === 'play') {
         if (!knows('thread')) toast('unknown');
         else if (S.mode === 'off') { if (rw.R.mode !== 'off') rw.toggle(false); if (canUse()) { S.mode = 'aim'; G.events.emit('craft:mode', { mode: 'aim' }); } }
@@ -377,6 +382,8 @@ export const craftSystem = {
       get mode() { return S.mode; },
       /** True while the thread or the back-light is out (craft owns attack / cast / guard / wheel). */
       get busy() { return S.mode !== 'off' || !!S.rw?.busy; },
+      /** Learning, lessons and sites (src/craft/lessons.js; tests read .L). */
+      get lessons() { return S.lessons || null; },
       /** The back-light: { busy, running, target, toggle(on), restoreAt(pos), stats() }. */
       get rewind() { return S.rw || null; },
       get holding() { return S.hold?.body || null; },

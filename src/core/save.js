@@ -53,6 +53,8 @@ export function defaultState() {
     /** roadside errands (src/gameplay/errands.js): errand id -> { s: 'active' | 'done', step, v }; keepsake id -> 1;
      *  traveller id -> 1 once she has met them (map pins, journal) */
     errands: { list: {}, keep: {}, seen: {} },
+    /** craft (src/craft/lessons.js): site id -> 1 once mended */
+    craft: { sites: {} },
   };
 }
 
