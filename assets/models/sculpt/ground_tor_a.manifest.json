@@ -1,0 +1,42 @@
+{
+ "sculpt_ground_tor_a": {
+  "file": "models/sculpt/ground_tor_a.glb",
+  "type": "model",
+  "license": "CC0 (original work)",
+  "author": "sculpted for this project",
+  "source": "tools/sculpt/assets/ground_rocks.mjs (facet kit, rock_facet.mjs)",
+  "scale": 1,
+  "size": [
+   1.05,
+   0.627,
+   0.851
+  ],
+  "tris": 580,
+  "lods": [
+   580,
+   326,
+   99
+  ],
+  "materials": [
+   "Rock_rock",
+   "Moss_none"
+  ],
+  "mats": {
+   "Rock_rock": {
+    "surface": "rock",
+    "look": {
+     "rim": 0.22,
+     "wrap": 0.3
+    }
+   },
+   "Moss_none": {
+    "surface": "none",
+    "look": {
+     "rim": 0.3,
+     "wrap": 0.5
+    }
+   }
+  },
+  "notes": "Facet stone (tor_a) for the landmark rock set pieces: exact planes with bevelled edges, beds / joints / drill marks as geometry, moss cushion as its own primitive (Moss_none). Vertex colour only (COLOR_0 linear rgb, neutral stone ~#9b9b9b). LOD tris 580 / 326 / 99. Origin = foot centre, ~1 m unit; src/world/landforms/setpieces.js fits it into each piece's box."
+ }
+}

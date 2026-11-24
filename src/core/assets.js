@@ -64,6 +64,9 @@ export const SCULPT_TYPES = {
   // trilithon stones, standing stones, dolmen, cairn, wells, bench, bee hives; vertex colours on every LOD
   landmarks: ['sculpt_lm_shrine', 'sculpt_lm_upright', 'sculpt_lm_lintel', 'sculpt_lm_standing_a', 'sculpt_lm_standing_b', 'sculpt_lm_dolmen',
     'sculpt_lm_cairn', 'sculpt_lm_well_a', 'sculpt_lm_well_b', 'sculpt_lm_bench', 'sculpt_lm_hive_skep', 'sculpt_lm_hive_box'],
+  // ground set pieces (round art-ground, tools/sculpt/assets/ground_rocks.mjs, facet kit): granite tor blocks, the quarry's
+  // cut blocks with drill marks and its spoil heaps, baked into the landmark rock set pieces (world/landforms/setpieces.js)
+  ground: ['sculpt_ground_tor_a', 'sculpt_ground_tor_b', 'sculpt_ground_quarry', 'sculpt_ground_spoil'],
   // retired by rockfam (no user left; kept for reference, never loaded by default): the distance-field rocks of 2026-11-17
   rocks: ['sculpt_rock_slab', 'sculpt_rock_outcrop', 'sculpt_rock_standing', 'sculpt_rock_rubble'],
   boulders: ['sculpt_rock_boulder_a', 'sculpt_rock_boulder_b'],
@@ -78,14 +81,14 @@ export const SCULPT_TYPES = {
   dango: ['sculpt_dango'], gohei: ['sculpt_prop_gohei'], broom: ['sculpt_prop_broom'], hip_lantern: ['sculpt_hip_lantern'],
   earth_column: ['sculpt_earth_column_a', 'sculpt_earth_column_b', 'sculpt_earth_column_c', 'sculpt_earth_rubble'],
 };
-export const SCULPT_DEFAULT = ['stone_lantern', 'komainu', 'kitsune', 'great_lantern', 'rockfam', 'drywall', 'mill', 'landmarks', 'pot', 'barrel', 'bucket', 'pumpkin',
+export const SCULPT_DEFAULT = ['stone_lantern', 'komainu', 'kitsune', 'great_lantern', 'rockfam', 'drywall', 'mill', 'landmarks', 'ground', 'pot', 'barrel', 'bucket', 'pumpkin',
   'jar', 'cart', 'hen', 'gohei', 'broom', 'hip_lantern', 'earth_column'];
 // sculpt GLBs whose COLOR_0 was rewritten by the asset's own post step (dango.mjs post, gohei.mjs / hip_lantern.mjs --split /
 // --post: sRGB paint -> linear once) — measured single-encoded, so fixSculptColours must leave them alone
 // facet-kit GLBs (tools/sculpt/assets/rock_facet.mjs) write linear COLOR_0 once as well, and so does the landmark driver
 // (tools/sculpt/assets/landmarks_lib.mjs vcAll: the kit's bakeVertexColors, sRGB paint -> linear once)
 const SCULPT_VC_OK = new Set(['sculpt_dango', 'sculpt_prop_gohei', 'sculpt_hip_lantern', ...SCULPT_TYPES.rockfam, ...SCULPT_TYPES.drywall, ...SCULPT_TYPES.mill,
-  ...SCULPT_TYPES.landmarks]);
+  ...SCULPT_TYPES.landmarks, ...SCULPT_TYPES.ground]);
 function sculptSwitch(G) {
   const p = G.params?.sculpt;
   const types = new Set(p === '0' ? [] : p === 'all' ? Object.keys(SCULPT_TYPES) : !p || p === '1' ? SCULPT_DEFAULT : String(p).split(',').map((s) => s.trim()).filter((s) => SCULPT_TYPES[s]));

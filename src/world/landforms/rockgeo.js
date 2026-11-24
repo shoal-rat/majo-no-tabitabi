@@ -131,7 +131,8 @@ const _v = new THREE.Vector3(), _n = new THREE.Vector3(), _nm = new THREE.Matrix
  */
 export class Bake {
   constructor() { this.p = []; this.n = []; this.c = []; this.idx = []; this.nv = 0; }
-  /** proto { geo, cav }, matrix (Matrix4), shade(wx,wy,wz,nx,ny,nz,cav,ly) -> [r,g,b] (ly = object-space y, -1..1) */
+  /** proto { geo, cav }, matrix (Matrix4), shade(wx,wy,wz,nx,ny,nz,cav,ly, proto, i) -> [r,g,b] (ly = object-space y, -1..1;
+   *  proto / i: the source vertex, for prototypes that carry their own colour — the facet stones of setpieces.js) */
   add(proto, m, shade) {
     const pos = proto.geo.attributes.position, nrm = proto.geo.attributes.normal, cav = proto.cav;
     _nm.getNormalMatrix(m);
@@ -140,7 +141,7 @@ export class Bake {
       _v.fromBufferAttribute(pos, i); const ly = _v.y; _v.applyMatrix4(m);
       _n.fromBufferAttribute(nrm, i).applyMatrix3(_nm).normalize();
       this.p.push(_v.x, _v.y, _v.z); this.n.push(_n.x, _n.y, _n.z);
-      const c = shade(_v.x, _v.y, _v.z, _n.x, _n.y, _n.z, cav ? cav[i] : 1, ly);
+      const c = shade(_v.x, _v.y, _v.z, _n.x, _n.y, _n.z, cav ? cav[i] : 1, ly, proto, i);
       this.c.push(c[0], c[1], c[2]);
     }
     const ix = proto.geo.index.array;
