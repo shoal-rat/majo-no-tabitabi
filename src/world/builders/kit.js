@@ -629,9 +629,31 @@ function crevices(P, N, r = 0.2) {
   return occ;
 }
 /** Shade one baked group of `site` (local frame = site frame). opts.ground=false skips the contact term (sky isles). */
+/**
+ * Boot time: the footprints (site.eaves) bucketed on an EAVE_CELL m grid, so each vertex of the vertex shading looks
+ * at the few footprints near it instead of every footprint of the place (the City of Magic has 539). Lists keep the
+ * footprints' order, so the first match is the same as the full scan's. Rebuilt when footprints were added.
+ */
+const EAVE_CELL = 8, EAVE_PAD = 1.4;
+function eaveIndex(site) {
+  const eaves = site.eaves || [];
+  let I = site._eaveIdx;
+  if (I && I.n === eaves.length) return I;
+  const map = new Map(), key = (i, j) => (i + 32768) * 65536 + (j + 32768);
+  for (let e = 0; e < eaves.length; e++) {
+    const f = eaves[e], a = f.hw + EAVE_PAD, b = f.hd + EAVE_PAD;
+    const ex = Math.abs(f.c) * a + Math.abs(f.s) * b, ez = Math.abs(f.s) * a + Math.abs(f.c) * b;
+    const i0 = Math.floor((f.x - ex) / EAVE_CELL), i1 = Math.floor((f.x + ex) / EAVE_CELL), j0 = Math.floor((f.z - ez) / EAVE_CELL), j1 = Math.floor((f.z + ez) / EAVE_CELL);
+    for (let i = i0; i <= i1; i++) for (let j = j0; j <= j1; j++) { const k = key(i, j); let l = map.get(k); if (!l) map.set(k, (l = [])); l.push(e); }
+  }
+  I = { n: eaves.length, at: (x, z) => map.get(key(Math.floor(x / EAVE_CELL), Math.floor(z / EAVE_CELL))) };
+  site._eaveIdx = I;
+  return I;
+}
 export function shadeBaked(baked, site, opts = {}) {
   const ground = opts.ground !== false;
   const eaves = site.eaves || [];
+  const EI = eaveIndex(site);
   for (const mesh of baked.children) {
     if (!mesh.isMesh || mesh.isInstancedMesh || mesh.userData.dynamic) continue;
     const m = mesh.material;
@@ -706,9 +728,11 @@ export function shadeBaked(baked, site, opts = {}) {
         const w = 0.95 + 0.08 * n01(wx * 0.9, wz * 0.9);
         r *= w * (1 - 0.04 * mm); g *= w * (1 - 0.03 * mm); b *= w * (1 - 0.1 * mm);
       }
-      // eaves, soffits and per-building tint
-      for (let e = 0; e < eaves.length; e++) {
-        const f = eaves[e], dx = x - f.x, dz = z - f.z;
+      // eaves, soffits and per-building tint (the first footprint in list order whose margin holds the point: the
+      // grid hands back, in that order, only the footprints whose margin reaches this cell)
+      const near = EI.at(x, z);
+      if (near) for (let q = 0; q < near.length; q++) {
+        const f = eaves[near[q]], dx = x - f.x, dz = z - f.z;
         const ax = dx * f.c - dz * f.s, az = dx * f.s + dz * f.c;
         if (Math.abs(ax) > f.hw + 1.4 || Math.abs(az) > f.hd + 1.4) continue;
         r *= f.tint[0]; g *= f.tint[1]; b *= f.tint[2];
