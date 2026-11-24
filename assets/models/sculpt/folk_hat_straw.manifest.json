@@ -1,0 +1,40 @@
+{
+ "sculpt_folk_hat_straw": {
+  "file": "models/sculpt/folk_hat_straw.glb",
+  "type": "model",
+  "license": "CC0 (original work)",
+  "author": "sculpted for this project",
+  "source": "tools/sculpt/assets/folk_hat_straw.mjs (node tools/sculpt/assets/_smallprops.mjs)",
+  "scale": 1,
+  "size": [
+   0.413,
+   0.167,
+   0.412
+  ],
+  "tris": 2200,
+  "lods": [
+   2200,
+   700,
+   260
+  ],
+  "materials": [
+   "straw",
+   "cloth"
+  ],
+  "mats": {
+   "straw": {
+    "surface": "thatch",
+    "look": {
+     "scale": 0.8
+    }
+   },
+   "cloth": {
+    "surface": "none",
+    "look": {
+     "rim": 0.3
+    }
+   }
+  },
+  "notes": "Straw sun hat for the City of Magic residents (sewn plait crown and brim, ribbon band with a bow). Vertex colours on every LOD, no textures: drawn instanced and posed to the head bone on the CPU (builders/mage-folk.js)."
+ }
+}

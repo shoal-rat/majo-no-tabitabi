@@ -77,9 +77,11 @@ export const SCULPT_TYPES = {
   // broad flat face, the paint reads grey next to the old warm cream — the face is the companion's charm (REVIEW.md)
   dango: ['sculpt_dango'], gohei: ['sculpt_prop_gohei'], broom: ['sculpt_prop_broom'], hip_lantern: ['sculpt_hip_lantern'],
   earth_column: ['sculpt_earth_column_a', 'sculpt_earth_column_b', 'sculpt_earth_column_c', 'sculpt_earth_rubble'],
+  // figures (round art-figures): the City of Magic residents' carried props (builders/mage-folk.js, tools/sculpt/assets/folk_*.mjs)
+  figures: ['sculpt_folk_basket', 'sculpt_folk_hat_straw', 'sculpt_folk_cap'],
 };
 export const SCULPT_DEFAULT = ['stone_lantern', 'komainu', 'kitsune', 'great_lantern', 'rockfam', 'drywall', 'mill', 'landmarks', 'pot', 'barrel', 'bucket', 'pumpkin',
-  'jar', 'cart', 'hen', 'gohei', 'broom', 'hip_lantern', 'earth_column'];
+  'jar', 'cart', 'hen', 'gohei', 'broom', 'hip_lantern', 'earth_column', 'figures'];
 // sculpt GLBs whose COLOR_0 was rewritten by the asset's own post step (dango.mjs post, gohei.mjs / hip_lantern.mjs --split /
 // --post: sRGB paint -> linear once) — measured single-encoded, so fixSculptColours must leave them alone
 // facet-kit GLBs (tools/sculpt/assets/rock_facet.mjs) write linear COLOR_0 once as well, and so does the landmark driver

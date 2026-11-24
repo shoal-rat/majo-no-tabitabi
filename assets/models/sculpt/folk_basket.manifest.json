@@ -1,0 +1,53 @@
+{
+ "sculpt_folk_basket": {
+  "file": "models/sculpt/folk_basket.glb",
+  "type": "model",
+  "license": "CC0 (original work)",
+  "author": "sculpted for this project",
+  "source": "tools/sculpt/assets/folk_basket.mjs (node tools/sculpt/assets/_smallprops.mjs)",
+  "scale": 1,
+  "size": [
+   0.354,
+   0.411,
+   0.258
+  ],
+  "tris": 2400,
+  "lods": [
+   2400,
+   800,
+   300
+  ],
+  "materials": [
+   "straw",
+   "food",
+   "fruit"
+  ],
+  "mats": {
+   "straw": {
+    "surface": "thatch",
+    "look": {
+     "scale": 0.8
+    }
+   },
+   "food": {
+    "surface": "none",
+    "look": {
+     "spec": 0.12,
+     "specPower": 24,
+     "rim": 0.3,
+     "wrap": 0.5
+    }
+   },
+   "fruit": {
+    "surface": "none",
+    "look": {
+     "spec": 0.3,
+     "specPower": 36,
+     "rim": 0.35,
+     "wrap": 0.5
+    }
+   }
+  },
+  "notes": "Market basket for the City of Magic residents (oval withy body, bentwood bail along z with straw bindings, a checked cloth, a loaf, apples). Vertex colours on every LOD, no textures: drawn instanced and posed to a hand on the CPU (builders/mage-folk.js)."
+ }
+}

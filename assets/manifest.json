@@ -23286,5 +23286,125 @@
    }
   },
   "notes": "Sculpted dolmen (landmarks west_dolmen): three supports + capstone, the old supports placed exactly and the capstone top at the old platform height. Vertex colours on every LOD. Stone -> carved-stone family, Moss -> ivy."
+ },
+ "sculpt_folk_basket": {
+  "file": "models/sculpt/folk_basket.glb",
+  "type": "model",
+  "license": "CC0 (original work)",
+  "author": "sculpted for this project",
+  "source": "tools/sculpt/assets/folk_basket.mjs (node tools/sculpt/assets/_smallprops.mjs)",
+  "scale": 1,
+  "size": [
+   0.354,
+   0.411,
+   0.258
+  ],
+  "tris": 2400,
+  "lods": [
+   2400,
+   800,
+   300
+  ],
+  "materials": [
+   "straw",
+   "food",
+   "fruit"
+  ],
+  "mats": {
+   "straw": {
+    "surface": "thatch",
+    "look": {
+     "scale": 0.8
+    }
+   },
+   "food": {
+    "surface": "none",
+    "look": {
+     "spec": 0.12,
+     "specPower": 24,
+     "rim": 0.3,
+     "wrap": 0.5
+    }
+   },
+   "fruit": {
+    "surface": "none",
+    "look": {
+     "spec": 0.3,
+     "specPower": 36,
+     "rim": 0.35,
+     "wrap": 0.5
+    }
+   }
+  },
+  "notes": "Market basket for the City of Magic residents (oval withy body, bentwood bail along z with straw bindings, a checked cloth, a loaf, apples). Vertex colours on every LOD, no textures: drawn instanced and posed to a hand on the CPU (builders/mage-folk.js)."
+ },
+ "sculpt_folk_hat_straw": {
+  "file": "models/sculpt/folk_hat_straw.glb",
+  "type": "model",
+  "license": "CC0 (original work)",
+  "author": "sculpted for this project",
+  "source": "tools/sculpt/assets/folk_hat_straw.mjs (node tools/sculpt/assets/_smallprops.mjs)",
+  "scale": 1,
+  "size": [
+   0.413,
+   0.167,
+   0.412
+  ],
+  "tris": 2200,
+  "lods": [
+   2200,
+   700,
+   260
+  ],
+  "materials": [
+   "straw",
+   "cloth"
+  ],
+  "mats": {
+   "straw": {
+    "surface": "thatch",
+    "look": {
+     "scale": 0.8
+    }
+   },
+   "cloth": {
+    "surface": "none",
+    "look": {
+     "rim": 0.3
+    }
+   }
+  },
+  "notes": "Straw sun hat for the City of Magic residents (sewn plait crown and brim, ribbon band with a bow). Vertex colours on every LOD, no textures: drawn instanced and posed to the head bone on the CPU (builders/mage-folk.js)."
+ },
+ "sculpt_folk_cap": {
+  "file": "models/sculpt/folk_cap.glb",
+  "type": "model",
+  "license": "CC0 (original work)",
+  "author": "sculpted for this project",
+  "source": "tools/sculpt/assets/folk_cap.mjs (node tools/sculpt/assets/_smallprops.mjs)",
+  "scale": 1,
+  "size": [
+   0.25,
+   0.099,
+   0.311
+  ],
+  "tris": 1800,
+  "lods": [
+   1800,
+   600,
+   220
+  ],
+  "materials": [
+   "cloth"
+  ],
+  "mats": {
+   "cloth": {
+    "surface": "none",
+    "look": {
+     "rim": 0.3
+    }
+   }
+  },
+  "notes": "Wool cap with a short peak for the City of Magic townsmen (eight stitched panels, button, band, peak). Vertex colours on every LOD, no textures: drawn instanced and posed to the head bone on the CPU (builders/mage-folk.js)."
  }
 }

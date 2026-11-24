@@ -1,0 +1,33 @@
+{
+ "sculpt_folk_cap": {
+  "file": "models/sculpt/folk_cap.glb",
+  "type": "model",
+  "license": "CC0 (original work)",
+  "author": "sculpted for this project",
+  "source": "tools/sculpt/assets/folk_cap.mjs (node tools/sculpt/assets/_smallprops.mjs)",
+  "scale": 1,
+  "size": [
+   0.25,
+   0.099,
+   0.311
+  ],
+  "tris": 1800,
+  "lods": [
+   1800,
+   600,
+   220
+  ],
+  "materials": [
+   "cloth"
+  ],
+  "mats": {
+   "cloth": {
+    "surface": "none",
+    "look": {
+     "rim": 0.3
+    }
+   }
+  },
+  "notes": "Wool cap with a short peak for the City of Magic townsmen (eight stitched panels, button, band, peak). Vertex colours on every LOD, no textures: drawn instanced and posed to the head bone on the CPU (builders/mage-folk.js)."
+ }
+}
