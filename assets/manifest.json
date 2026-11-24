@@ -22871,9 +22871,9 @@
   "source": "tools/sculpt/assets/lm_cairn.mjs (node tools/sculpt/assets/landmarks_lib.mjs)",
   "scale": 1,
   "size": [
-   1.976,
-   2.305,
-   2.153
+   1.979,
+   2.309,
+   2.154
   ],
   "tris": 4200,
   "lods": [

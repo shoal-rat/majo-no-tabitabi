@@ -351,43 +351,172 @@ function hay(site, x, z, s = 1) {
 
 // ---------------------------------------------------------------- large
 function watchtower(site, r) {
-  const y = site.h(0, 0) - 0.6, R = 3.4, H = 21;
-  site.add(cyl(R + 0.5, R + 0.9, 1.4, ST.dark, 0, y + 0.6, 0, 14));
-  site.add(cyl(R, R + 0.35, H, ST.old, 0, y + H / 2, 0, 14));
-  for (const by of [6.5, 13.5]) site.add(cyl(R + 0.22, R + 0.22, 0.32, ST.lime, 0, y + by, 0, 14));
-  // broken crown: merlons of uneven height, a bite out of the west side
+  const y = site.h(0, 0) - 0.6, R = 3.4, H = 21, T = lmTier(), seg = T < 2 ? 24 : 14, jr = mulberry32(3131);
+  site.add(cyl(R + 0.5, R + 0.9, 1.4, ST.dark, 0, y + 0.6, 0, seg));
+  site.add(cyl(R, R + 0.35, H, ST.old, 0, y + H / 2, 0, seg));
+  const rAt = (yy) => R + 0.35 * (1 - (yy - y) / H);
+  // string courses, and four chains of long-and-short dressed stones up the shaft
+  for (const by of [6.5, 13.5]) T < 2 ? site.add(torus(rAt(y + by) + 0.02, 0.17, ST.lime, 0, y + by, 0, 5, seg)).rotation.x = Math.PI / 2 : site.add(cyl(R + 0.22, R + 0.22, 0.32, ST.lime, 0, y + by, 0, 14));
+  if (T < 2) for (const a0 of [0.8, 2.37, 3.94, 5.5]) for (let k = 0, yy = y + 1.4; yy < y + H - 1.6; k++, yy += 0.62) {
+    const a = a0 + (k % 2 ? 0.05 : -0.05), rr = rAt(yy + 0.31);
+    plank(site.root, ST.lime, Math.sin(a) * rr, yy + 0.31, Math.cos(a) * rr, k % 2 ? 0.7 : 1.05, 0.58, 0.07, a);
+  }
+  // the crown: corbels carrying a projecting parapet, then the broken merlons (a bite out of the west side)
+  if (T < 2) {
+    for (let k = 0; k < 20; k++) { const a = k / 20 * Math.PI * 2; plank(site.root, ST.lime, Math.sin(a) * (R + 0.08), y + H - 1.05, Math.cos(a) * (R + 0.08), 0.42, 0.7, 0.34, a); }
+    site.add(cyl(R + 0.42, R + 0.42, 0.42, ST.old, 0, y + H - 0.5, 0, seg));
+  }
   for (let k = 0; k < 14; k++) {
     const a = k / 14 * Math.PI * 2, bite = Math.cos(a - 2.4) > 0.55;
     const h = bite ? 0.6 + r() * 1.2 : 1.6 + r() * 1.8 - (k % 2) * 0.9;
     B(site, 1.25, h, 0.9, ST.old, Math.sin(a) * (R - 0.25), y + H + h / 2 - (bite ? 2.2 : 0), Math.cos(a) * (R - 0.25), a);
+    if (T < 2 && !bite && jr() < 0.7) block(site.root, ST.lime, Math.sin(a) * (R - 0.25), y + H + h + 0.06, Math.cos(a) * (R - 0.25), 1.4, 0.12, 1.02, a, 0.03);
   }
-  // windows, door, ivy
-  for (const [a, wy] of [[0.3, 4], [2.1, 9], [4.2, 12], [1.2, 16.5], [3.4, 18.5]]) B(site, 0.6, 1.3, 0.5, glass, Math.sin(a) * (R + 0.02), y + wy, Math.cos(a) * (R + 0.02), a);
+  // windows in dressed surrounds, glass set back; the door under a round head; ivy as leafy clumps
+  for (const [a, wy] of [[0.3, 4], [2.1, 9], [4.2, 12], [1.2, 16.5], [3.4, 18.5]]) {
+    const rr = rAt(y + wy) + 0.02;
+    B(site, 0.6, 1.3, 0.5, glass, Math.sin(a) * (rr - 0.04), y + wy, Math.cos(a) * (rr - 0.04), a);
+    if (T < 2) {
+      for (const s of [-1, 1]) plank(site.root, ST.lime, Math.sin(a) * rr + Math.cos(a) * s * 0.42, y + wy, Math.cos(a) * rr - Math.sin(a) * s * 0.42, 1.6, 0.24, 0.1, a, Math.PI / 2);
+      plank(site.root, ST.lime, Math.sin(a) * rr, y + wy + 0.77, Math.cos(a) * rr, 1.1, 0.26, 0.1, a);
+      block(site.root, ST.lime, Math.sin(a) * (rr + 0.06), y + wy - 0.72, Math.cos(a) * (rr + 0.06), 1.0, 0.12, 0.3, a, 0.02);
+    }
+  }
   B(site, 1.3, 2.4, 0.5, WD.dark, 0, y + 1.9, R + 0.12, 0);
-  for (let k = 0; k < 7; k++) { const a = 3.5 + r() * 1.6; B(site, 1.2 + r(), 2 + r() * 4, 0.2, ivy, Math.sin(a) * (R + 0.15), y + 2 + r() * 12, Math.cos(a) * (R + 0.15), a); }
+  if (T < 2) {
+    for (const s of [-1, 1]) site.add(box(0.3, 2.5, 0.3, ST.lime, s * 0.82, y + 1.95, R + 0.3));
+    const head = new THREE.Mesh(new THREE.TorusGeometry(0.82, 0.16, 4, 12, Math.PI), ST.lime); head.position.set(0, y + 3.2, R + 0.3); site.add(head);
+    for (let k = 0; k < 3; k++) site.add(box(2.0 - k * 0.3, 0.2, 0.5, ST.grey, 0, y + 0.55 + k * 0.2, R + 1.3 - k * 0.35));
+  }
+  for (let k = 0; k < 7; k++) {
+    const a = 3.5 + r() * 1.6, iw = 1.2 + r(), ih = 2 + r() * 4, iy = y + 2 + r() * 12;
+    if (T === 2) { B(site, iw, ih, 0.2, ivy, Math.sin(a) * (R + 0.15), iy, Math.cos(a) * (R + 0.15), a); continue; }
+    for (let j = 0; j < 5; j++) { const t = j / 4, rr = R + 0.2, aa = a + (jr() - 0.5) * iw / R; const c = sphere(0.35 + jr() * 0.3, ivy, Math.sin(aa) * rr, iy - ih / 2 + t * ih, Math.cos(aa) * rr, 6, 4); c.scale.set(1, 1.3, 0.55); c.rotation.y = aa; site.add(c); }
+  }
   // fallen blocks
-  for (let k = 0; k < 9; k++) { const a = 2 + r() * 1.4, d = R + 1.5 + r() * 6; stone(site, Math.sin(a) * d, site.h(Math.sin(a) * d, Math.cos(a) * d) + 0.2, Math.cos(a) * d, 0.5 + r() * 0.4, 0.35, 0.45 + r() * 0.3, ST.old, r() * 3); }
+  for (let k = 0; k < 9; k++) {
+    const a = 2 + r() * 1.4, d = R + 1.5 + r() * 6, sx = 0.5 + r() * 0.4, sz = 0.45 + r() * 0.3, ry = r() * 3, x = Math.sin(a) * d, z = Math.cos(a) * d;
+    rubble(site, ST.old, x, site.h(x, z) + 0.2, z, sx, 0.35, sz, ry, (jr() - 0.5) * 0.5, (jr() - 0.5) * 0.4);
+  }
   site.colCyl(0, 0, R + 0.4, y - 1, y + H);
   site.platDisc(0, 0, R - 0.6, y + H - 0.4, 1.0);
 }
+/** merge a group's meshes into one mesh per material (sails turn as one object: three draws, not forty) */
+function mergeByMaterial(g) {
+  g.updateMatrixWorld(true);
+  const by = new Map();
+  g.traverse((o) => { if (!o.isMesh) return; let l = by.get(o.material); if (!l) by.set(o.material, (l = [])); const q = (o.geometry.index ? o.geometry.toNonIndexed() : o.geometry.clone()); for (const n of Object.keys(q.attributes)) if (n !== 'position' && n !== 'normal') q.deleteAttribute(n); q.applyMatrix4(o.matrixWorld); l.push(q); });
+  const out = new THREE.Group();
+  for (const [m, list] of by) { const mesh = new THREE.Mesh(mergeGeometries(list, false), m); mesh.castShadow = true; mesh.receiveShadow = true; out.add(mesh); }
+  return out;
+}
+/**
+ * Tower windmill in the lake mill's manner (journey-waysides): coursed limestone tower with a cornice, a timber curb,
+ * a flared cap of slate rows with a finial, the windshaft housing on the front, a tail pole with its winding wheel,
+ * and lattice sails (stocks, whips, bars, hemlaths; three cloths spread, one furled) merged to one mesh per material.
+ */
+// the lake mill's sculpt (tools/sculpt/assets/mill_lake.mjs, G.sculpt type 'mill'): the same white surface materials
+// as journey-waysides.js (toon() is cached by its arguments, so these are the very same families)
+const MILL_HUB = [0, 9.15, 4.0];
+function millMats() {
+  const vc = (m) => sculptVcMat(m);
+  return {
+    MillStone_stone: vc(toon(0xa59c90, { surface: 'stone', look: { detail: 0.3, bump: 0.35 } })), MillTimber_wood: vc(toon(0x755741, { surface: 'wood', look: { detail: 0.4 } })),
+    MillSlate_paint: vc(toon(0x6b7580, { surface: 'paint', look: { detail: 0.2, spec: 0.08, specPower: 40 } })), MillCloth_cloth: vc(toon(0xdfcfa2, { surface: 'cloth', look: { trans: 0.25 } })),
+    MillIron_metal: vc(toon(0x3c3d44, { surface: 'metal', look: { spec: 0.3 } })),
+  };
+}
+/** the sculpted tower mill at (x, z), heading ry, scaled k; its sails turn with the wind. false when it is off / missing */
+function sculptedMill(site, ctx, x, y, z, ry, k, speed) {
+  if (!G.sculpt?.on?.('mill')) return false;
+  const lod = lmTier() === 2 ? 1 : 0, body = pieces('sculpt_mill_lake', lod), sail = pieces('sculpt_mill_lake_sails', lod);
+  if (!body || !sail) return false;
+  const M = millMats(), g = new THREE.Group(); g.position.set(x, y, z); g.rotation.y = ry; g.scale.setScalar(k); site.add(g);
+  for (const [name, geo] of Object.entries(body)) { const m = new THREE.Mesh(geo, M[name] || M.MillStone_stone); m.castShadow = m.receiveShadow = true; g.add(m); }
+  const sails = new THREE.Group();
+  for (const [name, geo] of Object.entries(sail)) { const m = new THREE.Mesh(geo, M[name] || M.MillTimber_wood); m.castShadow = m.receiveShadow = true; sails.add(m); }
+  const holder = new THREE.Group(); holder.rotation.y = ry; holder.scale.setScalar(k); holder.add(sails);
+  site.addDynamic(holder, x + Math.sin(ry) * MILL_HUB[2] * k, y + MILL_HUB[1] * k, z + Math.cos(ry) * MILL_HUB[2] * k, 0);
+  ctx.tick((dt) => { sails.rotation.z += dt * speed * (G.journeyWeather?.state.wind || 1); });
+  return true;
+}
 function windmill(site, ctx, x, z, ry, s, r) {
   const y = site.h(x, z) - 0.4, H = 8.6 * s;
-  site.add(cyl(2.2 * s, 2.95 * s, H, plaster, x, y + H / 2, z, 12));
-  site.add(cyl(2.35 * s, 2.4 * s, 0.3, WD.dark, x, y + H, z, 12));
-  site.add(cone(2.8 * s, 3.2 * s, RF.thatch, x, y + H + 1.6 * s, z, 12));
-  B(site, 1.0, 1.9, 0.2, WD.dark, x + Math.sin(ry) * 2.9 * s, y + 1.0, z + Math.cos(ry) * 2.9 * s, ry);
-  const hubX = x + Math.sin(ry) * 2.8 * s, hubZ = z + Math.cos(ry) * 2.8 * s, hubY = y + H - 1.2 * s;
-  const sails = new THREE.Group();
-  for (let i = 0; i < 4; i++) {
-    const arm = new THREE.Group(); arm.rotation.z = i * Math.PI / 2;
-    arm.add(box(0.14, 6.2 * s, 0.16, WD.dark, 0, 3.05 * s, 0));
-    arm.add(box(1.05 * s, 3.6 * s, 0.05, canvas, 0.5 * s, 4.1 * s, 0));
-    for (let j = 0; j < 7; j++) arm.add(box(1.2 * s, 0.05, 0.08, WD.wood, 0.5 * s, 2.4 * s + j * 0.55 * s, 0.05));
-    sails.add(arm);
+  // the lake mill's sculpt, its base (r 3.15 m, curb 8.4 m) fitted to the old tower (r 2.95 s, 8.6 s); same collider
+  const spd = 0.25 + r() * 0.2;
+  if (sculptedMill(site, ctx, x, y + 0.2, z, ry, s * 0.97, spd)) { site.colCyl(x, z, 2.9 * s, y - 1, y + H); return; }
+  codeMill(site, ctx, x, z, ry, s, spd);
+}
+/** the hand-built tower mill (when the sculpted one is off): the same pieces in primitives */
+function codeMill(site, ctx, x, z, ry, s, speed) {
+  const y = site.h(x, z) - 0.4, H = 8.6 * s, T = lmTier(), seg = T < 2 ? 24 : 12, jr = mulberry32(Math.round(x * 7 + z * 13 + 5) >>> 0);
+  const R0 = 2.95 * s, R1 = 2.2 * s, rAt = (yy) => R0 + (R1 - R0) * Math.min(1, Math.max(0, (yy - y) / H));
+  site.add(cyl(R1, R0, H, T === 0 ? ST.dark : ST.lime, x, y + H / 2, z, seg));
+  if (T === 0) {
+    // courses of dressed blocks round the batter, every course offset by half a block
+    for (let yy = y + 0.45, c = 0; yy < y + H - 0.3; yy += 0.46, c++) {
+      const rr = rAt(yy + 0.23), n = Math.max(10, Math.round(2 * Math.PI * rr / 0.95)), off = (c % 2) * Math.PI / n;
+      for (let k = 0; k < n; k++) { const a = off + k * 2 * Math.PI / n; plank(site.root, ST.lime, x + Math.sin(a) * rr, yy + 0.23, z + Math.cos(a) * rr, 2 * Math.PI * rr / n - 0.035, 0.43, 0.08, a, 0, 0.03); }
+    }
   }
+  if (T < 2) {
+    for (let k = 0; k < 12; k++) { const a = k / 12 * Math.PI * 2 + 0.1, rr = R0 + 0.2; block(site.root, ST.grey, x + Math.sin(a) * rr, y + 0.35, z + Math.cos(a) * rr, 1.5 * s, 0.7, 0.75, a, 0.07); }
+    site.add(torus(R1 + 0.06, 0.16, ST.lime, x, y + H - 0.25, z, 5, seg)).rotation.x = Math.PI / 2;
+  }
+  // curb and cap: slate rows flaring out at the eave, a lead finial
+  site.add(cyl(2.35 * s, 2.4 * s, 0.3, WD.dark, x, y + H, z, seg));
+  const capH = 3.2 * s, capR = 2.8 * s, rows = T < 2 ? 6 : 1;
+  if (rows === 1) site.add(cone(capR, capH, RF.slate, x, y + H + capH / 2, z, 12));
+  else for (let k = 0; k < rows; k++) {
+    const t0 = k / rows, t1 = Math.min(1, (k + 1.35) / rows), y0 = y + H + 0.12 + t0 * capH * 0.92, y1 = y + H + 0.12 + t1 * capH * 0.92;
+    const r0 = capR * (1 - t0) * (k === 0 ? 1.04 : 1) + 0.05, r1 = capR * (1 - t1) + 0.02;
+    const band = new THREE.Mesh(new THREE.CylinderGeometry(Math.max(0.05, r1), r0, y1 - y0, seg, 1, true), RF.slate); band.position.set(x, (y0 + y1) / 2, z); band.castShadow = band.receiveShadow = true; site.add(band);
+    const lip = new THREE.Mesh(new THREE.CylinderGeometry(r0, r0 + 0.05, 0.07, seg), RF.slate); lip.position.set(x, y0 + 0.03, z); site.add(lip);
+  }
+  site.add(sphere(0.18 * s, iron, x, y + H + capH + 0.1, z, 8, 6));
+  if (T < 2) site.add(cyl(0.02, 0.05, 0.9 * s, iron, x, y + H + capH + 0.5, z, 5));
+  // door (timber frame, plank leaf, a little hood, a step) and a shuttered window, on the sail side
+  const fx = Math.sin(ry), fz = Math.cos(ry), dr = rAt(y + 1) + 0.02;
+  B(site, 1.0, 1.9, 0.2, WD.dark, x + fx * dr, y + 1.0, z + fz * dr, ry);
+  if (T < 2) {
+    for (const sd of [-1, 1]) plank(site.root, WD.wood, x + fx * (dr + 0.05) + fz * sd * 0.58, y + 1.05, z + fz * (dr + 0.05) - fx * sd * 0.58, 2.1, 0.16, 0.1, ry, Math.PI / 2);
+    plank(site.root, WD.wood, x + fx * (dr + 0.06), y + 2.12, z + fz * (dr + 0.06), 1.4, 0.18, 0.12, ry);
+    const hood = box(1.6, 0.08, 0.6, RF.slate, x + fx * (dr + 0.3), y + 2.35, z + fz * (dr + 0.3)); hood.rotation.set(0.25, ry, 0, 'YXZ'); site.add(hood);
+    block(site.root, ST.grey, x + fx * (dr + 0.4), y + 0.32, z + fz * (dr + 0.4), 1.4, 0.2, 0.7, ry, 0.03);
+    const wa = ry + 1.2, wr = rAt(y + H * 0.55) + 0.02;
+    plank(site.root, glass, x + Math.sin(wa) * wr, y + H * 0.55, z + Math.cos(wa) * wr, 0.55, 0.75, 0.03, wa);
+    plank(site.root, WD.wood, x + Math.sin(wa) * (wr + 0.02), y + H * 0.55 + 0.44, z + Math.cos(wa) * (wr + 0.02), 0.8, 0.12, 0.08, wa);
+    for (const sd of [-1, 1]) plank(site.root, red, x + Math.sin(wa) * (wr + 0.08) + Math.cos(wa) * sd * 0.55, y + H * 0.55, z + Math.cos(wa) * (wr + 0.08) - Math.sin(wa) * sd * 0.55, 0.42, 0.8, 0.04, wa + sd * 0.4);
+  }
+  // windshaft housing on the front of the cap, and the tail pole with its winding wheel at the back
+  const hubX = x + Math.sin(ry) * 2.8 * s, hubZ = z + Math.cos(ry) * 2.8 * s, hubY = y + H - 1.2 * s;
+  if (T < 2) {
+    const hs = new THREE.Group(); hs.position.set(x + fx * 1.9 * s, y + H + 0.2, z + fz * 1.9 * s); hs.rotation.y = ry; site.add(hs);
+    hs.add(box(1.4 * s, 1.1 * s, 1.4 * s, WD.old, 0, 0.55 * s, 0));
+    const gr = new THREE.Shape(); gr.moveTo(-0.85 * s, 0); gr.lineTo(0.85 * s, 0); gr.lineTo(0, 0.7 * s); gr.closePath();
+    const gg = new THREE.Mesh(new THREE.ExtrudeGeometry(gr, { depth: 1.6 * s, bevelEnabled: false }), RF.slate); gg.position.set(0, 1.1 * s, -0.8 * s); hs.add(gg);
+    const tail = new THREE.Group(); tail.position.set(x, 0, z); tail.rotation.y = ry + Math.PI; site.add(tail);
+    const ty = y + H + 0.1, gy0 = site.h(x - fx * (R0 + 2.6), z - fz * (R0 + 2.6));
+    tail.add(beam(0, ty, 2.0 * s, 0, gy0 + 1.0, R0 + 2.6, 0.2, 0.22, WD.dark));
+    tail.add(beam(0.6, ty - 0.4, 1.8 * s, 0, gy0 + 1.6, R0 + 1.9, 0.12, 0.12, WD.dark)); tail.add(beam(-0.6, ty - 0.4, 1.8 * s, 0, gy0 + 1.6, R0 + 1.9, 0.12, 0.12, WD.dark));
+    const wh = torus(0.7, 0.06, WD.dark, 0, gy0 + 0.75, R0 + 2.75, 5, 16); wh.rotation.y = Math.PI / 2; tail.add(wh);
+    for (let k = 0; k < 6; k++) { const a = k * Math.PI / 3; tail.add(rod(0, gy0 + 0.75, R0 + 2.75, Math.cos(a) * 0.04, gy0 + 0.75 + Math.sin(a) * 0.68, R0 + 2.75 + Math.cos(a) * 0.68, 0.03, WD.wood, 4)); }
+  }
+  // sails: canister, two stocks, four whips with lattice and cloths (one furled), merged per material
+  const lat = new THREE.Group();
+  const can = cyl(0.32 * s, 0.32 * s, 0.5, iron, 0, 0, 0.1, 10); can.rotation.x = Math.PI / 2; lat.add(can);
+  for (let i = 0; i < 4; i++) {
+    const arm = new THREE.Group(); arm.rotation.z = i * Math.PI / 2; lat.add(arm);
+    arm.add(box(0.16, 6.2 * s, 0.18, WD.dark, 0, 3.05 * s, 0));
+    const furled = i === 2, bars = T < 2 ? 10 : 7, x0 = 0.12, x1 = 1.15 * s, y0 = 1.9 * s, y1 = 6.1 * s;
+    for (let j = 0; j < bars; j++) arm.add(box(x1 - x0 + 0.05, 0.05, 0.06, WD.wood, (x0 + x1) / 2, y0 + (y1 - y0) * j / (bars - 1), 0.07));
+    if (T < 2) { arm.add(box(0.06, y1 - y0, 0.06, WD.wood, x1, (y0 + y1) / 2, 0.07)); arm.add(box(0.05, y1 - y0, 0.05, WD.wood, x0 + 0.35 * s, (y0 + y1) / 2, 0.07)); }
+    if (furled) { const roll = cyl(0.11, 0.11, y1 - y0 - 0.2, canvas, x0 + 0.12, (y0 + y1) / 2, 0.16, 6); arm.add(roll); }
+    else { const cl = box(x1 - x0 - 0.04, y1 - y0 - 0.1, 0.03, canvas, (x0 + x1) / 2, (y0 + y1) / 2, -0.02); if (T < 2) cl.rotation.y = -0.06; arm.add(cl); }
+  }
+  const sails = mergeByMaterial(lat);
   const holder = new THREE.Group(); holder.rotation.y = ry; holder.add(sails);
   site.addDynamic(holder, hubX, hubY, hubZ, 0);
-  const speed = 0.25 + r() * 0.2;
   ctx.tick((dt) => { sails.rotation.z += dt * speed * (G.journeyWeather?.state.wind || 1); });
   site.colCyl(x, z, 2.9 * s, y - 1, y + H);
 }
