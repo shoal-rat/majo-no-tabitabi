@@ -400,31 +400,71 @@ function windmills(site, ctx, r) {
   for (let k = 0; k < 4; k++) hay(site, -12 + k * 3.6, -9 + r() * 3, 0.8);
 }
 function beaconKeep(site, ctx, r) {
-  const y = site.h(0, 0) - 0.8;
-  // curtain wall: ring of thick segments with breaches
+  const y = site.h(0, 0) - 0.8, T = lmTier(), jr = mulberry32(9191);
+  // curtain wall: ring of thick segments with breaches; coursed outer face, coping, merlons on the tall ones
   const R = 20;
   for (let k = 0; k < 18; k++) {
     if (k === 4 || k === 5 || k === 12) continue;
     const a = k / 18 * Math.PI * 2, x = Math.sin(a) * R, z = Math.cos(a) * R, g = site.h(x, z) - 0.6;
     const h = 3.2 + r() * 2.6 - (k % 3 === 0 ? 1.6 : 0);
-    B(site, 7.2, h, 1.6, ST.old, x, g + h / 2, z, a + Math.PI / 2);
+    const seg = new THREE.Group(); seg.position.set(x, g, z); seg.rotation.y = a + Math.PI / 2; site.add(seg);
+    seg.add(box(7.2, h, 1.5, ST.old, 0, h / 2, 0));
+    block(seg, ST.old, 0, 0.35, 0, 7.4, 0.7, 1.9, 0, 0.06);                                 // battered foot
+    if (T === 0) for (const f of [-1, 1]) for (let yy = 0.7, c = 0; yy < h - 0.4; yy += 0.75, c++) {
+      let u = -3.6 + (c % 2 ? 0.6 : 0);
+      if (u > -3.6) plank(seg, ST.old, (-3.6 + u) / 2, yy + 0.36, f * 0.78, u + 3.6 - 0.03, 0.72, 0.08, f > 0 ? 0 : Math.PI);
+      while (u < 3.55) { const l = Math.min(3.6 - u, 1.1 + jr() * 0.6); plank(seg, ST.old, u + l / 2, yy + 0.36, f * 0.78, l - 0.03, 0.72, 0.08, f > 0 ? 0 : Math.PI); u += l; }
+    }
+    if (T < 2) {
+      if (h > 4.2) {
+        for (let m = -3; m <= 3; m++) if ((m + 3) % 2 === 0 && jr() < 0.85) { block(seg, ST.old, m * 1.02, h + 0.45, 0.35, 0.8, 0.9, 0.7, 0, 0.04); block(seg, ST.lime, m * 1.02, h + 0.95, 0.35, 0.95, 0.12, 0.82, 0, 0.03); }
+        block(seg, ST.lime, 0, h + 0.06, 0, 7.3, 0.14, 1.6, 0, 0.03);
+      } else for (let m = 0; m < 4; m++) block(seg, ST.old, -3 + m * 2 + jr() * 0.5, h + 0.2, (jr() - 0.5) * 0.4, 1.2 + jr() * 0.6, 0.45 + jr() * 0.3, 1.2, jr() * 0.3, 0.06);
+    }
     site.colBox(x, z, 3.6, 0.8, a + Math.PI / 2, g - 1, g + h);
   }
-  // square keep, one corner collapsed
+  // square keep, its north-east corner fallen in: battered plinth, quoins, two string courses, arrow slits,
+  // corbels under the parapet and merlons on the two whole walls; the low walls stepped and ragged
   const K = 5.2, H = 16;
   for (const [x, z, w, d, h] of [[0, -K, K * 2 + 1, 1.2, H], [0, K, K * 2 + 1, 1.2, H - 5], [-K, 0, 1.2, K * 2, H], [K, 0, 1.2, K * 2, H - 7]]) {
     B(site, w, h, d, ST.grey, x, y + h / 2, z);
   }
+  if (T < 2) {
+    for (const [sx, sz] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) {
+      const ch = sx > 0 && sz > 0 ? H - 7 : sx > 0 || sz > 0 ? H - 5 : H;   // the fallen corner's quoins stop low
+      for (let k = 0, yy = 0; yy < ch - 0.6; k++, yy += 0.62) {
+        const long = k % 2 === 0;
+        block(site.root, ST.lime, sx * (K + 0.6 - (long ? 0.45 : 0.3)), y + yy + 0.31, sz * (K + 0.6 - (long ? 0.3 : 0.45)), long ? 0.95 : 0.65, 0.58, long ? 0.65 : 0.95, 0, 0.04);
+      }
+    }
+    block(site.root, ST.dark, 0, y + 0.5, 0, K * 2 + 2.2, 1.0, K * 2 + 2.2, 0, 0.12);                  // battered plinth
+    for (const by of [5.6, 10.8]) for (const [x, z, w, d, h] of [[0, -K, K * 2 + 1.3, 1.45, H], [-K, 0, 1.45, K * 2 + 1.3, H], [0, K, K * 2 + 1.3, 1.45, H - 5], [K, 0, 1.45, K * 2 + 1.3, H - 7]]) if (by < h - 0.5) block(site.root, ST.lime, x, y + by, z, w, 0.2, d, 0, 0.03);
+    // arrow slits: a dark slot in a raised surround, three up each wall
+    for (const [fx, fz, ry, hmax] of [[0, -1, Math.PI, H], [-1, 0, -Math.PI / 2, H], [0, 1, 0, H - 5], [1, 0, Math.PI / 2, H - 7]]) for (const sy of [3.2, 7.6, 12.4]) {
+      if (sy > hmax - 1.6) continue;
+      const px = fx * (K + 0.6), pz = fz * (K + 0.6);
+      plank(site.root, ST.lime, px, y + sy, pz, 0.6, 1.7, 0.08, ry);
+      plank(site.root, ST.dark, px + fx * 0.05, y + sy, pz + fz * 0.05, 0.12, 1.2, 0.05, ry);
+    }
+    // parapet on the two whole walls: corbels, a projecting course, merlons with caps
+    for (const [fx, fz, ry] of [[0, -1, Math.PI], [-1, 0, -Math.PI / 2]]) for (let m = -5; m <= 5; m++) {
+      const u = m * 1.05, px = fx * (K + 0.6) + (fz !== 0 ? u : 0), pz = fz * (K + 0.6) + (fx !== 0 ? u : 0);
+      plank(site.root, ST.lime, px, y + H - 0.55, pz, 0.36, 0.5, 0.3, ry);
+      if (m % 2 === 0) { block(site.root, ST.old, px + fx * 0.12, y + H + 0.45, pz + fz * 0.12, fz !== 0 ? 0.85 : 0.6, 0.9, fx !== 0 ? 0.85 : 0.6, 0, 0.04); block(site.root, ST.lime, px + fx * 0.12, y + H + 0.95, pz + fz * 0.12, fz !== 0 ? 1.0 : 0.72, 0.12, fx !== 0 ? 1.0 : 0.72, 0, 0.03); }
+    }
+    for (let k = 0; k < 6; k++) block(site.root, ST.old, K - 1 + jr() * 1.5, y + H - 6.6 + jr() * 0.5, K - 1 + jr() * 1.5, 0.9 + jr() * 0.6, 0.55, 0.8 + jr() * 0.5, jr() * 3, 0.06);   // ragged rim
+  }
   B(site, K * 2 + 1.2, 0.8, K * 2 + 1.2, ST.dark, 0, y + H - 0.4, 0);
   site.colBox(0, 0, K + 0.6, K + 0.6, 0, y - 1, y + H);
   site.platBox(0, 0, K, K, 0, y + H, 1);
-  for (let k = 0; k < 8; k++) { const a = r() * 6.28, d = K + 2 + r() * 8; stone(site, Math.sin(a) * d, site.h(Math.sin(a) * d, Math.cos(a) * d) + 0.25, Math.cos(a) * d, 0.7, 0.45, 0.6, ST.grey, r() * 3); }
-  // the beacon: an iron basket of split wood on the keep top
+  for (let k = 0; k < 8; k++) { const a = r() * 6.28, d = K + 2 + r() * 8, ry = r() * 3; rubble(site, ST.old, Math.sin(a) * d, site.h(Math.sin(a) * d, Math.cos(a) * d) + 0.25, Math.cos(a) * d, 0.7, 0.45, 0.6, ry, (jr() - 0.5) * 0.5, (jr() - 0.5) * 0.4); }
+  // the beacon: an open iron basket of straps and hoops full of split wood, on a stone hearth block
   const by = y + H;
-  site.add(cyl(1.1, 0.7, 1.0, iron, 0, by + 1.4, 0, 8));
-  site.add(cyl(0.12, 0.12, 1.0, iron, 0, by + 0.5, 0, 6));
-  for (let k = 0; k < 6; k++) { const l = cyl(0.09, 0.1, 1.5, WD.wood, Math.sin(k) * 0.4, by + 2.0, Math.cos(k) * 0.4, 5); l.rotation.set(0.5 * Math.sin(k * 2), 0, 0.5 * Math.cos(k * 2)); site.add(l); }
-  site.add(torus(0.95, 0.06, iron, 0, by + 1.9, 0));
+  block(site.root, ST.lime, 0, by + 0.2, 0, 1.6, 0.4, 1.6, 0.4, 0.05);
+  site.add(cyl(0.12, 0.12, 1.0, iron, 0, by + 0.7, 0, 6));
+  for (const [hy, hr] of [[1.0, 0.72], [1.45, 0.92], [1.9, 1.05]]) site.add(torus(hr, 0.05, iron, 0, by + hy, 0, 5, 20)).rotation.x = Math.PI / 2;
+  for (let k = 0; k < 10; k++) { const a = k / 10 * Math.PI * 2; site.add(rod(Math.sin(a) * 0.66, by + 0.95, Math.cos(a) * 0.66, Math.sin(a) * 1.1, by + 2.05, Math.cos(a) * 1.1, 0.035, iron, 4)); }
+  for (let k = 0; k < 9; k++) { const l = cyl(0.09, 0.1, 1.5, WD.wood, Math.sin(k * 0.7) * 0.42, by + 1.75, Math.cos(k * 0.7) * 0.42, 6); l.rotation.set(0.5 * Math.sin(k * 2), 0, 0.5 * Math.cos(k * 2)); site.add(l); }
 }
 function trilithons(site, r) {
   const y = site.h(0, 0);
