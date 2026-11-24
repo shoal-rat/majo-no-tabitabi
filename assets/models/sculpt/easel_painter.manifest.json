@@ -1,0 +1,42 @@
+{
+ "sculpt_easel_painter": {
+  "file": "models/sculpt/easel_painter.glb",
+  "type": "model",
+  "license": "CC0 (original work)",
+  "author": "sculpted for this project",
+  "source": "tools/sculpt/assets/easel_painter.mjs (node tools/sculpt/assets/props_activity_lib.mjs)",
+  "scale": 1,
+  "size": [
+   1.122,
+   1.666,
+   0.767
+  ],
+  "tris": 3780,
+  "lods": [
+   3780,
+   2004,
+   204
+  ],
+  "materials": [
+   "EaselWood_wood",
+   "EaselPaint_none"
+  ],
+  "mats": {
+   "EaselWood_wood": {
+    "surface": "wood",
+    "look": {
+     "detail": 0.3,
+     "rim": 0.3
+    }
+   },
+   "EaselPaint_none": {
+    "surface": "none",
+    "look": {
+     "rim": 0.25,
+     "wrap": 0.35
+    }
+   }
+  },
+  "notes": "The painter's field easel (gameplay/errands-props.js makeEasel): bevelled legs, ledge, clamp; a canvas with a moor landscape painted in vertex colour; a paint box with pots, a jar of brushes and a palette at its foot. Faces +Z, origin on the ground; legs 1.65 m. LOD tris 3780 / 2004 / 204. Vertex colour only (COLOR_0 linear rgb, written once)."
+ }
+}

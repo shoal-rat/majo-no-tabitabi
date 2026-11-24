@@ -111,7 +111,7 @@ export function tube(m, path, { r = 0.02, sides = 6, part = 'body', col = [0.5, 
       const off = add(mul(f.n, ca * rr * aspect[0]), mul(f.b, sa * rr * aspect[1]));
       const nn = norm(add(mul(f.n, ca / aspect[0]), mul(f.b, sa / aspect[1])));
       const p = add(f.p, off);
-      row.push(m.v(p, nn, lin(paint({ t, a, p, n: nn, i, r: rr })), part));
+      row.push(m.v(p, nn, lin(paint({ t, a, p, n: nn, i, r: rr, chamfer: 0 })), part));
     }
     rows.push(row);
   }
@@ -159,7 +159,7 @@ export function lathe(m, prof, { sides = 16, part = 'body', col = [0.5, 0.5, 0.5
       const a = a0 + (s / sides) * arc, ca = Math.cos(a), sa = Math.sin(a);
       const rr = wob ? r * (1 + wob(a, y)) : r;
       let p = [sa * rr, y, ca * rr], n = norm([sa * q.n[0], q.n[1], ca * q.n[0]]);
-      const c = lin(paint({ p, n, a, k: q.k, r, y }));
+      const c = lin(paint({ p, n, a, k: q.k, r, y, chamfer: 0 }));
       if (xf) { p = xf.p(p); n = xf.n(n); }
       row.push(m.v(p, n, c, part));
     }
@@ -275,7 +275,7 @@ export function blob(m, { r = [0.1, 0.1, 0.1], seg = 10, rings = 7, part = 'body
       const ph = (j / seg) * Math.PI * 2, d = [Math.sin(ph) * sr, sy, Math.cos(ph) * sr];
       const k = disp ? disp(d, v, ph) : 1;
       let p = [d[0] * r[0] * k, d[1] * r[1] * k, d[2] * r[2] * k], n = norm([d[0] / r[0], d[1] / r[1], d[2] / r[2]]);
-      const c = lin(paint({ p, n, u: ph / (Math.PI * 2), v, d }));
+      const c = lin(paint({ p, n, u: ph / (Math.PI * 2), v, d, chamfer: 0 }));
       if (xf) { p = xf.p(p); n = xf.n(n); }
       row.push(m.v(p, n, c, part));
     }

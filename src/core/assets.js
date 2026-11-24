@@ -78,9 +78,10 @@ export const SCULPT_TYPES = {
   dango: ['sculpt_dango'], gohei: ['sculpt_prop_gohei'], broom: ['sculpt_prop_broom'], hip_lantern: ['sculpt_hip_lantern'],
   earth_column: ['sculpt_earth_column_a', 'sculpt_earth_column_b', 'sculpt_earth_column_c', 'sculpt_earth_rubble'],
   // the activity props (round art-props, tools/sculpt/assets/props_activity_lib.mjs; gameplay/errands-props.js sculptedProp):
-  // the landmark puzzles' briar thicket, rubble heap and pack chest (+ lid), the broom courses' witch's ring gate;
-  // vertex colours on every LOD
-  'props-activity': ['sculpt_briar_thicket', 'sculpt_rubble_heap', 'sculpt_chest_pack', 'sculpt_chest_pack_lid', 'sculpt_ring_willow'],
+  // the landmark puzzles' briar thicket, rubble heap and pack chest (+ lid), the broom courses' witch's ring gate, the
+  // roadside errands' felt hat, easel, stove, handcart and sitting stone; vertex colours on every LOD
+  'props-activity': ['sculpt_briar_thicket', 'sculpt_rubble_heap', 'sculpt_chest_pack', 'sculpt_chest_pack_lid', 'sculpt_ring_willow',
+    'sculpt_hat_felt', 'sculpt_easel_painter', 'sculpt_stove_iron', 'sculpt_cart_hand', 'sculpt_seat_stone'],
 };
 export const SCULPT_DEFAULT = ['stone_lantern', 'komainu', 'kitsune', 'great_lantern', 'rockfam', 'drywall', 'mill', 'landmarks', 'pot', 'barrel', 'bucket', 'pumpkin',
   'jar', 'cart', 'hen', 'gohei', 'broom', 'hip_lantern', 'earth_column', 'props-activity'];
