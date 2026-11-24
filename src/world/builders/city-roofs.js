@@ -9,7 +9,7 @@ import { G } from '../../core/game.js';
 import { flat } from '../../core/mats.js';
 import { mat, sculptVcMat } from './kit.js';
 import { cyl, sphere } from '../../core/geo.js';
-import { ByMat, hash01 } from './city-geo.js';
+import { ByMat, GeoBuilder, hash01 } from './city-geo.js';
 
 /** 2 = high, 1 = med, 0 = low tier and phones (the mobile tier is 'low' to the systems). */
 export const roofTier = () => (G.quality?.name === 'high' ? 2 : G.quality?.name === 'med' ? 1 : 0);
@@ -115,14 +115,14 @@ export function modelGable(g, w, d, h, rise, roofM, bodyM, alongX, ov = 0.5, see
   const tileM0 = modelTile(roofM),
     T1 = B.get(modelTile(roofM, slate ? 1 : 0.9)),
     TR = B.get(modelTile(roofM, 1.07));
-  const cs = (tier === 2 ? 0.33 : tier === 1 ? 0.42 : 0.62) * (0.94 + 0.12 * hash01(seed, 3)),
+  const cs = (tier === 2 ? 0.4 : tier === 1 ? 0.48 : 0.62) * (0.94 + 0.12 * hash01(seed, 3)),
     nc = Math.max(3, Math.round(Ls / cs)),
     lip = slate ? 0.032 : 0.048;
   // gable walls: the attic triangle in the body's plaster
   B.get(bodyM).prism([[-half + 0.01, h], [half - 0.01, h], [0, h + rise]], -D / 2 + 0.01, D / 2 - 0.01);
   // an attic light in the street gable (and the back one on high): stone surround, cross bars, a sill
   if (!alongX && rise > 2.2)
-    for (const e of tier === 2 ? [1, -1] : [1]) {
+    for (const e of [1]) {
       const ww = Math.min(0.82, W * 0.15),
         wh = ww * 1.3,
         yc = h + rise * 0.34,
@@ -178,7 +178,7 @@ export function modelGable(g, w, d, h, rise, roofM, bodyM, alongX, ov = 0.5, see
     }
     // half-round cover tiles over the pans, eave to ridge (not on slate)
     if (!slate && tier > 0) {
-      const pr = (tier === 2 ? 0.37 : 0.52) * (0.95 + 0.1 * hash01(seed, 5)),
+      const pr = (tier === 2 ? 0.5 : 0.62) * (0.95 + 0.1 * hash01(seed, 5)),
         nr = Math.floor((zB - zA - 0.1) / pr),
         z0 = (zA + zB) / 2 - ((nr - 1) * pr) / 2,
         rr = tier === 2 ? 0.095 : 0.1,
@@ -189,8 +189,8 @@ export function modelGable(g, w, d, h, rise, roofM, bodyM, alongX, ov = 0.5, see
           e1 = Ls - 0.14;
         const ring = (s) => {
           const out = [];
-          for (let k = 0; k <= 3; k++) {
-            const th = (k * Math.PI) / 3,
+          for (let k = 0; k <= 2; k++) {
+            const th = (k * Math.PI) / 2,
               cz = Math.cos(th),
               cn = Math.sin(th),
               c = P(sg, s, zc, la);
@@ -200,9 +200,9 @@ export function modelGable(g, w, d, h, rise, roofM, bodyM, alongX, ov = 0.5, see
         };
         const R0 = ring(e0),
           R1 = ring(e1);
-        for (let k = 0; k < 3; k++) TR.squad(R0[k][0], R0[k + 1][0], R1[k + 1][0], R1[k][0], R0[k][1], R0[k + 1][1], R1[k + 1][1], R1[k][1]);
+        for (let k = 0; k < 2; k++) TR.squad(R0[k][0], R0[k + 1][0], R1[k + 1][0], R1[k][0], R0[k][1], R0[k + 1][1], R1[k + 1][1], R1[k][1]);
         const c = P(sg, e0, zc, la);
-        for (let k = 0; k < 3; k++) TR.tri(c, R0[k][0], R0[k + 1][0], dn);
+        for (let k = 0; k < 2; k++) TR.tri(c, R0[k][0], R0[k + 1][0], dn);
       }
     }
     // the eave: fascia board, soffit, rafter tails, gutter
@@ -211,8 +211,9 @@ export function modelGable(g, w, d, h, rise, roofM, bodyM, alongX, ov = 0.5, see
       x1 = sg * (xe + 0.055);
     F.box(Math.min(x0, x1), yU(xe) - 0.1, zA, Math.max(x0, x1), yE + 0.012, zB);
     B.get(soffitM).quad([sg * xe, yU(xe), zA], [sg * xe, yU(xe), zB], [0, h + rise, zB], [0, h + rise, zA], [sg * sa, -ca, 0]);
-    if (tier > 0) {
-      const sp = tier === 2 ? 0.85 : 1.3,
+    if (tier > 0 && alongX) {
+      // rafter tails only where the eave faces the street (a gable house's eaves are on its party walls)
+      const sp = tier === 2 ? 1.2 : 1.6,
         nt = Math.max(2, Math.floor((D - 0.3) / sp));
       for (let k = 0; k <= nt; k++) {
         const zc = -D / 2 + 0.15 + ((D - 0.3) * k) / nt,
@@ -244,7 +245,7 @@ export function modelGable(g, w, d, h, rise, roofM, bodyM, alongX, ov = 0.5, see
         zb = za + 0.062;
       B.get(fasciaM).prism(sg > 0 ? poly : poly.slice().reverse(), za, zb);
     }
-  // ridge: a half-round run of ridge tiles, each joint marked by the next tile's collar
+  // ridge: a half-round run of ridge tiles
   const yR = h + rise + T + 0.04,
     rr = 0.16,
     as = Math.min(1.35, a + 0.25),
@@ -265,16 +266,6 @@ export function modelGable(g, w, d, h, rise, roofM, bodyM, alongX, ov = 0.5, see
       R1 = ridgeRing(zB + 0.06, rr);
     for (let k = 0; k < ns; k++) RG.squad(R1[k][0], R1[k + 1][0], R0[k + 1][0], R0[k][0], R1[k][1], R1[k + 1][1], R0[k + 1][1], R0[k][1]);
     for (const [Rr, sgn] of [[R0, -1], [R1, 1]]) for (let k = 0; k < ns; k++) RG.tri([0, yR - 0.02, Rr[0][0][2]], Rr[k][0], Rr[k + 1][0], [0, 0, sgn]);
-    if (tier === 2) {
-      const step = 0.62,
-        nk = Math.floor((zB - zA) / step);
-      for (let j = 1; j < nk; j++) {
-        const z = zA + j * step,
-          A0 = ridgeRing(z - 0.035, rr + 0.022),
-          A1 = ridgeRing(z + 0.035, rr + 0.022);
-        for (let k = 0; k < ns; k++) RG.squad(A1[k][0], A1[k + 1][0], A0[k + 1][0], A0[k][0], A1[k][1], A1[k + 1][1], A0[k + 1][1], A0[k][1]);
-      }
-    }
   }
   // crow steps on the street gable: stone steps climbing to an apex pier, each with a coping cap
   if (stepped) {
@@ -331,7 +322,7 @@ export function modelGable(g, w, d, h, rise, roofM, bodyM, alongX, ov = 0.5, see
     const Cr = B.get(ironM),
       yC = yR + rr + 0.02;
     Cr.tube([[0, yC + 0.22, zA + 0.2], [0, yC + 0.22, zB - 0.2]], 0.018, 4);
-    for (let z = zA + 0.3; z < zB - 0.25; z += 0.42) Cr.lathe([[0.012, yC - 0.05], [0.012, yC + 0.22], [0.035, yC + 0.27], [0.001, yC + 0.36]], 4, 0, 0, z);
+    for (let z = zA + 0.3; z < zB - 0.25; z += 0.7) Cr.lathe([[0.012, yC - 0.05], [0.012, yC + 0.22], [0.035, yC + 0.27], [0.001, yC + 0.36]], 3, 0, 0, z);
     for (const z of [zA + 0.2, zB - 0.2]) B.get(brassM).lathe([[0.03, yC - 0.05], [0.03, yC + 0.4], [0.07, yC + 0.47], [0.001, yC + 0.7]], 6, 0, 0, z);
   }
   flushRoof(B, r, h, seed);
@@ -339,7 +330,9 @@ export function modelGable(g, w, d, h, rise, roofM, bodyM, alongX, ov = 0.5, see
   if (tier > 0 && hash01(seed, 13) > 0.55)
     for (const e of stepped ? [-1] : [-1, 1]) {
       const z = e * (zB + 0.035);
-      r.add(cyl(0.05, 0.07, 0.75, fasciaM, 0, yTop(0) + 0.25, z, 6), sphere(0.11, brassM, 0, yTop(0) + 0.7, z, 8, 6));
+      const fb = new GeoBuilder();
+      fb.lathe([[0.07, 0], [0.05, 0.6], [0.11, 0.7], [0.08, 0.8], [0.001, 0.84]], 5, 0, yTop(0) - 0.1, z);
+      fb.mesh(brassM, r);
     }
   if (alongX) r.rotation.y = Math.PI / 2;
   g.add(r);
@@ -404,7 +397,9 @@ export function modelHip(g, w, d, h, rise, roofM, ov = 0.55, seed = 1) {
   const HR = B.get(modelTile(roofM, 0.84));
   for (const [cx, cz] of C) HR.tube([[cx * 1.01, yE + 0.06, cz * 1.01], [0, yA + 0.05, 0]], 0.1, tier ? 6 : 4, true);
   flushRoof(B, r, h, seed);
-  r.add(cyl(0.06, 0.1, 1.1, brassM, 0, yA + 0.5, 0, 6), sphere(tier ? 0.2 : 0.16, brassM, 0, yA + 1.15, 0, 9, 7));
+  const fb = new GeoBuilder();
+  fb.lathe([[0.1, yA - 0.05], [0.06, yA + 0.9], [tier ? 0.2 : 0.16, yA + 1.12], [0.12, yA + 1.3], [0.001, yA + 1.36]], 6);
+  fb.mesh(brassM, r);
   if (tier > 0) r.add(cyl(0.012, 0.012, 0.9, brassM, 0, yA + 1.7, 0, 4));
   g.add(r);
   return { top: yA + 1.2 };
@@ -436,7 +431,7 @@ export function chimney(g, cx, cz, top, tip, seed = 1, flues = 1) {
   for (let i = 0; i < pots; i++) {
     const px = cx + (pots === 1 ? 0 : (i / (pots - 1) - 0.5) * (sx * 2 - s * 0.9)),
       hgt = 0.34 + 0.16 * hash01(seed + i, 23);
-    P.lathe([[0.13, 0], [0.1, hgt * 0.85], [0.135, hgt], [0.105, hgt + 0.02]], 7, px, tip + 0.24, cz);
+    P.lathe([[0.13, 0], [0.1, hgt * 0.85], [0.135, hgt], [0.105, hgt + 0.02]], 5, px, tip + 0.24, cz);
     B.get(rafterM).lathe([[0.1, hgt - 0.03], [0, hgt - 0.03]], 5, px, tip + 0.24, cz);
   }
   B.flush(g);

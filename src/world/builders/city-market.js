@@ -70,14 +70,15 @@ export function wallLantern(g, iron, y, z, dir, lite) {
   const B = new ByMat(), I = B.get(iron), d = dir;
   I.box(d > 0 ? 0 : -0.04, y - 0.25, z - 0.09, d > 0 ? 0.04 : 0, y + 0.25, z + 0.09);
   const pts = [];
-  for (let i = 0; i <= 8; i++) { const t = i / 8; pts.push([d * (0.02 + 0.55 * t), y + 0.12 * Math.sin(t * Math.PI) - 0.1 * t, z]); }
-  I.tube(pts, 0.025, 4);
-  if (!lite) { const sc = []; for (let i = 0; i <= 8; i++) { const a = (i / 8) * Math.PI * 1.5; sc.push([d * (0.12 + Math.cos(a) * 0.09), y - 0.12 + Math.sin(a) * 0.09, z]); } I.tube(sc, 0.014, 4); }
+  for (let i = 0; i <= 4; i++) { const t = i / 4; pts.push([d * (0.02 + 0.55 * t), y + 0.12 * Math.sin(t * Math.PI) - 0.1 * t, z]); }
+  I.tube(pts, 0.025, 3);
+  if (!lite) { const sc = []; for (let i = 0; i <= 6; i++) { const a = (i / 6) * Math.PI * 1.5; sc.push([d * (0.12 + Math.cos(a) * 0.09), y - 0.12 + Math.sin(a) * 0.09, z]); } I.tube(sc, 0.014, 3); }
   const cx = d * 0.55, top = y - 0.12;
-  for (let k = 0; k < 4; k++) {
-    const a = Math.PI / 4 + (k * Math.PI) / 2, px = cx + Math.sin(a) * 0.17, pz = z + Math.cos(a) * 0.17;
-    I.box(px - 0.012, top - 0.5, pz - 0.012, px + 0.012, top - 0.06, pz + 0.012, 'nypy');
-  }
+  if (!lite)
+    for (let k = 0; k < 4; k++) {
+      const a = Math.PI / 4 + (k * Math.PI) / 2, px = cx + Math.sin(a) * 0.17, pz = z + Math.cos(a) * 0.17;
+      I.box(px - 0.012, top - 0.5, pz - 0.012, px + 0.012, top - 0.06, pz + 0.012, 'nypyny');
+    }
   I.lathe([[0.22, top - 0.08], [0.07, top + 0.06], [0.03, top + 0.12]], 4, cx, 0, z, 1, Math.PI / 4, true);
   I.lathe([[0.2, top - 0.54], [0.2, top - 0.5], [0.001, top - 0.62]], 4, cx, 0, z, 0, Math.PI / 4, true);
   B.flush(g);

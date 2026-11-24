@@ -324,6 +324,7 @@ function registerBays(faces, skip, x, z, base, yaw, seed) {
           if (hash01(k, seed) < boxP) fl |= BAY.BOX;
           else if (!(fl & BAY.ARCH) && hash01(seed, k * 1.3) < railP) fl |= BAY.RAIL;
           if (!(fl & BAY.CLOSED) && hash01(k * 0.7, seed + 3) < curP) fl |= BAY.CURTAIN;
+          if (!(fl & (BAY.CLOSED | BAY.RAIL)) && hash01(k * 1.9, seed + 5) < 0.06) fl |= BAY.OPEN | BAY.CURTAIN; // a window left open, its curtain out
           const hx = ox + xc * xb,
             hz = oz + xs * xb;
           addBay(BELL.x + x + hx * c + hz * s, base + hy, BELL.z + z - hx * s + hz * c, yaw + ry, Wb / 1.6, fl, f.ti, shut, cur, bloom + (k % 3), hash01(seed, k + 0.5));
@@ -364,7 +365,7 @@ export function townhouse(site, o) {
   const hs = (k) => hash01(seed, 90 + k),
     arcaded = !!o.shop && !o.cap && !lite && o.arcade !== false && hs(1) < 0.34,
     stepped = kind === 'gable' && hs(2) < 0.42,
-    timber = st > 3 && hs(3) < 0.4,
+    timber = st > 3 && hs(3) < 0.3,
     turret = !o.cap && st >= 4 && w >= 5.6 && hs(4) < 0.16;
   const ti = stepped ? 2 : timber ? 0 : (seed * 3 + 1) % 4,
     roofM = o.roof || ROOFMIX[(seed * 5 + 3) % ROOFMIX.length];
@@ -396,7 +397,7 @@ export function townhouse(site, o) {
     const up = st > k1;
     halfTimber(g, w + (up ? jet : 0), d + (up ? jet : 0), up ? GF + k1 * FH : GF, up ? st - k1 : k1, FH, up ? jet / 2 : 0, Math.max(1, Math.round((w + (up ? jet : 0)) / 1.6)), Math.max(1, Math.round((d + (up ? jet : 0)) / 1.6)), seed, lite);
   }
-  if (stepped) quoins(g, w + 0.1, d + 0.1 - back, 0.5, GF + k1 * FH, -back / 2);
+  if (stepped && !lite) quoins(g, w + 0.1, d + 0.1 - back, 0.5, GF + k1 * FH, -back / 2);
   const fz = d / 2 + (st > k1 ? jet : 0);
   // cornice band at the wall top (shallow under a pitched roof: the eave's soffit and fascia take over)
   const cor = kind === 'flat' ? 0.36 : 0.12;
@@ -473,7 +474,7 @@ export function townhouse(site, o) {
       if (!lite) {
         // pots along the rail, a broom rack by the door on the balconies witches land on
         const P2 = new ByMat();
-        const np = 1 + Math.floor(hash01(seed, k) * 3);
+        const np = 1 + Math.floor(hash01(seed, k) * 2);
         for (let i = 0; i < np; i++) pottedPlant(P2, bx - bw / 2 + 0.35 + (i * (bw - 0.7)) / Math.max(1, np - 1 || 1), y + 0.08, front + bd - 0.32, 0.16, seed + i + k, lite);
         if (hash01(k, seed) < 0.4) broomRack(P2, bx + (made % 2 ? 1 : -1) * 0.95, y + 1.95, front + 0.02, seed + k);
         P2.flush(g);
@@ -1466,6 +1467,8 @@ function stall(site, x, z, yaw, i) {
   stallModel(g, { wood, trim, iron, cloth: cloth[i % 4] }, i, lowQ());
   site.add(g, x, H, z, yaw);
   site.colBox(x, z, 1.5, 0.75, yaw, H, H + 1.2);
+  // the stall keeper's spot behind the counter, facing the customers (life/city-crowds.js)
+  (CITY_LIFE.vendors ||= []).push({ x: BELL.x + x - Math.sin(yaw) * 1.0, z: BELL.z + z - Math.cos(yaw) * 1.0, face: yaw });
 }
 function planter(site, x, z, yaw, seed) {
   const g = new THREE.Group();
@@ -1476,6 +1479,7 @@ function planter(site, x, z, yaw, seed) {
 /** Lamps with blue magic orbs along the streets, the fountain square, wells, stalls and planters. */
 export function streetProps(site, taken) {
   while (_carve.length) _carve.shift()(); // anything still queued (no house layout ran) is built before the bake
+  CITY_LIFE.vendors = [];
   const lite = lowQ(),
     rand = mulberry32(777);
   let lamps = 0;

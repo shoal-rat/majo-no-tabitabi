@@ -5,7 +5,7 @@
 import * as THREE from 'three';
 import { mat } from './kit.js';
 import { ByMat, GeoBuilder, hash01 } from './city-geo.js';
-import { coursedSpire, corbel, lancet } from './city-stone.js';
+import { coursedSpire, lancet } from './city-stone.js';
 
 const timberM = mat.wood(0x4a3326),
   stoneM = mat.stone(0xe3d8c2),
@@ -20,7 +20,7 @@ export function halfTimber(g, w, d, y0, n, FH, dz, bw, bd, seed, lite) {
   const B = new ByMat(), T = B.get(timberM), t = 0.15, out = 0.11;
   const faces = [[0, 0, dz + d / 2 + 0.02, w, bw], [Math.PI, 0, dz - d / 2 - 0.02, w, bw], [Math.PI / 2, w / 2 + 0.02, dz, d, bd], [-Math.PI / 2, -w / 2 - 0.02, dz, d, bd]];
   const pattern = Math.floor(hash01(seed, 71) * 3); // 0 K-braces, 1 St Andrew's crosses, 2 plain posts and rails
-  for (const [ry, ox, oz, W, nb] of lite ? faces.slice(0, 2) : faces) {
+  for (const [ry, ox, oz, W, nb] of faces.slice(0, 2)) {
     const f = new GeoBuilder(), Wb = W / nb, H = n * FH;
     for (let j = 0; j <= nb; j++) {
       const x = -W / 2 + j * Wb;
@@ -47,18 +47,17 @@ export function halfTimber(g, w, d, y0, n, FH, dz, bw, bd, seed, lite) {
   B.flush(g);
 }
 
-/** Long-and-short quoins up the four corners of a w x d block from y0 to y1 (stone burgher houses). */
+/** Long-and-short quoins up the street corners of a w x d block from y0 to y1 (stone burgher houses). */
 export function quoins(g, w, d, y0, y1, dz = 0) {
   const B = new ByMat(), Q = B.get(quoinM), c = 0.24;
   let k = 0;
-  for (let y = y0; y < y1 - 0.2; y += 0.62, k++) {
-    const h = Math.min(0.56, y1 - y - 0.06), long = k % 2 ? 0.6 : 0.36;
-    for (const sx of [-1, 1])
-      for (const sz of [-1, 1]) {
-        const cx = (sx * w) / 2, cz = dz + (sz * d) / 2;
-        Q.box(sx > 0 ? cx - long : cx - 0.035, y, sz > 0 ? cz - 0.035 : cz - c, sx > 0 ? cx + 0.035 : cx + long, y + h, sz > 0 ? cz + c : cz + 0.035);
-        Q.box(sx > 0 ? cx - c : cx - 0.035, y, sz > 0 ? cz - (k % 2 ? 0.36 : 0.6) : cz - 0.035, sx > 0 ? cx + 0.035 : cx + c, y + h, sz > 0 ? cz + 0.035 : cz + (k % 2 ? 0.36 : 0.6));
-      }
+  for (let y = y0; y < y1 - 0.2; y += 0.84, k++) {
+    // the two street corners only (the back ones are seldom seen); long and short faces alternate up the corner
+    const h = Math.min(0.78, y1 - y - 0.06), long = k % 2 ? 0.6 : 0.34, cz = dz + d / 2;
+    for (const sx of [-1, 1]) {
+      const cx = (sx * w) / 2;
+      Q.box(sx > 0 ? cx - long : cx - 0.035, y, cz - (k % 2 ? 0.34 : 0.6), sx > 0 ? cx + 0.035 : cx + long, y + h, cz + 0.035, 'ny');
+    }
   }
   B.flush(g);
 }
@@ -67,8 +66,8 @@ export function quoins(g, w, d, y0, y1, dz = 0) {
 export function corbelTable(g, w, d, y, dz = 0, lite = false) {
   const B = new ByMat();
   for (const [ry, ox, oz, W] of [[0, 0, dz + d / 2, w], [Math.PI, 0, dz - d / 2, w], [Math.PI / 2, w / 2, dz, d], [-Math.PI / 2, -w / 2, dz, d]]) {
-    const f = new ByMat(), n = Math.max(2, Math.round(W / (lite ? 1.4 : 0.8)));
-    for (let i = 0; i < n; i++) corbel(f.get(stoneM), -W / 2 + ((i + 0.5) * W) / n, 0, 0, 0.32, 0.36);
+    const f = new ByMat(), n = lite ? 0 : Math.max(2, Math.round(W / 0.9));
+    for (let i = 0; i < n; i++) { const x = -W / 2 + ((i + 0.5) * W) / n; f.get(stoneM).box(x - 0.13, -0.34, 0, x + 0.13, 0, 0.3, 'nz'); }
     f.get(stoneM).slab(-W / 2 - 0.36, 0, -0.05, W / 2 + 0.36, 0.18, 0.42, 0.03, false);
     for (const [m, gb] of f.map) B.get(m).append(gb, new THREE.Matrix4().makeRotationY(ry).setPosition(ox, y, oz));
   }

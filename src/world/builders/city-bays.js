@@ -8,7 +8,7 @@
 // no shadows cast. Phones and the low tier keep the painted facades only.
 import * as THREE from 'three';
 import { G } from '../../core/game.js';
-import { toon } from '../../core/mats.js';
+import { toon, own } from '../../core/mats.js';
 import { GeoBuilder, hash01, frontRing, fixWinding } from './city-geo.js';
 
 /** Modelled bays within this many metres of the camera: by tier (phones and low: none). */
@@ -19,7 +19,7 @@ const lin = (hex) => new THREE.Color(hex);
 // ---- the registry: one record per bay, filled while the town houses are built ----
 const rec = []; // [x, y, z, yaw, sx, flags, tint, shutter, curtain, bloom, seed] per bay
 const STRIDE = 11;
-export const BAY = { ARCH: 1, SHUT: 2, CLOSED: 4, BOX: 8, RAIL: 16, CURTAIN: 32, PANEL: 64 };
+export const BAY = { ARCH: 1, SHUT: 2, CLOSED: 4, BOX: 8, RAIL: 16, CURTAIN: 32, PANEL: 64, OPEN: 128 };
 /**
  * Register a bay: world position of the middle of its storey's floor line on the facade plane, facing yaw (the
  * facade's outward normal is (sin yaw, cos yaw)), width scale sx (bay width / 1.6 m), flags (BAY.*), colour indices.
@@ -142,6 +142,34 @@ function curtains() {
   b.quad([-GX, GL1 - 0.2, ZG + 0.005], [GX, GL1 - 0.2, ZG + 0.005], [GX, GL1 - 0.05, ZG + 0.005], [-GX, GL1 - 0.05, ZG + 0.005], [0, 0, 1]);
   return b;
 }
+/** The lower casement swung open on its left hinge (frame + glass), for an open window. */
+function openLeaf() {
+  const b = new GeoBuilder(true), t = new GeoBuilder(true), y0 = GL0 + 0.02, y1 = 1.93;
+  t.colour(lin(0xe6dfd0));
+  t.box(0, y0, 0, GX, y0 + 0.05, 0.035);
+  t.box(0, y1 - 0.05, 0, GX, y1, 0.035);
+  t.box(0, y0, 0, 0.045, y1, 0.035);
+  t.box(GX - 0.045, y0, 0, GX, y1, 0.035);
+  t.colour(lin(0x4a6476));
+  t.quad([0.045, y0 + 0.05, 0.018], [GX - 0.045, y0 + 0.05, 0.018], [GX - 0.045, y1 - 0.05, 0.018], [0.045, y1 - 0.05, 0.018], [0, 0, 1]);
+  t.quad([0.045, y1 - 0.05, 0.016], [GX - 0.045, y1 - 0.05, 0.016], [GX - 0.045, y0 + 0.05, 0.016], [0.045, y0 + 0.05, 0.016], [0, 0, -1]);
+  b.append(t, new THREE.Matrix4().makeRotationY(-1.15).setPosition(-GX, 0, ZG + 0.03));
+  return b;
+}
+/** A curtain blown out of an open window (it stirs in the shader: life of the street canyon). */
+function curtainFlap() {
+  const b = new GeoBuilder(true), rows = 6, x0 = -0.27, x1 = 0.06;
+  const P = (u, v) => [x0 + (x1 - x0) * u + 0.06 * v * v, 1.9 - 1.15 * v, ZG + 0.05 + 0.42 * Math.pow(v, 1.6) + 0.03 * Math.sin(u * 6.28)];
+  b.colour(1, 1, 1);
+  for (let j = 0; j < rows; j++)
+    for (let i = 0; i < 2; i++) {
+      const u0 = i / 2, u1 = (i + 1) / 2, v0 = j / rows, v1 = (j + 1) / rows;
+      b.quad(P(u0, v0), P(u1, v0), P(u1, v1), P(u0, v1), [0, 0.3, 1]);
+      b.quad(P(u0, v1), P(u1, v1), P(u1, v0), P(u0, v0), [0, -0.3, -1]);
+    }
+  return b;
+}
+const uTime = { value: 0 };
 function octa(b, x, y, z, r, ry = r) {
   const P = [[x + r, y, z], [x, y + ry, z], [x - r, y, z], [x, y - ry * 0.4, z], [x, y, z + r], [x, y, z - r]];
   const F = [[0, 1, 4], [1, 2, 4], [2, 3, 4], [3, 0, 4], [1, 0, 5], [2, 1, 5], [3, 2, 5], [0, 3, 5]];
@@ -257,7 +285,9 @@ export function startBays(ctx) {
     box: mk(flowerBox(), wood, Math.ceil(cap * 0.6)),
     bloom: mk(bloomClump(), petals, Math.ceil(cap * 1.8)),
     rail: mk(rail(), metal, Math.ceil(cap * 0.4)),
-    bal: mk(balustrade(), wood, Math.ceil(cap * 0.3))
+    bal: mk(balustrade(), wood, Math.ceil(cap * 0.3)),
+    open: mk(openLeaf(), paint, Math.ceil(cap * 0.12)),
+    flap: mk(curtainFlap(), flapMat(cloth), Math.ceil(cap * 0.12))
   };
   for (const m of Object.values(M)) G.scene.add(m);
   state = { R, grid, M, last: [1e9, 1e9, 1e9], frame: 0, n };
@@ -265,7 +295,21 @@ export function startBays(ctx) {
   if (G.structures) G.structures.cityBays = bayStats; // probes: bays drawn now
   return state;
 }
-const _cnt = { sq: 0, ar: 0, leaf: 0, cur: 0, box: 0, bloom: 0, rail: 0, bal: 0 };
+const _cnt = { sq: 0, ar: 0, leaf: 0, cur: 0, box: 0, bloom: 0, rail: 0, bal: 0, open: 0, flap: 0 };
+/** The flap's cloth stirs: more at its free end, phase from where the window is (no per-instance attribute). */
+function flapMat(base) {
+  const m = own(base);
+  m.onBeforeCompile = (sh) => {
+    sh.uniforms.uTime = uTime;
+    sh.vertexShader = 'uniform float uTime;\n' + sh.vertexShader.replace('#include <begin_vertex>', `#include <begin_vertex>
+      float fw = clamp((1.9 - position.y) / 1.15, 0.0, 1.0);
+      float fph = instanceMatrix[3].x * 0.37 + instanceMatrix[3].z * 0.23;
+      transformed.z += (sin(uTime * 1.9 + fph) * 0.5 + 0.5) * 0.16 * fw * fw;
+      transformed.x += sin(uTime * 1.3 + fph * 1.7) * 0.06 * fw;`);
+  };
+  m.customProgramCacheKey = () => 'cityBayFlap';
+  return m;
+}
 let _fz = 1; // depth scale of the bays being written: they rise out of the wall over the last metres of the range
 function put(m, key, x, y, z, c, s, sx, col) {
   const i = _cnt[key];
@@ -280,7 +324,8 @@ function put(m, key, x, y, z, c, s, sx, col) {
   _cnt[key] = i + 1;
 }
 const _tmp = new THREE.Color();
-function update() {
+function update(dt) {
+  uTime.value = (uTime.value + (dt || 0)) % 3600;
   const S = state;
   if (!S || !G.camera || (++S.frame & 1)) return;
   const e = G.camera.matrixWorld.elements, cx = e[12], cy = e[13], cz = e[14];
@@ -318,6 +363,10 @@ function update() {
           }
         }
         if (f & BAY.CURTAIN) put(M.cur, 'cur', x, y, z, c, s, sx, CURTAIN[rec[o + 8]]);
+        if (f & BAY.OPEN) {
+          put(M.open, 'open', x, y, z, c, s, sx, tint);
+          put(M.flap, 'flap', x, y, z, c, s, sx, CURTAIN[rec[o + 8]]);
+        }
         if (f & BAY.RAIL) put(M.rail, 'rail', x, y, z, c, s, sx, IRON[rec[o + 7] % 3]);
         if (f & BAY.BOX) {
           put(M.box, 'box', x, y, z, c, s, sx, tint);

@@ -67,9 +67,9 @@ function garment(kind, w, h) {
 
 /** A clay pot with a leafy plant (in flower on some), foot at (x, y, z) in B's frame; r = pot radius. */
 export function pottedPlant(B, x, y, z, r, seed, lite) {
-  B.get(pot).lathe([[0.001, y], [r * 0.75, y], [r, y + r * 1.4], [r * 1.1, y + r * 1.5], [r * 0.95, y + r * 1.5], [0.001, y + r * 1.35]], lite ? 6 : 8, x, 0, z, 0, 0, true);
-  B.get(leaf[seed % 3]).lathe([[0.001, y + r * 1.3], [r * 1.35, y + r * 1.8], [r * 1.15, y + r * 2.6], [0.001, y + r * 2.9]], 6, x, 0, z, 0, seed);
-  if (!lite && hash01(seed, 3) > 0.4) for (let q = 0; q < 4; q++) { const a = q * 1.7 + seed; B.get(bloom[(q + seed) % 5]).lathe([[0.001, 0], [0.04, 0.02], [0.001, 0.045]], 5, x + Math.cos(a) * r * 0.85, y + r * 2.45, z + Math.sin(a) * r * 0.85); }
+  B.get(pot).lathe([[0.001, y], [r * 0.75, y], [r, y + r * 1.4], [r * 1.1, y + r * 1.5], [0.001, y + r * 1.4]], 6, x, 0, z, 0, 0, true);
+  B.get(leaf[seed % 3]).lathe([[0.001, y + r * 1.3], [r * 1.35, y + r * 1.8], [r * 1.15, y + r * 2.6], [0.001, y + r * 2.9]], 5, x, 0, z, 0, seed);
+  if (!lite && hash01(seed, 3) > 0.5) for (let q = 0; q < 3; q++) { const a = q * 1.7 + seed; B.get(bloom[(q + seed) % 5]).lathe([[0.001, 0], [0.04, 0.02], [0.001, 0.045]], 5, x + Math.cos(a) * r * 0.85, y + r * 2.45, z + Math.sin(a) * r * 0.85); }
 }
 
 /** Broom rack on a wall at z = zf facing +z: a pegged rail with two or three brooms hanging bristles down. */

@@ -7,6 +7,7 @@
 // returned to the caller so it stays a lamp for the night pools.
 import * as THREE from 'three';
 import { mat } from './kit.js';
+import { glow } from '../../core/mats.js';
 import { GeoBuilder, ByMat, hash01, frontRing, fixWinding } from './city-geo.js';
 import { wallLantern } from './city-market.js';
 
@@ -18,7 +19,7 @@ const C = {
   frame: mat.wood(0x5a4232),
   wood: mat.wood(0x6e4c38),
   glass: mat.paint(0x3d5667),
-  lit: mat.paint(0x6f8f9c),
+  lit: glow(0xd9b07a, 0.95), // a lamp-lit shop interior behind the panes
   brass: mat.metal(0xcf9f52),
   iron: mat.paint(0x35393f),
   cream: mat.cloth(0xf3eee2),
@@ -45,14 +46,17 @@ export function frontDoor(g, x, zf, seed, lite, lantern = 0) {
   const B = new ByMat(), arched = hash01(seed, 63) > 0.5, w = 1.1, hgt = 2.3;
   // two dressed steps
   B.get(C.step).slab(x - 0.95, 0, zf, x + 0.95, 0.17, zf + 0.62, 0.03, true);
-  B.get(C.step).slab(x - 0.8, 0.17, zf, x + 0.8, 0.32, zf + 0.34, 0.03, true);
+  if (!lite) B.get(C.step).slab(x - 0.8, 0.17, zf, x + 0.8, 0.32, zf + 0.34, 0.03, true);
   // moulded surround (an arched head on some houses)
   const pts = [[x - w / 2, 0.32, -1, 0], [x - w / 2, hgt, arched ? -1 : -1, arched ? 0 : 1]];
   if (arched) for (let i = 1; i < 6; i++) { const a = Math.PI - (i / 6) * Math.PI; pts.push([x + Math.cos(a) * (w / 2), hgt + Math.sin(a) * 0.32, Math.cos(a), Math.sin(a)]); }
   pts.push([x + w / 2, hgt, 1, arched ? 0 : 1], [x + w / 2, 0.32, 1, 0]);
   const S = B.get(C.stone), from = S.tris;
-  frontRing(S, pts, zf + 0.14, zf, zf - 0.06, [0.17, 0.05]);
-  fixWinding(S, from);
+  if (lite) S.box(x - w / 2 - 0.16, 0.32, zf - 0.06, x + w / 2 + 0.16, hgt + 0.16, zf + 0.06, 'nz');
+  else {
+    frontRing(S, pts, zf + 0.14, zf, zf - 0.06, [0.17, 0.05]);
+    fixWinding(S, from);
+  }
   if (!arched) S.slab(x - w / 2 - 0.3, hgt + 0.17, -0.02 + zf, x + w / 2 + 0.3, hgt + 0.3, zf + 0.2, 0.03, false);
   // leaf: a slab with raised panels, a fanlight above, a ring knocker and a knob
   const D = B.get(C.door), top = arched ? hgt + 0.3 : hgt;
@@ -62,11 +66,7 @@ export function frontDoor(g, x, zf, seed, lite, lantern = 0) {
   B.get(C.frame).box(x - w / 2, hgt - (arched ? 0.04 : 0.46), zf - 0.05, x + w / 2, hgt - (arched ? 0 : 0.42), zf - 0.02, 'nz');
   if (!lite) {
     const Pn = B.get(C.doorDk), yT = hgt - (arched ? 0 : 0.42);
-    for (const [y0, y1] of [[0.5, 1.15], [1.3, yT - 0.15]]) for (const s of [-1, 1]) Pn.bevel(x + (s < 0 ? -w / 2 + 0.1 : 0.05), y0, zf - 0.04, x + (s < 0 ? -0.05 : w / 2 - 0.1), y1, zf - 0.005, 0.02, '');
-    const ring = [];
-    for (let i = 0; i <= 10; i++) { const a = (i / 10) * Math.PI * 2; ring.push([x + Math.cos(a) * 0.07, 1.42 + Math.sin(a) * 0.07, zf + 0.015]); }
-    B.get(C.brass).tube(ring, 0.012, 4);
-    B.get(C.brass).lathe([[0.001, 0], [0.04, 0.02], [0.035, 0.05], [0.001, 0.06]], 6, x + w / 2 - 0.15, 1.05, zf - 0.04);
+    for (const [y0, y1] of [[0.5, yT - 0.15]]) for (const s of [-1, 1]) Pn.bevel(x + (s < 0 ? -w / 2 + 0.1 : 0.05), y0, zf - 0.04, x + (s < 0 ? -0.05 : w / 2 - 0.1), y1, zf - 0.005, 0.02, '');
   }
   B.flush(g);
   if (!lantern) return null;
@@ -74,7 +74,7 @@ export function frontDoor(g, x, zf, seed, lite, lantern = 0) {
   lg.position.set(x + lantern * (w / 2 + 0.42), 0, zf);
   lg.rotation.y = -Math.PI / 2;
   g.add(lg);
-  const [lx, ly, lz] = wallLantern(lg, C.iron, 2.65, 0, 1, lite);
+  const [lx, ly, lz] = wallLantern(lg, C.iron, 2.65, 0, 1, true);
   // lantern point back in the door's frame
   return [x + lantern * (w / 2 + 0.42) - lz, ly, zf + lx];
 }
@@ -92,7 +92,7 @@ export function awning(B, x, y, zf, w, depth, colA, colB, lite) {
       A.quad(P(u0, v1), P(u1, v1), P(u1, v0), P(u0, v0), [0, -1, -0.3]);
     }
     const a = P(k / nS, 1), c = P((k + 1) / nS, 1);
-    for (let q = 0; q < 3; q++) {
+    for (let q = 0; q < (lite ? 0 : 3); q++) {
       const t0 = q / 3, t1 = (q + 1) / 3, x0 = a[0] + (c[0] - a[0]) * t0, x1 = a[0] + (c[0] - a[0]) * t1;
       const y0 = a[1] - 0.16 - 0.08 * Math.sin(Math.PI * t0), y1 = a[1] - 0.16 - 0.08 * Math.sin(Math.PI * t1);
       A.quad([x0, a[1], a[2]], [x1, a[1], a[2]], [x1, y1, a[2]], [x0, y0, a[2]], [0, 0, 1]);
