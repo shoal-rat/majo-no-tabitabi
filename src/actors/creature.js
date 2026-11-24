@@ -656,7 +656,9 @@ const SCULPT = {
 };
 // bodies made by the offline sculpt kit (tools/sculpt): asset id -> [G.sculpt type, kit asset id]; createCreature swaps them in
 // (type null: no switch of its own, on unless ?sculpt=0)
-const KIT_BODY = { ani_chicken: ['hen', 'sculpt_ani_chicken'] };
+const KIT_BODY = { ani_chicken: ['hen', 'sculpt_ani_chicken'], ani_wolf: ['creatures', 'sculpt_wolf_wild'], mon_bat: ['creatures', 'sculpt_bat_star'] };
+// glow colours of kit bodies swapped in by KIT_BODY (TEXCOORD_0.x through the ramp): the wolves' amber eyes, the bat's stars
+const KIT_GLOW = { sculpt_wolf_wild: 0xff9a2a, sculpt_bat_star: 0xffcf6a };
 // foes whose kit body IS their asset (round art-creatures; tools/sculpt/assets/*.mjs + beast_kit.mjs post; G.sculpt type
 // 'creatures'): the pack asset they fall back to (?sculpt=0 / type off: the GLB is not even loaded), the death / spawn
 // style, the glow colour of TEXCOORD_0.x (ramp).
@@ -1268,6 +1270,7 @@ export function createCreature(assetId, opts = {}) {
   const missing = !model;
   if (!model) model = placeholder();
   else if (!opts.primitive && !old && !kitId && !ownKit) applySculpt(assetId, model);
+  if (!missing && kitId && KIT_GLOW[kitId] != null && !opts.tint) kitGlow(model, KIT_GLOW[kitId]);
   if (!missing && (kitId || ownKit)) {
     if (ownKit && own.style) model.userData.creature = Object.assign({}, model.userData.creature, { style: own.style });
     if (ownKit && (own.glow != null || own.lift != null)) kitGlow(model, own.glow, own.lift);

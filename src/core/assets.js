@@ -80,7 +80,7 @@ export const SCULPT_TYPES = {
   // foes and wildlife sculpted on the pack skeletons (round art-creatures, tools/sculpt/assets/{stag_frost,…}.mjs +
   // beast_kit.mjs post), swapped in by actors/creature.js KIT_OWN / KIT_BODY; off -> the pack bodies as before. Their
   // COLOR_0 is the kit's skinned output (like the hen's): lifted once at load by fixSculptColours
-  creatures: ['sculpt_froststag', 'sculpt_embersnake'],
+  creatures: ['sculpt_froststag', 'sculpt_embersnake', 'sculpt_wolf_wild', 'sculpt_bat_star'],
 };
 export const SCULPT_DEFAULT = ['stone_lantern', 'komainu', 'kitsune', 'great_lantern', 'rockfam', 'drywall', 'mill', 'landmarks', 'pot', 'barrel', 'bucket', 'pumpkin',
   'jar', 'cart', 'hen', 'gohei', 'broom', 'hip_lantern', 'earth_column', 'creatures'];

@@ -23340,5 +23340,58 @@
    "SnakeArmature|Snake_Walk"
   ],
   "notes": "Clip use: idle=Snake_Idle, move=Snake_Walk, attack=Snake_Attack. Sculpted ember serpent on the mon_serpent skeleton (joints, IBMs, clips unchanged). Vertex colours; TEXCOORD_0.x = ember glow (the game adds emissive through a ramp); eyes added by the game on the Mouth bone."
+ },
+ "sculpt_wolf_wild": {
+  "file": "models/sculpt/wolf_wild.glb",
+  "type": "model",
+  "license": "CC0 (original body sculpted for this project; skeleton and clips from the source pack, CC0)",
+  "author": "sculpted for this project (rig: Quaternius, CC0 (skeleton + clips))",
+  "source": "tools/sculpt/assets/wolf_wild.mjs",
+  "scale": 1,
+  "tris": 5600,
+  "clips": [
+   "Attack",
+   "Death",
+   "Eating",
+   "Gallop",
+   "Gallop_Jump",
+   "Idle_HitReact_Left",
+   "Idle_HitReact_Right",
+   "Jump_ToIdle",
+   "Walk",
+   "Idle_2_HeadLow",
+   "Idle_2",
+   "Idle",
+   "AnimalArmature|Attack",
+   "AnimalArmature|Death",
+   "AnimalArmature|Eating",
+   "AnimalArmature|Gallop",
+   "AnimalArmature|Gallop_Jump",
+   "AnimalArmature|Idle",
+   "AnimalArmature|Idle_2",
+   "AnimalArmature|Idle_2_HeadLow",
+   "AnimalArmature|Idle_HitReact_Left",
+   "AnimalArmature|Idle_HitReact_Right",
+   "AnimalArmature|Jump_ToIdle",
+   "AnimalArmature|Walk"
+  ],
+  "notes": "Clip use: idle=Idle, move=Walk, run=Gallop, attack=Attack, death=Death. Sculpted moorland wolf on the ani_wolf skeleton (joints, IBMs, clips unchanged; form from wolf_lib.mjs at the pooled density). Vertex colours; TEXCOORD_0.x = eye glow."
+ },
+ "sculpt_bat_star": {
+  "file": "models/sculpt/bat_star.glb",
+  "type": "model",
+  "license": "CC0 (original body sculpted for this project; skeleton and clips from the source pack, CC0)",
+  "author": "sculpted for this project (rig: Quaternius, CC0 (skeleton + clips))",
+  "source": "tools/sculpt/assets/bat_star.mjs",
+  "scale": 1,
+  "tris": 9000,
+  "clips": [
+   "BatArmature|Bat_Attack",
+   "BatArmature|Bat_Attack2",
+   "BatArmature|Bat_Death",
+   "BatArmature|Bat_Flying",
+   "BatArmature|Bat_Hit"
+  ],
+  "notes": "Clip use: idle=Bat_Flying, move=Bat_Flying, attack=Bat_Attack, death=Bat_Death. Sculpted star-pecking bat on the mon_bat skeleton (joints, IBMs, clips unchanged; form from shade_bat.mjs). Vertex colours; TEXCOORD_0.x = glow of the amber eyes and the gold star flecks."
  }
 }
