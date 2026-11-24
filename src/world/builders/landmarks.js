@@ -609,24 +609,34 @@ function aqueduct(site, l, r) {
 // ---------------------------------------------------------------- medium
 function bridgeRuin(site, r) {
   // two arches across the brook (local x = across the water); the far arch has fallen
-  const bankA = site.h(-13, 0), bankB = site.h(13, 0), top = Math.max(bankA, bankB) + 3.4;
+  const bankA = site.h(-13, 0), bankB = site.h(13, 0), top = Math.max(bankA, bankB) + 3.4, T = lmTier(), jr = mulberry32(4242);
   for (const [x, ok] of [[-6, true], [6, false]]) {
-    const sh = new THREE.Shape(), half = 4.8, spring = top - 2.8;
-    sh.moveTo(-6, -3); sh.lineTo(6, -3); sh.lineTo(6, top); sh.lineTo(-6, top); sh.lineTo(-6, -3);
-    const hole = new THREE.Path(); hole.moveTo(-half, -3.01); hole.lineTo(half, -3.01); hole.lineTo(half, spring); hole.absarc(0, spring, half, 0, Math.PI, false); hole.lineTo(-half, -3.01);
-    sh.holes.push(hole);
+    const half = 4.8, spring = top - 2.8;
     if (ok) {
-      const geo = new THREE.ExtrudeGeometry(sh, { depth: 3.0, bevelEnabled: false, curveSegments: 7 }); geo.translate(0, 0, -1.5);
-      const m = new THREE.Mesh(geo, ST.grey); m.position.set(x, 0, 0); m.castShadow = m.receiveShadow = true; site.add(m);
-      for (const s of [-1, 1]) B(site, 12, 0.7, 0.3, ST.old, x, top + 0.35, s * 1.35);
+      const ag = new THREE.Group(); ag.position.set(x, 0, 0); site.add(ag);
+      archBay(ag, ST.grey, 12, -3, top, half, spring, 3.0, T, jr, { vh: 0.62, nv: 19 });
+      // parapets of coping stones, one fallen gap
+      for (const s of [-1, 1]) for (let j = 0; j < 8; j++) {
+        if (s > 0 && j === 5) continue;
+        block(site.root, ST.old, x - 6 + 0.75 + j * 1.5, top + 0.35, s * 1.35, 1.46, 0.7, 0.32, 0, 0.05);
+      }
       site.platBox(x, 0, 6, 1.4, 0, top, 1);
     } else {
-      // stump of the pier and fallen voussoirs in the water
-      B(site, 2.0, top + 3, 3.0, ST.grey, x + 5.5, (top - 3) / 2, 0);
-      for (let k = 0; k < 7; k++) stone(site, x + (r() - 0.5) * 8, -1.6 + r() * 0.8, (r() - 0.5) * 5, 0.9, 0.6, 0.7, ST.grey, r() * 3, r(), r());
+      // stump of the pier, coursed, and fallen voussoirs in the water
+      coursedPier(site.root, ST.grey, x + 5.5, -3, 0, 2.0, 3.0, top + 3, T, jr, true);
+      for (let k = 0; k < 7; k++) {
+        const vx = x + (r() - 0.5) * 8, vy = -1.6 + r() * 0.8, vz = (r() - 0.5) * 5, ry = r() * 3, rx = r(), rz = r();
+        const v = new THREE.Mesh(voussoirGeo(half, 0.62, 19, k % 5, 3.0), ST.grey); v.castShadow = v.receiveShadow = true;
+        // laid on its side, the wedge's middle at the stone's place
+        const holder = new THREE.Group(); holder.position.set(vx, vy, vz); holder.rotation.set(rx, ry, rz); holder.add(v);
+        v.position.set(-Math.cos((k % 5 + 0.5) * Math.PI / 19) * (half + 0.31), -Math.sin((k % 5 + 0.5) * Math.PI / 19) * (half + 0.31), 0);
+        site.add(holder);
+      }
     }
   }
-  B(site, 2.4, top + 3, 3.2, ST.grey, 0, (top - 3) / 2, 0);
+  // the middle pier with pointed cutwaters up- and downstream
+  coursedPier(site.root, ST.grey, 0, -3, 0, 2.4, 3.2, top + 3, T, jr);
+  if (T < 2) for (const s of [-1, 1]) { const cw = cyl(0.01, 1.7, top + 2.6, ST.grey, 0, (top - 3) / 2 + 1.3 - 0.01, s * 1.6, 4); cw.scale.set(1, 1, 0.75); cw.rotation.y = Math.PI / 4; site.add(cw); }
   site.colBox(-6, 0, 6, 1.5, 0, top - 3.2, top);
 }
 function hermitCottage(site, r) {
