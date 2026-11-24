@@ -46,8 +46,9 @@ async function fly(){
   G.state.abilities.broom=true;G.state.flags.majo_named=true;G.state.flags.majo_brooch=true;
   P.setOutfit('elaina',{quiet:true});P.yaw=-2.78;G.cam.yaw=P.yaw-Math.PI;G.cam.pitch=-.2;
   for(let i=0;i<7;i++)await step();
-  // Wait for the playable UI and the outfit's asynchronous asset swap before pressing F.
-  for(let i=0;i<100&&(G.mode!=='play'||P.outfit!=='elaina');i++)await step();
+  // Wait for the playable UI and the outfit's asynchronous asset swap before pressing F. The swap loads and compiles in
+  // wall-clock time while this test steps a virtual clock, so alternate a small virtual step with a real frame.
+  for(let i=0;i<4000&&(G.mode!=='play'||P.outfit!=='elaina');i++){await clock.step(4);await clock.present();}
   for(let i=0;i<3&&!P.onBroom;i++){
     T.key('KeyF',true);await step();T.key('KeyF',false);
     if(!P.onBroom)for(let j=0;j<6;j++)await step();
