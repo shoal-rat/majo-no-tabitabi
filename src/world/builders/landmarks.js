@@ -471,35 +471,136 @@ function lighthouse(site, ctx, r) {
   site.platDisc(0, 0, 2.35, top + 0.35, 0.8);
   house(site, { x: -7.5, z: 4, w: 6.5, d: 4.6, wallH: 2.7, rise: 2.0, ry: 0.2, walls: ST.white, roof: RF.slate, seed: 5 });
 }
+// ---------------------------------------------------------------- arches and coursed masonry (aqueduct, bridge)
+// An arch is built in its own group: the arcade runs along local x, the two faces at z = +-depth/2. A recessed core
+// (the old extruded outline) carries a ring of wedge voussoirs through the whole thickness, a proud keystone, impost
+// blocks, and (high tier) coursed ashlar on both spandrel faces; every stone is its own piece.
+const _vous = new Map();
+/** wedge voussoir i of n round a half circle (inner radius ri, depth vh), extruded `depth` along z, centred */
+function voussoirGeo(ri, vh, n, i, depth, key = 0) {
+  const k = [ri, vh, n, i, depth, key].map((v) => v.toFixed(3)).join(',');
+  let g = _vous.get(k);
+  if (g) return g;
+  const gap = 0.014 / ri, a0 = Math.PI * i / n + gap, a1 = Math.PI * (i + 1) / n - gap, ro = ri + vh + key, b = 0.025;
+  const sh = new THREE.Shape();
+  sh.moveTo(Math.cos(a0) * (ri + b), Math.sin(a0) * (ri + b)); sh.lineTo(Math.cos(a0) * (ro - b), Math.sin(a0) * (ro - b));
+  sh.lineTo(Math.cos(a1) * (ro - b), Math.sin(a1) * (ro - b)); sh.lineTo(Math.cos(a1) * (ri + b), Math.sin(a1) * (ri + b)); sh.closePath();
+  g = new THREE.ExtrudeGeometry(sh, { depth: depth - 2 * b, bevelEnabled: true, bevelThickness: b, bevelSize: b, bevelSegments: 1 });
+  g.translate(0, 0, -(depth - 2 * b) / 2);
+  g.userData.shared = true;
+  _vous.set(k, g);
+  return g;
+}
+/**
+ * One arch bay in group ag: outline from u -w/2..w/2, y bot..top, round opening of half width `half` springing at
+ * `spring`; m = stone. Coursed spandrels when T === 0 (rnd for the joints).
+ */
+function archBay(ag, m, w, bot, top, half, spring, depth, T, rnd, { vh = 0.7, nv = 15, mFace = m } = {}) {
+  const courseFaces = T === 0, cd = courseFaces ? depth - 0.1 : depth;
+  // one U-shaped outline (no hole: a hole touching the outline triangulates wrongly): jambs, the arch cut, the top;
+  // the cut steps out to the voussoirs' back at the springing so the core never doubles the soffit
+  const sh = new THREE.Shape(), R = half + vh - 0.05;
+  sh.moveTo(-w / 2, bot); sh.lineTo(-half, bot); sh.lineTo(-half, spring); sh.lineTo(-R, spring);
+  sh.absarc(0, spring, R, Math.PI, 0, true);
+  sh.lineTo(half, spring); sh.lineTo(half, bot); sh.lineTo(w / 2, bot); sh.lineTo(w / 2, top); sh.lineTo(-w / 2, top); sh.closePath();
+  const geo = new THREE.ExtrudeGeometry(sh, { depth: cd, bevelEnabled: false, curveSegments: 8 }); geo.translate(0, 0, -cd / 2);
+  const core = new THREE.Mesh(geo, m); core.castShadow = core.receiveShadow = true; ag.add(core);
+  // the ring: voussoirs through the thickness, the keystone taller and proud
+  for (let i = 0; i < nv; i++) {
+    const key = i === (nv - 1) >> 1 ? 0.16 : 0;
+    const v = new THREE.Mesh(voussoirGeo(half, vh, nv, i, depth + (key ? 0.14 : 0.06), key), mFace); v.position.set(0, spring, 0); v.castShadow = v.receiveShadow = true; ag.add(v);
+  }
+  // impost blocks under the springing
+  for (const s of [-1, 1]) block(ag, mFace, s * (half + 0.3), spring - 0.13, 0, 0.75, 0.24, depth + 0.16, 0, 0.03);
+  if (!courseFaces) return;
+  // coursed ashlar on both faces of the spandrels and jambs
+  const ch = 0.55, Rx = half + vh + 0.03;
+  for (let y = bot, c = 0; y < top - 0.05; y += ch, c++) {
+    const hh = Math.min(ch, top - y), yl = y, yh = y + hh;
+    let e = 0;
+    if (yh <= spring) e = half; else if (yl - spring < Rx) e = Math.sqrt(Math.max(0, Rx * Rx - Math.max(0, yl - spring) ** 2));
+    const spans = e > 0 ? [[-w / 2, -e], [e, w / 2]] : [[-w / 2, w / 2]];
+    for (const [a, b] of spans) {
+      let u = a + (c % 2 ? 0.45 : 0);
+      if (u > a) { if (u - a > 0.12) for (const sgn of [1, -1]) plank(ag, mFace, (a + u) / 2, yl + hh / 2, sgn * (cd / 2 + 0.035), u - a - 0.03, hh - 0.03, 0.07, sgn > 0 ? 0 : Math.PI); }
+      while (u < b - 0.06) {
+        const l = Math.min(b - u, 0.8 + rnd() * 0.6), cu = u + l / 2;
+        for (const sgn of [1, -1]) plank(ag, mFace, cu, yl + hh / 2, sgn * (cd / 2 + 0.035), l - 0.03, hh - 0.03, 0.07, sgn > 0 ? 0 : Math.PI);
+        u += l;
+      }
+    }
+  }
+}
+/** a pier of coursed blocks (two to a course, joints crossing), footprint w (x) x d (z), from y0 up h; a wider plinth */
+function coursedPier(g, m, x, y0, z, w, d, h, T, rnd, ragged = false) {
+  if (T === 2) { g.add(box(w, h, d, m, x, y0 + h / 2, z)); return; }
+  block(g, m, x, y0 + 0.3, z, w + 0.3, 0.6, d + 0.3, 0, 0.05);
+  const ch = 0.6;
+  for (let y = y0 + 0.6, c = 0; y < y0 + h - 0.05; y += ch, c++) {
+    const hh = Math.min(ch, y0 + h - y), cut = 0.35 + rnd() * 0.3, top = y + hh >= y0 + h - 0.05;
+    if (ragged && top && rnd() < 0.5) continue;
+    const alongX = c % 2 === 0, L = alongX ? w : d;
+    for (const [a, b] of [[-L / 2, -L / 2 + L * cut], [-L / 2 + L * cut, L / 2]]) {
+      const lc = (a + b) / 2, ll = b - a - 0.025;
+      block(g, m, x + (alongX ? lc : 0), y + hh / 2, z + (alongX ? 0 : lc), alongX ? ll : w, hh - 0.025, alongX ? d : ll, 0, 0.04);
+    }
+  }
+}
+/** rubble: a broken dressed block lying where it fell (old stone() call order: x, z, size, turn from `r`) */
+function rubble(site, m, x, y, z, sx, sy, sz, ry, rx = 0, rz = 0) {
+  const o = bevelBox(sx * 1.6, sy * 1.6, sz * 1.6, m, x, y - sy * 0.35, z, 0.06); o.rotation.set(rx * 0.5, ry, rz * 0.5); return site.add(o);
+}
+
+/**
+ * A wall of coursed blocks in group g: centre (cx, cz), base y0, length `len` along its own x (heading ry), thickness
+ * `th`, height h. Courses ~0.42 m, two or three blocks each with staggered joints; `ragged` = how much of the top is
+ * broken away (0..1, more towards +x when slope > 0). T 2: one plain block.
+ */
+function coursedWall(g, m, cx, y0, cz, len, th, h, ry, T, rnd, { ragged = 0, slope = 0, ch = 0.42 } = {}) {
+  if (T === 2) { const o = box(len, h, th, m, cx, y0 + h / 2, cz); o.rotation.y = ry; g.add(o); return; }
+  const w = new THREE.Group(); w.position.set(cx, y0, cz); w.rotation.y = ry; g.add(w);
+  for (let y = 0, c = 0; y < h - 0.05; y += ch, c++) {
+    const hh = Math.min(ch, h - y), topZone = (h - y) < ch * 2.2;
+    let u = -len / 2;
+    const first = c % 2 ? 0.35 + rnd() * 0.3 : 0.7 + rnd() * 0.4;
+    for (let j = 0; u < len / 2 - 0.05; j++) {
+      const l = Math.min(len / 2 - u, j === 0 ? first : 0.7 + rnd() * 0.6), cu = u + l / 2;
+      u += l;
+      if (ragged && topZone && rnd() < ragged * (0.6 + 0.4 * slope * (cu / len + 0.5))) continue;
+      block(w, m, cu, y + hh / 2, 0, l - 0.025, hh - 0.025, th + (rnd() - 0.5) * 0.04, 0, 0.035);
+    }
+  }
+}
 function aqueduct(site, l, r) {
-  const L = l.len, span = 9.2, n = Math.floor(L / span);
+  const L = l.len, span = 9.2, n = Math.floor(L / span), T = lmTier();
   // the channel top follows a gentle fall from end to end, high over the dips
   let topA = -1e9;
   for (let k = 0; k <= n; k++) topA = Math.max(topA, site.h(0, -L / 2 + k * span));
   const top0 = topA + 9;
   const missing = new Set([Math.floor(n * 0.36), Math.floor(n * 0.36) + 1, Math.floor(n * 0.74)]);
   for (let k = 0; k < n; k++) {
-    const z0 = -L / 2 + k * span, zc = z0 + span / 2;
+    const z0 = -L / 2 + k * span, zc = z0 + span / 2, jr = mulberry32(k * 977 + 13);   // jr: joints only (r keeps the old order)
     const top = top0 - (k / n) * 2.2;
     const g0 = Math.min(site.h(0, z0), site.h(0, z0 + span)) - 1.2;
-    // pier at z0
+    // pier at z0: coursed blocks, a broken pier ragged at the top
     const pierH = top - g0;
     if (!missing.has(k) || !missing.has(k - 1)) {
       const ph = missing.has(k - 1) && missing.has(k) ? pierH * 0.5 : pierH - (missing.has(k) || missing.has(k - 1) ? 2.4 + r() * 2 : 0);
-      B(site, 2.4, ph, 2.6, ST.lime, 0, g0 + ph / 2, z0);
+      coursedPier(site.root, ST.lime, 0, g0, z0, 2.6, 2.4, ph, T, jr, ph < pierH - 0.1);
       site.colBox(0, z0, 1.2, 1.3, 0, g0, g0 + ph);
     }
-    if (missing.has(k)) { for (let j = 0; j < 5; j++) stone(site, (r() - 0.5) * 6, site.h(0, zc) + 0.3, zc + (r() - 0.5) * 7, 0.8 + r() * 0.5, 0.45, 0.6, ST.lime, r() * 3); continue; }
-    // arch span: rectangle with a round-headed opening
-    const sh = new THREE.Shape();
+    if (missing.has(k)) {
+      for (let j = 0; j < 5; j++) { const x = (r() - 0.5) * 6, z = zc + (r() - 0.5) * 7, sx = 0.8 + r() * 0.5, ry = r() * 3; rubble(site, ST.lime, x, site.h(0, zc) + 0.3, z, sx, 0.45, 0.6, ry, (jr() - 0.5) * 0.5, (jr() - 0.5) * 0.4); }
+      continue;
+    }
+    // the arch bay (its faces look along local +-x: the group is turned a quarter round)
     const bot = top - 6.4, spring = top - 4.2, half = span / 2 - 1.2;
-    sh.moveTo(-span / 2, bot); sh.lineTo(span / 2, bot); sh.lineTo(span / 2, top); sh.lineTo(-span / 2, top); sh.lineTo(-span / 2, bot);
-    const hole = new THREE.Path(); hole.moveTo(-half, bot - 0.01); hole.lineTo(half, bot - 0.01); hole.lineTo(half, spring); hole.absarc(0, spring, half, 0, Math.PI, false); hole.lineTo(-half, bot - 0.01);
-    sh.holes.push(hole);
-    const geo = new THREE.ExtrudeGeometry(sh, { depth: 2.2, bevelEnabled: false, curveSegments: 6 }); geo.translate(0, 0, -1.1);
-    const m = new THREE.Mesh(geo, ST.lime); m.position.set(0, 0, zc); m.rotation.y = Math.PI / 2; m.castShadow = m.receiveShadow = true; site.add(m);
-    // channel lips + a little moss
-    for (const s of [-1, 1]) B(site, 0.35, 0.6, span, ST.old, s * 0.95, top + 0.3, zc);
+    const ag = new THREE.Group(); ag.position.set(0, 0, zc); ag.rotation.y = Math.PI / 2; site.add(ag);
+    archBay(ag, ST.lime, span, bot, top - 0.3, half, spring, 2.2, T, jr, { vh: 0.75, nv: 15 });
+    // cornice band under the channel, both faces
+    for (const sx of [-1, 1]) block(site.root, ST.old, sx * 1.12, top - 0.15, zc, 0.26, 0.3, span + 0.02, 0, 0.03);
+    // channel lips: coping stones laid end to end + a little moss
+    for (const sx of [-1, 1]) for (let j = 0; j < 3; j++) block(site.root, ST.old, sx * 0.95, top + 0.3, zc - span / 3 + j * span / 3, 0.38, 0.6, span / 3 - 0.04, 0, 0.05);
     if (r() < 0.4) B(site, 1.2, 0.08, span * 0.7, ivy, 0, top + 0.05, zc);
     site.platBox(0, zc, 1.1, span / 2, 0, top, 1.0);
   }
