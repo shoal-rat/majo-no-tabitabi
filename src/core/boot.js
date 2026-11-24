@@ -439,7 +439,11 @@ function installDebug() {
       const yaw = G.player.yaw ?? 0;
       const off = typeof side === 'number' ? side : ({ front: 0, right: -Math.PI / 2, left: Math.PI / 2, back: Math.PI }[side] ?? 0);
       const a = yaw + off;
-      G.debug.setCam(p.x + Math.sin(a) * dist, p.y + h, p.z + Math.cos(a) * dist, p.x, p.y + lookH, p.z, { view: true });
+      const cx = p.x + Math.sin(a) * dist, cz = p.z + Math.cos(a) * dist;
+      // keep the capture camera above the terrain (it has no collision): a fixed offset from her facing can swing into a bank
+      const g = G.world?.heightAt?.(cx, cz);
+      const cy = Number.isFinite(g) ? Math.max(p.y + h, g + 0.35) : p.y + h;
+      G.debug.setCam(cx, cy, cz, p.x, p.y + lookH, p.z, { view: true });
     },
     /** Save a screenshot as <name>.png in the run's output folder. */
     shot: async (name = 'shot') => {

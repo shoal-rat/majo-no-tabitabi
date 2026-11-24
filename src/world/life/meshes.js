@@ -8,6 +8,8 @@
 // Shared instance attributes: iColA / iColB (vec3), iAnim (vec4), iShape (vec4); meaning per body below.
 import * as THREE from 'three';
 import { toonGradient, hookMaterial } from '../../core/mats.js';
+import { G } from '../../core/game.js';
+import * as BGU from 'three/addons/utils/BufferGeometryUtils.js';
 
 // ---- geometry helpers ----------------------------------------------------------------------------------------------
 // part list -> one non-indexed BufferGeometry with position, normal, color (r: toward colB, g: shade, b: warm accent),
@@ -158,24 +160,85 @@ void lifeBend(inout vec3 p, inout vec3 n) {
   }
 }
 `;
-function birdGeo() {
+// round art-creatures: a sculpted songbird instead of the blue lozenge — a plump teardrop body (deep breast, tapering to
+// the tail root), a round head with a clear beak, wings whose hand splits into five primaries with gaps at the tips, a
+// tail fanned out of seven feathers. Same parts / units / attributes, so the flap, fold, legs and neck in BIRD_V and the
+// per-species colours work as before. Low tiers (lo) get fewer rings, three primaries and five tail feathers.
+function birdBody(lo) {
+  // a lathe along z: radius per station, the cross-section deeper below (the breast) than above
+  const st = [[0.36, 0.0], [0.33, 0.06], [0.26, 0.1], [0.16, 0.128], [0.04, 0.135], [-0.08, 0.118], [-0.18, 0.09], [-0.26, 0.06], [-0.31, 0.04], [-0.34, 0.0]];
+  const NS = lo ? 8 : 12, P = [], I = [];
+  for (let i = 0; i < st.length; i++) for (let k = 0; k < NS; k++) {
+    const [z, r] = st[i], a = (k / NS) * Math.PI * 2, c = Math.cos(a), s = Math.sin(a);
+    const down = s < 0 ? 1.12 - 0.15 * (z < -0.1 ? 1 : 0) : 0.9;
+    P.push(c * r * 0.92, s * r * down + (z > 0.1 ? -0.012 : 0) + (z < -0.2 ? 0.02 : 0), z);
+  }
+  // the two tips collapse onto the axis (radius 0): weld them into one vertex each so the normals stay smooth
+  for (let i = 0; i < st.length - 1; i++) for (let k = 0; k < NS; k++) {
+    const a = i * NS + k, b = (i + 1) * NS + k, c = i * NS + (k + 1) % NS, d = (i + 1) * NS + (k + 1) % NS;
+    I.push(a, b, c, c, b, d);
+  }
+  const g = BGU.mergeVertices(new THREE.BufferGeometry().setAttribute('position', new THREE.Float32BufferAttribute(P, 3)).setIndex(I));
+  g.computeVertexNormals();
+  return g;
+}
+// one feather: a flat tapered blade from root to tip in the y = y0 plane (side +x), w0 wide at the root, pointed
+function featherGeo(root, tip, w0, y0, segs = 3) {
+  const dx = tip[0] - root[0], dz = tip[1] - root[1], L = Math.hypot(dx, dz), nx = -dz / L, nz = dx / L;
+  const P = [], N = [], UV = [];
+  const at = (t, side) => { const w = w0 * (1 - Math.pow(t, 1.6)) * 0.5 * side; return [root[0] + dx * t + nx * w, y0 + 0.004 * t, root[1] + dz * t + nz * w]; };
+  for (let i = 0; i < segs; i++) {
+    const t0 = i / segs, t1 = (i + 1) / segs;
+    const a = at(t0, 1), b = at(t0, -1), c = at(t1, 1), d = at(t1, -1);
+    for (const [v, u, w] of [[a, t0, 1], [b, t0, 0], [c, t1, 1], [c, t1, 1], [b, t0, 0], [d, t1, 0]]) { P.push(...v); N.push(0, 1, 0); UV.push(u, w); }
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(P, 3));
+  g.setAttribute('normal', new THREE.Float32BufferAttribute(N, 3));
+  g.setAttribute('uv', new THREE.Float32BufferAttribute(UV, 2));
+  return g;
+}
+function birdGeo(lo = false) {
   const parts = [];
-  const body = new THREE.SphereGeometry(1, 12, 8);
   // back darker, belly toward cream (warm accent channel), soft AO under the wings
-  parts.push({ geo: body, m: M(0, 0, 0, 0.13, 0.12, 0.34), part: 0, col: (x, y, z) => [0.15 * smooth(0, 0.1, y), 0.78 + 0.22 * smooth(-0.12, 0.1, y), 0.45 * smooth(0.0, -0.11, y)] });
-  parts.push({ geo: new THREE.SphereGeometry(1, 10, 7), m: M(0, 0.09, 0.34, 0.095, 0.095, 0.1), part: 3, col: (x, y) => [0, 0.88 + 0.12 * smooth(0.02, 0.15, y), 0.25 * smooth(0.06, 0.0, y)] });
-  parts.push({ geo: new THREE.ConeGeometry(0.035, 0.14, 6), m: M(0, 0.07, 0.48, 1, 1, 1, Math.PI / 2), part: 3, col: [0, 1, 1] });
-  for (const s of [1, -1]) parts.push({ geo: new THREE.SphereGeometry(0.022, 6, 4), m: M(s * 0.07, 0.12, 0.4), part: 3, col: [0, 0.06, 0] });
-  // fanned tail
-  const tail = wingGeo([[0, 0.05, 0.05], [0.1, -0.04, -0.12], [0.16, -0.08, -0.24]], 0, 0);
-  parts.push({ geo: tail, m: M(0, 0.03, -0.28, 1, 1, 1, 0, Math.PI / 2), part: 0, col: [0.85, 0.82, 0] });
-  parts.push({ geo: mirrorX(tail), m: M(0, 0.03, -0.28, 1, 1, 1, 0, Math.PI / 2), part: 0, col: [0.85, 0.82, 0] });
-  // wings: arm + hand, pointed primaries; primaries darker (painted gradient)
-  const st = [[0, 0.14, -0.16], [0.22, 0.13, -0.22], [0.45, 0.08, -0.24], [0.7, 0.0, -0.2], [0.92, -0.12, -0.17]];
-  const wcol = (x) => { const s = Math.abs(x); return [0.55 + 0.45 * smooth(0.1, 0.6, s), 1.0 - 0.28 * smooth(0.45, 0.95, s), 0]; };
-  const wl = wingGeo(st, 0.06, 0.04);
-  parts.push({ geo: wl, part: 1, col: wcol });
-  parts.push({ geo: mirrorX(wl), part: 2, col: wcol });
+  parts.push({ geo: birdBody(lo), part: 0, col: (x, y, z) => [0.15 * smooth(0, 0.1, y) + 0.1 * smooth(-0.15, -0.3, z), 0.76 + 0.24 * smooth(-0.12, 0.1, y), 0.5 * smooth(0.0, -0.1, y) * smooth(-0.25, 0.0, z)] });
+  parts.push({ geo: new THREE.SphereGeometry(1, lo ? 8 : 12, lo ? 6 : 9), m: M(0, 0.1, 0.36, 0.1, 0.098, 0.105), part: 3, col: (x, y) => [0, 0.88 + 0.12 * smooth(0.04, 0.17, y), 0.3 * smooth(0.08, 0.02, y)] });
+  // beak: upper and lower mandible, a clear wedge
+  parts.push({ geo: new THREE.ConeGeometry(0.034, 0.12, lo ? 5 : 7), m: M(0, 0.085, 0.49, 1, 0.8, 1, Math.PI / 2), part: 3, col: [0, 1, 1] });
+  parts.push({ geo: new THREE.ConeGeometry(0.024, 0.08, 5), m: M(0, 0.066, 0.47, 1, 0.7, 1, Math.PI / 2 + 0.25), part: 3, col: [0, 0.85, 1] });
+  // eyes, with a pale ring round them
+  for (const s of [1, -1]) {
+    parts.push({ geo: new THREE.SphereGeometry(0.03, 6, 5), m: M(s * 0.07, 0.125, 0.41, 0.5, 1, 1), part: 3, col: [0, 1, 0.55] });
+    parts.push({ geo: new THREE.SphereGeometry(0.022, 6, 5), m: M(s * 0.082, 0.126, 0.413), part: 3, col: [0, 0.06, 0] });
+  }
+  // tail: a fan of feathers, the middle ones longest
+  const NT = lo ? 5 : 7;
+  for (let i = 0; i < NT; i++) {
+    const f = (i - (NT - 1) / 2) / ((NT - 1) / 2), a = f * 0.62, len = 0.2 - Math.abs(f) * 0.04;
+    const g = featherGeo([0, 0], [Math.sin(a) * len, -Math.cos(a) * len], 0.065, 0, 2);
+    parts.push({ geo: g, m: M(0, 0.03 + Math.abs(f) * 0.004, -0.28, 1, 1, 1, 0.12), part: 0, col: (x, y, z) => [0.85, 0.78 + 0.1 * smooth(-0.5, -0.36, z), 0] });
+  }
+  // wings: the arm (coverts) as one panel with a scalloped trailing edge, the hand split into primaries
+  const arm = [[0, 0.14, -0.15], [0.16, 0.14, -0.2], [0.32, 0.11, -0.22], [0.44, 0.07, -0.2]];
+  const wcol = (x) => { const s = Math.abs(x); return [0.55 + 0.45 * smooth(0.1, 0.6, s), 1.0 - 0.3 * smooth(0.45, 0.95, s), 0]; };
+  const wing = [];
+  wing.push(wingGeo(arm, 0.06, 0.04));
+  // secondaries: rounded tips along the arm's trailing edge
+  for (let i = 0; i < (lo ? 3 : 5); i++) {
+    const s0 = 0.03 + i * (lo ? 0.13 : 0.08), zt = -0.2 - 0.02 * Math.sin(i);
+    wing.push(featherGeo([0.06 + s0 + 0.03, zt + 0.03], [0.06 + s0 + 0.02, zt - 0.07], 0.075, 0.039, 1));
+  }
+  // primaries: fingers fanning out from the wrist, the outer ones longest, gaps between their tips
+  const NP = lo ? 3 : 5;
+  for (let i = 0; i < NP; i++) {
+    const f = i / (NP - 1);
+    const root = [0.06 + 0.42 + 0.02 * f, 0.07 - 0.1 * f], tip = [0.06 + 0.98 - 0.16 * (1 - f) - 0.05 * f, 0.06 - 0.3 * f - 0.02];
+    wing.push(featherGeo(root, tip, 0.085 - 0.012 * f, 0.039 - 0.004 * f, 3));
+  }
+  for (const g of wing) {
+    parts.push({ geo: g, part: 1, col: wcol });
+    parts.push({ geo: mirrorX(g), part: 2, col: wcol });
+  }
   // legs (unit long, scaled by iShape.x) and neck (unit tall, scaled by iShape.y)
   for (const s of [1, -1]) parts.push({ geo: new THREE.CylinderGeometry(0.014, 0.012, 1, 4, 1), m: M(s * 0.045, -0.58, 0.02), part: 4, col: [0, 0.9, 1] });
   parts.push({ geo: new THREE.CylinderGeometry(0.045, 0.06, 1, 6, 4), m: M(0, 0.5, 0.27), part: 5, col: [0, 0.92, 0.1] });
@@ -380,7 +443,7 @@ function leaperGeo() {
 
 /** Build the five meshes (caps = max instances each). Returns { bird, insect, frog, fish, jelly }. */
 export function buildLifeMeshes(caps) {
-  const bird = instanced(birdGeo(), litMaterial('bird', BIRD_V, 'mix(vec3(0.95, 0.62, 0.22), vec3(0.12, 0.1, 0.12), iShape.w)'), caps.bird, 'bird');
+  const bird = instanced(birdGeo(!!G.quality?.mobile || G.quality?.name === 'low'), litMaterial('bird', BIRD_V, 'mix(vec3(0.95, 0.62, 0.22), vec3(0.12, 0.1, 0.12), iShape.w)'), caps.bird, 'bird');
   const insect = instanced(insectGeo(), litMaterial('insect', INSECT_V, 'vec3(0.0)', { frag: INSECT_F, trans: 0.5 }), caps.insect, 'insect');
   const frog = instanced(frogGeo(), litMaterial('frog', FROG_V, 'vec3(0.93, 0.9, 0.7)'), caps.frog, 'frog');
   const fish = instanced(fishGeo(), fishMaterial(), caps.fish, 'fish');

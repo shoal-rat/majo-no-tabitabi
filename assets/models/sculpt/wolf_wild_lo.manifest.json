@@ -1,0 +1,38 @@
+{
+ "sculpt_wolf_wild_lo": {
+  "file": "models/sculpt/wolf_wild_lo.glb",
+  "type": "model",
+  "license": "CC0 (original body sculpted for this project; skeleton and clips from the source pack, CC0)",
+  "author": "sculpted for this project (rig: Quaternius, CC0 (skeleton + clips))",
+  "source": "tools/sculpt/assets/wolf_wild_lo.mjs",
+  "scale": 1,
+  "tris": 2600,
+  "clips": [
+   "Attack",
+   "Death",
+   "Eating",
+   "Gallop",
+   "Gallop_Jump",
+   "Idle_HitReact_Left",
+   "Idle_HitReact_Right",
+   "Jump_ToIdle",
+   "Walk",
+   "Idle_2_HeadLow",
+   "Idle_2",
+   "Idle",
+   "AnimalArmature|Attack",
+   "AnimalArmature|Death",
+   "AnimalArmature|Eating",
+   "AnimalArmature|Gallop",
+   "AnimalArmature|Gallop_Jump",
+   "AnimalArmature|Idle",
+   "AnimalArmature|Idle_2",
+   "AnimalArmature|Idle_2_HeadLow",
+   "AnimalArmature|Idle_HitReact_Left",
+   "AnimalArmature|Idle_HitReact_Right",
+   "AnimalArmature|Jump_ToIdle",
+   "AnimalArmature|Walk"
+  ],
+  "notes": "Clip use: idle=Idle, move=Walk, run=Gallop, attack=Attack, death=Death. Sculpted moorland wolf on the ani_wolf skeleton (joints, IBMs, clips unchanged; form from wolf_lib.mjs at the pooled density). Vertex colours; TEXCOORD_0.x = eye glow."
+ }
+}

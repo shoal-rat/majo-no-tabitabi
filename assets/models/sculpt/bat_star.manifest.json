@@ -1,0 +1,19 @@
+{
+ "sculpt_bat_star": {
+  "file": "models/sculpt/bat_star.glb",
+  "type": "model",
+  "license": "CC0 (original body sculpted for this project; skeleton and clips from the source pack, CC0)",
+  "author": "sculpted for this project (rig: Quaternius, CC0 (skeleton + clips))",
+  "source": "tools/sculpt/assets/bat_star.mjs",
+  "scale": 1,
+  "tris": 9000,
+  "clips": [
+   "BatArmature|Bat_Attack",
+   "BatArmature|Bat_Attack2",
+   "BatArmature|Bat_Death",
+   "BatArmature|Bat_Flying",
+   "BatArmature|Bat_Hit"
+  ],
+  "notes": "Clip use: idle=Bat_Flying, move=Bat_Flying, attack=Bat_Attack, death=Bat_Death. Sculpted star-pecking bat on the mon_bat skeleton (joints, IBMs, clips unchanged; form from shade_bat.mjs). Vertex colours; TEXCOORD_0.x = glow of the amber eyes and the gold star flecks."
+ }
+}

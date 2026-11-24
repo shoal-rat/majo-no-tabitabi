@@ -7,6 +7,7 @@
 // dialogue everyone close to the heroine or the camera fades out.
 import * as THREE from 'three';
 import { inKeepOut } from './city-flyers-plan.js';
+import { CITY_LIFE } from '../../data/city-life.js';
 
 const TAU = Math.PI * 2;
 const rnd = (a, b) => a + Math.random() * (b - a);
@@ -118,7 +119,7 @@ export function createCityCrowds(G, st, tier, dens) {
   function relocateWalker(cam) {
     for (const a of folk) {
       const sBehind = (a.x - cam.x) * Math.sin(F.cyaw) + (a.z - cam.z) * Math.cos(F.cyaw) < -15;
-      if (a.mode === 'shop' && P.shops.length && (Math.hypot(a.x - F.x, a.z - F.z) > 200 || sBehind) && Math.hypot(a.x - cam.x, a.z - cam.z) > 30) {
+      if (a.mode === 'shop' && !a.vendor && P.shops.length && (Math.hypot(a.x - F.x, a.z - F.z) > 200 || sBehind) && Math.hypot(a.x - cam.x, a.z - cam.z) > 30) {
         for (let k = 0; k < 40; k++) {
           const sh = pick(P.shops), d = Math.hypot(sh.x - F.x, sh.z - F.z);
           const fw = (sh.x - F.x) * Math.sin(F.cyaw) + (sh.z - F.z) * Math.cos(F.cyaw);
@@ -154,6 +155,13 @@ export function createCityCrowds(G, st, tier, dens) {
     const a = agent('adult', x, groundY(x, z), z, face + Math.PI);
     a.mode = 'shop'; a.home = { x, z, y: a.y };
     setClip(a, pick(['idle', 'talk', 'listen']));
+  }
+  // stall keepers behind the market counters (builders/mage-city.js stall() -> CITY_LIFE.vendors); they stay put
+  for (const v of CITY_LIFE.vendors || []) {
+    if (inKeepOut(st.keep, v.x, 0, v.z, 3)) continue;
+    const a = agent('adult', v.x, groundY(v.x, v.z), v.z, v.face);
+    a.mode = 'shop'; a.vendor = true; a.home = { x: v.x, z: v.z, y: a.y };
+    setClip(a, pick(['idle', 'talk']));
   }
 
   // ---- per frame

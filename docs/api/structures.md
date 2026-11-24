@@ -409,3 +409,38 @@ past 320 m, medium past 1100 m, large never. `G.structures.landmarks` = { built,
 - `journey-rooms.js`: the inn gets three painted upper storeys with street balconies (in the roof group, hidden with
   it from inside); Fran's parlour, Elaina's hearth, the inn's oil lamps; `places.franSwing` (rope swing tree) and
   `places.trialRocks` (slate-blue boulders round the storm clearing).
+
+## Art round: the City of Magic modelled, and lived in (2026-11-24)
+
+Painted texture detail on the Land of Mages replaced by modelled form, then dressed as a working town. All builders
+write plain geometry through `builders/city-geo.js` (`GeoBuilder`: explicit normals, boxes / chamfered slabs /
+bevelled prisms / lathes / tubes, `append(builder, matrix)`; `ByMat`: one builder per material, `flush(parent)` adds
+one mesh each), so the site bake merges them like primitives.
+- `builders/city-roofs.js` — `modelGable` (pan-tile courses, cover-tile rolls or staggered slates, ridge, fascia,
+  soffit, rafter tails and gutters where the eave faces the street, barge boards, attic light, dormers, cresting, a
+  crow-stepped street gable with `opt.stepped`), `modelHip` (the 'cone' houses), `chimney(…, flues)`. Tile meshes go
+  out pre-shaded in vertex colours on `kit.js sculptVcMat` copies (`flushRoof`): the bake skips their vertex shading
+  and the draw-call pass still merges them into the tile family. `CHIMNEY_TOPS` for the smoke.
+- `builders/city-bays.js` — modelled window bays laid over the painted ones within `bayRange()` m (40 high, 28 med, 0
+  low / phones): eight-plus instanced meshes refilled from a 24 m grid when the camera moves 2.5 m; facades facing
+  away are skipped; the bays rise out of the wall over the last 9 m. Registry `addBay()` filled by
+  `mage-city.js registerBays()` (the painted cell under each bay decides arch / shutters; per-house style seeds
+  shutter colour, flower boxes, curtains, balconettes, open windows) and by balconies (balustrade panels).
+- `builders/city-stone.js` — voussoirs, mouldings (`mouldX`, `mouldRing`, profiles `STRING` / `IMPOST`), corbels,
+  capped merlons, arrow slits, lancets / pointed outlines, coursed spires, pleated banners (`hangBanner`, clothify),
+  cathedral tracery (`archFrame`, `archivolt`, `roseTracery`).
+- `builders/city-market.js` — street lamps, wall lanterns, the octagonal fountain, market stalls, planters.
+- `builders/city-trades.js` — front doors (`frontDoor`), shop fronts by trade (`TRADES`, `shopFront`: window,
+  awning, hanging sign with an emblem, goods), arcades.
+- `builders/city-styles.js` — half-timber, quoins, the tower-house dentil band, corner turrets.
+- `builders/city-dressing.js` — laundry lines, potted plants, broom racks, notice boards; `CITY_DRESS` spots
+  (smoke, cats, glints, book carts, floating lanterns, pigeons, warm windows) for the ambient layer.
+- `life/city-ambient.js` — `startAmbient(ctx)` (from `layoutHouses`): builds on the first tick after
+  `CITY_LIFE.ready`; one InstancedMesh per kind, motion in the shaders (one time uniform), hidden beyond 420 m of the
+  city; warm windows fade in as `G.env.light` drops. Stall keepers: `CITY_LIFE.vendors` → `life/city-crowds.js`.
+- `mage-city.js` townhouse picks a seeded mix of house types with `hash01` (never `rand()`, so the layout and every
+  anchor stay as they were): arcaded shop rows (shop floor 1.9 m back, colliders split), stepped stone burgher
+  houses, half-timbered upper storeys, corner turrets, tower-houses ('cone').
+- Boot slices: the carved stonework of the walls, gate, towers and cathedral is queued (`later()`) and built between
+  the house layout's `ctx.step()` yields (`carveAll`); each structure uses its own copy of the stone materials
+  (`stoneSet(k)`, a colour 1/255 off) so the bake shades it in shorter steps; the family pass merges them back.

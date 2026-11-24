@@ -18,7 +18,7 @@
 //   ?crv=1 = the pre-upgrade-3 creature look (no motion layer, flat flash, additive dissolve) for A/B shots.
 import * as THREE from 'three';
 import { G } from '../core/game.js';
-import { toon, glow, PAL, hookMaterial } from '../core/mats.js';
+import { toon, glow, PAL, hookMaterial, toonGradient } from '../core/mats.js';
 import { makeActorShadowBlob } from './rig.js';
 import { updateCelGlobals, CEL_U, buildOutlines, outlineMaterial, sameBones, harmonize } from './celmat.js';
 import * as BGU from 'three/addons/utils/BufferGeometryUtils.js';
@@ -341,6 +341,141 @@ export function makeJelly() {
   return g;
 }
 
+// 泥沼团 mud spirit (round art-creatures; the bog foe, combat/beasts.js TYPES.blob): a soft wet mound of bog mud — round
+// shoulders, a skirt that spreads into its own puddle, drips running down as real lumps, a little pond on its crown with
+// reeds and the spirit's warm amber heart glowing in it, big eyes set into the face as shapes, a small mouth. The baked
+// crust (fire) is the same mound in pale cracked clay. Sizes as the old mound (0.83 tall, 0.6 round); one draw for the
+// body, the crust is hidden until baked. Tessellation by tier (built once).
+let _mudGeo = null, _crustGeo = null, _mudMats = null, _reedGeo = null, _eyeParts = null;
+const MUD_DRIPS = [[0.4, 0.42, 0.05], [1.35, 0.5, 0.045], [2.2, 0.36, 0.05], [3.05, 0.47, 0.04], [3.9, 0.4, 0.05], [4.8, 0.52, 0.045], [5.6, 0.38, 0.04]];
+function mudProfile(y) {   // radius of the mound at height y (0 .. 0.83)
+  const t = clamp(y / 0.83, 0, 1);
+  const dome = Math.sqrt(Math.max(0, 1 - Math.pow(t, 2.2))) * (0.56 - 0.06 * t);
+  const skirt = 0.11 * Math.exp(-y * 26);   // the puddle skirt at the foot
+  return dome + skirt;
+}
+function mudGeometry(crust) {
+  const lo = !!G.quality?.mobile || G.quality?.name === 'low';
+  const NS = lo ? 30 : 46, NR = lo ? 18 : 30;
+  const P = [], C = [], I = [];
+  const top = new THREE.Color(0xa47b52), mid = new THREE.Color(0x7d5434), low = new THREE.Color(0x4b3020), wet = new THREE.Color(0x5a3a22), sheen = new THREE.Color(0xd9bc92);
+  const clay = new THREE.Color(0xe2c79c), clayDark = new THREE.Color(0x8a6a48), c = new THREE.Color();
+  for (let r = 0; r <= NR; r++) {
+    // rings bunch toward the foot (skirt) and the crown (pond rim)
+    const u = r / NR, y = 0.83 * (1 - Math.pow(1 - u, 1.35));
+    for (let k = 0; k <= NS; k++) {
+      const a = (k / NS) * TAU;
+      let R = mudProfile(y);
+      // drips: raised runnels down the sides ending in a round bead above the skirt
+      let drip = 0;
+      for (const [da, len, w] of MUD_DRIPS) {
+        const dA = Math.atan2(Math.sin(a - da), Math.cos(a - da)) * R;
+        const yEnd = 0.62 - len, yy = (y - yEnd) / len;
+        if (yy > -0.25 && yy < 1) { const bead = yy < 0.15 ? Math.exp(-Math.pow((yy - 0.02) / 0.12, 2)) * 1.6 : 1; drip = Math.max(drip, Math.exp(-Math.pow(dA / (w * (yy < 0.15 ? 1.3 : 1)), 2)) * bead * (1 - Math.max(0, yy - 0.7) / 0.3)); }
+      }
+      R += drip * 0.035;
+      // soft lumps (low frequency) and a wavy skirt edge
+      R += 0.012 * Math.sin(a * 3 + 1.3) * Math.sin(y * 9) + (y < 0.06 ? 0.02 * Math.sin(a * 5 + 0.7) * (1 - y / 0.06) : 0);
+      // the crown pond: a shallow dish on top
+      let yy = y;
+      if (y > 0.74) { const k2 = (y - 0.74) / 0.09; yy = y - 0.05 * Math.sin(Math.min(1, k2) * Math.PI * 0.5) * k2; }
+      const sq = crust ? 1.035 : 1;
+      P.push(Math.sin(a) * R * sq, yy * (crust ? 1.02 : 1), Math.cos(a) * R * sq);
+      if (!crust) {
+        c.copy(low).lerp(mid, smooth01(y / 0.3)).lerp(top, smooth01((y - 0.35) / 0.4));
+        c.lerp(wet, drip * 0.7);
+        // the wet sheen: a pale streak on the upper front shoulder
+        const sh = Math.exp(-Math.pow(Math.atan2(Math.sin(a - 0.5), Math.cos(a - 0.5)) / 0.35, 2)) * Math.exp(-Math.pow((y - 0.6) / 0.07, 2));
+        c.lerp(sheen, sh * 0.85);
+        if (y < 0.05) c.lerp(wet, 0.6);
+      } else {
+        // baked clay with dark cracks (cellular seams)
+        const cx = Math.sin(a) * 6, cz = Math.cos(a) * 6, cy = y * 7;
+        const n1 = vnoise(cx + 3, cy, cz), n2 = vnoise(cx * 2.1, cy * 2.1 + 5, cz * 2.1);
+        const crack = Math.max(smooth01(1 - Math.abs(n1 - 0.5) / 0.05), smooth01(1 - Math.abs(n2 - 0.5) / 0.035) * 0.8);
+        c.copy(clay).lerp(clayDark, crack * 0.9 + (1 - smooth01(y / 0.4)) * 0.25);
+      }
+      C.push(c.r, c.g, c.b);
+    }
+  }
+  for (let r = 0; r < NR; r++) for (let k = 0; k < NS; k++) {
+    const a = r * (NS + 1) + k, b = a + NS + 1;
+    I.push(a, a + 1, b, a + 1, b + 1, b);
+  }
+  // close the crown (pond floor)
+  const ci = P.length / 3; P.push(0, 0.83 - 0.05, 0); C.push(...(crust ? [clay.r, clay.g, clay.b] : [top.r, top.g, top.b]));
+  for (let k = 0; k < NS; k++) { const a = NR * (NS + 1) + k; I.push(a, a + 1, ci); }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(P, 3));
+  g.setAttribute('color', new THREE.Float32BufferAttribute(C, 3));
+  g.setIndex(I);
+  const w = BGU.mergeVertices(g);   // the seam column (angle 0 = 2 pi) shares its normals with its neighbours
+  w.computeVertexNormals();
+  return w;
+}
+function smooth01(x) { const t = clamp(x, 0, 1); return t * t * (3 - 2 * t); }
+// one vertex-coloured geometry from [geometry, matrix, colour] pieces (position, normal, color; uv dropped)
+function paintedMerge(pieces) {
+  const out = pieces.map(([geo, m, hex]) => {
+    const g = (geo.index ? geo.toNonIndexed() : geo.clone()).applyMatrix4(m);
+    g.deleteAttribute('uv');
+    const c = new THREE.Color(hex), n = g.attributes.position.count, col = new Float32Array(n * 3);
+    for (let i = 0; i < n; i++) { col[i * 3] = c.r; col[i * 3 + 1] = c.g; col[i * 3 + 2] = c.b; }
+    g.setAttribute('color', new THREE.BufferAttribute(col, 3));
+    return g;
+  });
+  return BGU.mergeGeometries(out, false);
+}
+const _mm = (x, y, z, sx, sy, sz, rx = 0, ry = 0, rz = 0) => new THREE.Matrix4().compose(new THREE.Vector3(x, y, z), new THREE.Quaternion().setFromEuler(new THREE.Euler(rx, ry, rz)), new THREE.Vector3(sx, sy, sz));
+export function makeMudSpirit() {
+  if (!_mudGeo) {
+    _mudGeo = mudGeometry(false); _crustGeo = mudGeometry(true);
+    _mudMats = {
+      body: toon(0xffffff, { vertexColors: true, emissive: 0x1a1006 }),
+      crust: toon(0xffffff, { vertexColors: true, emissive: 0x3a2610 }),
+      parts: toon(0xffffff, { vertexColors: true }),
+      eye: toon(0xffffff, { vertexColors: true, emissive: 0x262018 }),
+      heart: glow(0xffb347, 2.4),
+    };
+    // reeds: five tapered blades and two cattail heads standing in the pond; the pond, a lily pad and the smile — one draw
+    const sph = new THREE.SphereGeometry(1, 16, 12), disc = new THREE.CircleGeometry(1, 20), rng = (i) => ((Math.sin(i * 77.3) * 43758.5) % 1 + 1) % 1;
+    const P = [];
+    for (let i = 0; i < 5; i++) {
+      const h = 0.3 + rng(i) * 0.22, r = new THREE.ConeGeometry(0.02, h, 4);
+      r.translate(0, h / 2, 0); r.rotateZ((rng(i + 9) - 0.5) * 0.6); r.rotateX((rng(i + 19) - 0.5) * 0.5 - 0.15);
+      P.push([r, _mm((rng(i + 29) - 0.5) * 0.2, 0.77, (rng(i + 39) - 0.5) * 0.14 - 0.08, 1, 1, 1), 0x7d8f3c]);
+    }
+    for (const [x, z, h] of [[0.05, -0.1, 0.42], [-0.07, -0.05, 0.36]]) {
+      P.push([new THREE.CylinderGeometry(0.008, 0.01, h, 4), _mm(x, 0.77 + h / 2, z, 1, 1, 1), 0x7d8f3c]);
+      P.push([new THREE.CapsuleGeometry(0.022, 0.08, 2, 6), _mm(x, 0.77 + h + 0.02, z, 1, 1, 1), 0x6a4a2a]);
+    }
+    P.push([disc, _mm(0, 0.79, 0, 0.19, 0.19, 1, -Math.PI / 2), 0x3d6f6a]);
+    P.push([disc, _mm(0.07, 0.795, 0.06, 0.07, 0.06, 1, -Math.PI / 2), 0x5f8a3a]);
+    P.push([new THREE.TorusGeometry(0.04, 0.009, 6, 14, Math.PI), _mm(0, 0.37, 0.488, 1, 1, 1, -0.25, 0, Math.PI), 0x2a1810]);
+    _reedGeo = paintedMerge(P);
+    // an eye: an almond of white, a big dark pupil, a catch-light (one mesh; the group scale blinks it)
+    _eyeParts = {
+      L: paintedMerge([[sph, _mm(0, 0, 0, 0.085, 0.1, 0.035), 0xfff4dc], [sph, _mm(-0.006, -0.008, 0.012, 0.058, 0.074, 0.03), 0x1a120c], [sph, _mm(0.018, 0.03, 0.036, 0.02, 0.02, 0.012), 0xffffff]]),
+      R: paintedMerge([[sph, _mm(0, 0, 0, 0.085, 0.1, 0.035), 0xfff4dc], [sph, _mm(0.006, -0.008, 0.012, 0.058, 0.074, 0.03), 0x1a120c], [sph, _mm(-0.018, 0.03, 0.036, 0.02, 0.02, 0.012), 0xffffff]]),
+      heart: sph,
+    };
+  }
+  const g = new THREE.Group();
+  const body = new THREE.Mesh(_mudGeo, _mudMats.body); body.name = 'MudBody';
+  const crust = new THREE.Mesh(_crustGeo, _mudMats.crust); crust.name = 'MudCrust'; crust.visible = false;
+  const heart = new THREE.Mesh(_eyeParts.heart, _mudMats.heart); heart.name = 'Core'; heart.position.set(-0.03, 0.8, 0.05); heart.scale.set(0.045, 0.035, 0.045);
+  const parts = new THREE.Mesh(_reedGeo, _mudMats.parts); parts.name = 'MudReeds';
+  g.add(body, crust, heart, parts);
+  for (const s of [-1, 1]) {
+    const eye = new THREE.Mesh(s < 0 ? _eyeParts.L : _eyeParts.R, _mudMats.eye); eye.name = 'Eye';
+    eye.position.set(0.135 * s, 0.47, 0.43); eye.rotation.set(-0.12, 0.3 * s, 0);
+    g.add(eye);
+  }
+  g.userData.crust = crust;
+  g.userData.creature = { motion: 'jelly', style: 'slime', outline: false, h: 0.83, r: 0.6 };
+  return g;
+}
+
 // 纸魅 hitogata: a folded paper doll (形代) with an ink face; flutters in the vertex shader
 let _paperTex = null, _paperMat = null, _paperGeo = null;
 function paperTexture() {
@@ -528,7 +663,108 @@ const SCULPT = {
   mon_golem_big: { head: 1.0, eye: 1, inflate: 0, blocky: 0.15, round: 0.3, stone: true },
 };
 // bodies made by the offline sculpt kit (tools/sculpt): asset id -> [G.sculpt type, kit asset id]; createCreature swaps them in
-const KIT_BODY = { ani_chicken: ['hen', 'sculpt_ani_chicken'] };
+const KIT_BODY = { ani_chicken: ['hen', 'sculpt_ani_chicken'], ani_wolf: ['creatures', 'sculpt_wolf_wild'], mon_bat: ['creatures', 'sculpt_bat_star'] };
+// glow colours of kit bodies swapped in by KIT_BODY (TEXCOORD_0.x through the ramp): the wolves' amber eyes, the bat's stars
+const KIT_GLOW = { sculpt_wolf_wild: 0xff9a2a, sculpt_bat_star: 0xffcf6a };
+// foes whose kit body IS their asset (round art-creatures; tools/sculpt/assets/*.mjs + beast_kit.mjs post; G.sculpt type
+// 'creatures'): the pack asset they fall back to (?sculpt=0 / type off: the GLB is not even loaded), the death / spawn
+// style, the glow colour of TEXCOORD_0.x (ramp).
+// The kit body carries its own colours, so the foe's tint is not applied to it (the fallback keeps the old tint).
+// eyes: [x, y, z] of the right eye in bind-pose model metres, radii [across, tall, deep], yaw (deg) of its gaze off +x
+// toward +z, the iris colour, the bone it rides — a textured cap that blinks (named 'Eye'), crisp at any size.
+const KIT_OWN = {
+  sculpt_froststag: { type: 'creatures', old: 'ani_stag', style: 'paper', lift: 0x1a3550, eyes: { bone: 'Head', at: [0.094, 1.68, 0.79], r: [0.036, 0.032, 0.016], yaw: 64, iris: 0x3fa9dc } },
+  sculpt_embersnake: { type: 'creatures', old: 'mon_serpent', glow: 0xff6a1a, eyes: { bone: 'Mouth', cx: -0.025, at: [0.345, 2.82, 0.53], r: [0.085, 0.078, 0.04], yaw: 70, iris: 0xf2b42a, slit: true } },
+};
+const kitOn = (type) => !!G.sculpt?.on?.(type);
+// low / mobile bodies (the same sculpt at about a third of the triangles, KIT_LO=1 builds): the tier picks one, the other
+// is the fallback when only it is loaded (src/core/assets.js loads the tier's own)
+const KIT_LO = { sculpt_froststag: 'sculpt_froststag_lo', sculpt_embersnake: 'sculpt_embersnake_lo', sculpt_wolf_wild: 'sculpt_wolf_wild_lo', sculpt_bat_star: 'sculpt_bat_star_lo' };
+const kitLoTier = () => !!G.quality?.mobile || G.quality?.name === 'low';
+function kitPick(id) {
+  const lo = KIT_LO[id], ready = (x) => !!G.assets?.ready?.(x);
+  if (!lo) return ready(id) ? id : null;
+  const [a, b] = kitLoTier() ? [lo, id] : [id, lo];
+  return ready(a) ? a : ready(b) ? b : null;
+}
+const _kb = new THREE.Matrix4(), _ki = new THREE.Matrix4();
+/** The bind frame of a kit body: model space of the sculpt (bind pose) -> the skinned mesh's own space. Voted over the
+ *  joints at rest (a few joints' rest differs from their bind), cached per skeleton source. Child of bone b with
+ *  matrix = boneInverse(b) x kitFrame shows sculpt-space geometry exactly where the skin puts it. */
+function kitFrame(model, sm) {
+  if (model.userData.kitFrame) return model.userData.kitFrame;
+  model.updateMatrixWorld(true);
+  _ki.copy(model.matrixWorld).invert();
+  const votes = new Map();
+  sm.skeleton.bones.forEach((b, i) => {
+    _kb.multiplyMatrices(_ki, b.matrixWorld).multiply(sm.skeleton.boneInverses[i]);
+    const k = _kb.elements.map((v) => v.toFixed(3)).join();
+    const e = votes.get(k); if (e) e.n++; else votes.set(k, { n: 1, m: _kb.clone() });
+  });
+  const best = [...votes.values()].sort((a, b) => b.n - a.n)[0];
+  return (model.userData.kitFrame = best.m.invert());
+}
+const kitGlowDone = new WeakSet();
+const kitEyeMats = new Map();
+let kitEyeGeo = null;
+function kitEyeMaterial(iris, slit) {
+  let m = kitEyeMats.get(iris + (slit ? 's' : ''));
+  if (m) return m;
+  const cv = document.createElement('canvas'); cv.width = cv.height = 128;
+  const x = cv.getContext('2d');
+  const ic = new THREE.Color(iris), hex = (c) => '#' + c.getHexString();
+  x.fillStyle = '#eef3f8'; x.fillRect(0, 0, 128, 128);
+  // a big iris (anime read): dark rim, the colour, a lighter lower half; a round pupil; two catch-lights up and to one side
+  let g = x.createRadialGradient(64, 70, 6, 64, 66, 50);
+  g.addColorStop(0, hex(ic.clone().multiplyScalar(0.35))); g.addColorStop(0.55, hex(ic)); g.addColorStop(0.86, hex(ic.clone().lerp(new THREE.Color(0xffffff), 0.25))); g.addColorStop(1, hex(ic.clone().multiplyScalar(0.3)));
+  x.fillStyle = g; x.beginPath(); x.ellipse(64, 66, 47, 52, 0, 0, TAU); x.fill();
+  x.fillStyle = '#0b1020'; x.beginPath(); x.ellipse(64, 66, slit ? 7 : 19, slit ? 40 : 23, 0, 0, TAU); x.fill();
+  x.fillStyle = 'rgba(255,255,255,0.95)'; x.beginPath(); x.ellipse(50, 44, 13, 11, -0.4, 0, TAU); x.fill();
+  x.beginPath(); x.ellipse(80, 88, 5, 4, 0, 0, TAU); x.fill();
+  const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace;
+  m = new THREE.MeshToonMaterial({ map: t, gradientMap: toonGradient(), emissive: 0xffffff, emissiveMap: t, emissiveIntensity: 0.28 });
+  m.name = 'KitEye'; m.userData.shared = true;
+  hookMaterial(m);
+  kitEyeMats.set(iris + (slit ? 's' : ''), m);
+  return m;
+}
+/** Eyes of a kit body: two textured caps in the sculpt's sockets, riding a bone through its inverse bind matrix. */
+function addKitEyes(model, E) {
+  let sm = null;
+  model.traverse((o) => { if (!sm && o.isSkinnedMesh && !o.userData.outline) sm = o; });
+  const bones = sm?.skeleton?.bones, hi = bones ? bones.findIndex((b) => b.name === E.bone) : -1;
+  if (hi < 0) return;
+  if (!kitEyeGeo) {
+    kitEyeGeo = new THREE.SphereGeometry(1, 20, 14);
+    const p = kitEyeGeo.attributes.position, uv = kitEyeGeo.attributes.uv;
+    for (let i = 0; i < p.count; i++) uv.setXY(i, p.getX(i) * 0.5 + 0.5, p.getY(i) * 0.5 + 0.5);   // the picture faces +z
+  }
+  const holder = new THREE.Group(); holder.name = 'KitEyes';
+  holder.matrixAutoUpdate = false; holder.matrix.copy(sm.skeleton.boneInverses[hi]).multiply(kitFrame(model, sm));
+  bones[hi].add(holder);
+  const mat = kitEyeMaterial(E.iris, !!E.slit);
+  for (const s of [1, -1]) {
+    const e = new THREE.Mesh(kitEyeGeo, mat); e.name = 'Eye';
+    e.position.set((E.cx || 0) + E.at[0] * s, E.at[1], E.at[2]);
+    e.rotation.y = s * E.yaw * Math.PI / 180;
+    e.scale.set(E.r[0], E.r[1], E.r[2]);
+    holder.add(e);
+  }
+}
+/** TEXCOORD_0.x of a kit body = glow amount (beast_kit post): emissive colour through the grey ramp; or a flat emissive
+ *  lift (the frost stag's coat keeps its cold light in shade, as the old pale recolour did). Once per material. */
+function kitGlow(model, color, lift) {
+  model.traverse((o) => {
+    if (!o.isSkinnedMesh || o.userData.outline) return;
+    for (const m of [].concat(o.material)) {
+      if (!m || kitGlowDone.has(m) || !m.emissive) continue;
+      kitGlowDone.add(m);
+      if (color != null && o.geometry?.attributes.uv) { m.emissive.set(color); m.emissiveMap = glowRamp(false); }
+      else m.emissive.set(lift ?? 0);
+      m.emissiveIntensity = 1; m.needsUpdate = true;
+    }
+  });
+}
 const sculpted = new Map();   // assetId -> { geo, outGeo, mat } | null (failed)
 const _sv = new THREE.Vector3(), _sm = new THREE.Matrix4(), _sc = new THREE.Color();
 const texPix = new WeakMap();
@@ -1040,12 +1276,27 @@ export function createCreature(assetId, opts = {}) {
   // a body from the sculpt kit (G.sculpt type, e.g. 'hen' -> sculpt_ani_chicken: same skeleton + clips, its own smooth
   // vertex-coloured body) replaces the asset-pack mesh, and applySculpt must not re-subdivide it / read its colours as AO
   const kit = !opts.primitive && !old && KIT_BODY[assetId];
-  const kitId = kit && G.sculpt?.on?.(kit[0]) && G.assets?.ready?.(kit[1]) ? kit[1] : null;
-  let model = (typeof opts.primitive === 'function' ? opts.primitive() : opts.primitive) || (assetId ? G.assets?.model(kitId || assetId) : null);
+  const kitId = kit && kitOn(kit[0]) ? kitPick(kit[1]) : null;
+  const own = !opts.primitive && KIT_OWN[assetId];
+  const ownId = own && !old && kitOn(own.type) ? kitPick(assetId) : null;
+  if (own) {
+    if (ownId) opts = Object.assign({}, opts, { tint: null });
+    else assetId = own.old;
+  }
+  const ownKit = !!ownId;
+  const srcId = kitId || ownId || assetId;   // the asset whose model (and clips) is used
+  let model = (typeof opts.primitive === 'function' ? opts.primitive() : opts.primitive) || (assetId ? G.assets?.model(srcId) : null);
   const missing = !model;
   if (!model) model = placeholder();
-  else if (!opts.primitive && !old && !kitId) applySculpt(assetId, model);
-  if (!missing && !opts.primitive && !old && !opts.tint && !SCULPT[assetId]) mergeCreatureParts(model, model.userData.clips || G.assets?.clips(assetId));
+  else if (!opts.primitive && !old && !kitId && !ownKit) applySculpt(assetId, model);
+  if (!missing && kitId && KIT_GLOW[kit[1]] != null && !opts.tint) kitGlow(model, KIT_GLOW[kit[1]]);
+  if (!missing && (kitId || ownKit)) {
+    if (ownKit && own.style) model.userData.creature = Object.assign({}, model.userData.creature, { style: own.style });
+    if (ownKit && (own.glow != null || own.lift != null)) kitGlow(model, own.glow, own.lift);
+    if (ownKit && own.eyes) addKitEyes(model, own.eyes);
+    if (ownKit) { let sm = null; model.traverse((o) => { if (!sm && o.isSkinnedMesh && !o.userData.outline) sm = o; }); if (sm) kitFrame(model, sm); }
+  }
+  if (!missing && !opts.primitive && !old && !opts.tint && !SCULPT[assetId] && !kitId && !ownKit) mergeCreatureParts(model, model.userData.clips || G.assets?.clips(assetId));
   const cfg = model.userData.creature || null;
   model.scale.multiplyScalar(scale);
   const s0 = model.scale.x;
@@ -1074,7 +1325,7 @@ export function createCreature(assetId, opts = {}) {
   const height = Math.max(0.2, box.max.y - box.min.y);
   const length = Math.max(box.max.z - box.min.z, box.max.x - box.min.x);
 
-  const clips = missing ? [] : (model.userData.clips || G.assets?.clips(assetId) || []);
+  const clips = missing ? [] : (model.userData.clips || G.assets?.clips(srcId) || []);
   const mixer = clips.length ? new THREE.AnimationMixer(model) : null;
   const table = Object.assign({}, clipUse(assetId), opts.clips || {});
   const actions = new Map();
