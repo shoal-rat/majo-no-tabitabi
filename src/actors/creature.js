@@ -18,7 +18,7 @@
 //   ?crv=1 = the pre-upgrade-3 creature look (no motion layer, flat flash, additive dissolve) for A/B shots.
 import * as THREE from 'three';
 import { G } from '../core/game.js';
-import { toon, glow, PAL, hookMaterial } from '../core/mats.js';
+import { toon, glow, PAL, hookMaterial, toonGradient } from '../core/mats.js';
 import { makeActorShadowBlob } from './rig.js';
 import { updateCelGlobals, CEL_U, buildOutlines, outlineMaterial, sameBones, harmonize } from './celmat.js';
 import * as BGU from 'three/addons/utils/BufferGeometryUtils.js';
@@ -528,7 +528,96 @@ const SCULPT = {
   mon_golem_big: { head: 1.0, eye: 1, inflate: 0, blocky: 0.15, round: 0.3, stone: true },
 };
 // bodies made by the offline sculpt kit (tools/sculpt): asset id -> [G.sculpt type, kit asset id]; createCreature swaps them in
+// (type null: no switch of its own, on unless ?sculpt=0)
 const KIT_BODY = { ani_chicken: ['hen', 'sculpt_ani_chicken'] };
+// foes whose kit body IS their asset (round art-creatures; tools/sculpt/assets/*.mjs + beast_kit.mjs post; G.sculpt type
+// 'creatures'): the pack asset they fall back to (?sculpt=0 / type off: the GLB is not even loaded), the death / spawn
+// style, the glow colour of TEXCOORD_0.x (ramp).
+// The kit body carries its own colours, so the foe's tint is not applied to it (the fallback keeps the old tint).
+// eyes: [x, y, z] of the right eye in bind-pose model metres, radii [across, tall, deep], yaw (deg) of its gaze off +x
+// toward +z, the iris colour, the bone it rides — a textured cap that blinks (named 'Eye'), crisp at any size.
+const KIT_OWN = {
+  sculpt_froststag: { type: 'creatures', old: 'ani_stag', style: 'paper', lift: 0x1a3550, eyes: { bone: 'Head', at: [0.094, 1.68, 0.79], r: [0.036, 0.032, 0.016], yaw: 64, iris: 0x3fa9dc } },
+};
+const kitOn = (type) => !!G.sculpt?.on?.(type);
+const _kb = new THREE.Matrix4(), _ki = new THREE.Matrix4();
+/** The bind frame of a kit body: model space of the sculpt (bind pose) -> the skinned mesh's own space. Voted over the
+ *  joints at rest (a few joints' rest differs from their bind), cached per skeleton source. Child of bone b with
+ *  matrix = boneInverse(b) x kitFrame shows sculpt-space geometry exactly where the skin puts it. */
+function kitFrame(model, sm) {
+  if (model.userData.kitFrame) return model.userData.kitFrame;
+  model.updateMatrixWorld(true);
+  _ki.copy(model.matrixWorld).invert();
+  const votes = new Map();
+  sm.skeleton.bones.forEach((b, i) => {
+    _kb.multiplyMatrices(_ki, b.matrixWorld).multiply(sm.skeleton.boneInverses[i]);
+    const k = _kb.elements.map((v) => v.toFixed(3)).join();
+    const e = votes.get(k); if (e) e.n++; else votes.set(k, { n: 1, m: _kb.clone() });
+  });
+  const best = [...votes.values()].sort((a, b) => b.n - a.n)[0];
+  return (model.userData.kitFrame = best.m.invert());
+}
+const kitGlowDone = new WeakSet();
+const kitEyeMats = new Map();
+let kitEyeGeo = null;
+function kitEyeMaterial(iris) {
+  let m = kitEyeMats.get(iris);
+  if (m) return m;
+  const cv = document.createElement('canvas'); cv.width = cv.height = 128;
+  const x = cv.getContext('2d');
+  const ic = new THREE.Color(iris), hex = (c) => '#' + c.getHexString();
+  x.fillStyle = '#eef3f8'; x.fillRect(0, 0, 128, 128);
+  // a big iris (anime read): dark rim, the colour, a lighter lower half; a round pupil; two catch-lights up and to one side
+  let g = x.createRadialGradient(64, 70, 6, 64, 66, 50);
+  g.addColorStop(0, hex(ic.clone().multiplyScalar(0.35))); g.addColorStop(0.55, hex(ic)); g.addColorStop(0.86, hex(ic.clone().lerp(new THREE.Color(0xffffff), 0.25))); g.addColorStop(1, hex(ic.clone().multiplyScalar(0.3)));
+  x.fillStyle = g; x.beginPath(); x.ellipse(64, 66, 47, 52, 0, 0, TAU); x.fill();
+  x.fillStyle = '#0b1020'; x.beginPath(); x.ellipse(64, 66, 19, 23, 0, 0, TAU); x.fill();
+  x.fillStyle = 'rgba(255,255,255,0.95)'; x.beginPath(); x.ellipse(50, 44, 13, 11, -0.4, 0, TAU); x.fill();
+  x.beginPath(); x.ellipse(80, 88, 5, 4, 0, 0, TAU); x.fill();
+  const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace;
+  m = new THREE.MeshToonMaterial({ map: t, gradientMap: toonGradient(), emissive: 0xffffff, emissiveMap: t, emissiveIntensity: 0.28 });
+  m.name = 'KitEye'; m.userData.shared = true;
+  hookMaterial(m);
+  kitEyeMats.set(iris, m);
+  return m;
+}
+/** Eyes of a kit body: two textured caps in the sculpt's sockets, riding a bone through its inverse bind matrix. */
+function addKitEyes(model, E) {
+  let sm = null;
+  model.traverse((o) => { if (!sm && o.isSkinnedMesh && !o.userData.outline) sm = o; });
+  const bones = sm?.skeleton?.bones, hi = bones ? bones.findIndex((b) => b.name === E.bone) : -1;
+  if (hi < 0) return;
+  if (!kitEyeGeo) {
+    kitEyeGeo = new THREE.SphereGeometry(1, 20, 14);
+    const p = kitEyeGeo.attributes.position, uv = kitEyeGeo.attributes.uv;
+    for (let i = 0; i < p.count; i++) uv.setXY(i, p.getX(i) * 0.5 + 0.5, p.getY(i) * 0.5 + 0.5);   // the picture faces +z
+  }
+  const holder = new THREE.Group(); holder.name = 'KitEyes';
+  holder.matrixAutoUpdate = false; holder.matrix.copy(sm.skeleton.boneInverses[hi]).multiply(kitFrame(model, sm));
+  bones[hi].add(holder);
+  const mat = kitEyeMaterial(E.iris);
+  for (const s of [1, -1]) {
+    const e = new THREE.Mesh(kitEyeGeo, mat); e.name = 'Eye';
+    e.position.set(E.at[0] * s, E.at[1], E.at[2]);
+    e.rotation.y = s * E.yaw * Math.PI / 180;
+    e.scale.set(E.r[0], E.r[1], E.r[2]);
+    holder.add(e);
+  }
+}
+/** TEXCOORD_0.x of a kit body = glow amount (beast_kit post): emissive colour through the grey ramp; or a flat emissive
+ *  lift (the frost stag's coat keeps its cold light in shade, as the old pale recolour did). Once per material. */
+function kitGlow(model, color, lift) {
+  model.traverse((o) => {
+    if (!o.isSkinnedMesh || o.userData.outline) return;
+    for (const m of [].concat(o.material)) {
+      if (!m || kitGlowDone.has(m) || !m.emissive) continue;
+      kitGlowDone.add(m);
+      if (color != null && o.geometry?.attributes.uv) { m.emissive.set(color); m.emissiveMap = glowRamp(false); }
+      else m.emissive.set(lift ?? 0);
+      m.emissiveIntensity = 1; m.needsUpdate = true;
+    }
+  });
+}
 const sculpted = new Map();   // assetId -> { geo, outGeo, mat } | null (failed)
 const _sv = new THREE.Vector3(), _sm = new THREE.Matrix4(), _sc = new THREE.Color();
 const texPix = new WeakMap();
@@ -1040,12 +1129,24 @@ export function createCreature(assetId, opts = {}) {
   // a body from the sculpt kit (G.sculpt type, e.g. 'hen' -> sculpt_ani_chicken: same skeleton + clips, its own smooth
   // vertex-coloured body) replaces the asset-pack mesh, and applySculpt must not re-subdivide it / read its colours as AO
   const kit = !opts.primitive && !old && KIT_BODY[assetId];
-  const kitId = kit && G.sculpt?.on?.(kit[0]) && G.assets?.ready?.(kit[1]) ? kit[1] : null;
+  const kitId = kit && kitOn(kit[0]) && G.assets?.ready?.(kit[1]) ? kit[1] : null;
+  const own = !opts.primitive && KIT_OWN[assetId];
+  if (own) {
+    if (!old && kitOn(own.type) && G.assets?.ready?.(assetId)) opts = Object.assign({}, opts, { tint: null });
+    else assetId = own.old;
+  }
+  const ownKit = own && assetId !== own.old;
   let model = (typeof opts.primitive === 'function' ? opts.primitive() : opts.primitive) || (assetId ? G.assets?.model(kitId || assetId) : null);
   const missing = !model;
   if (!model) model = placeholder();
-  else if (!opts.primitive && !old && !kitId) applySculpt(assetId, model);
-  if (!missing && !opts.primitive && !old && !opts.tint && !SCULPT[assetId]) mergeCreatureParts(model, model.userData.clips || G.assets?.clips(assetId));
+  else if (!opts.primitive && !old && !kitId && !ownKit) applySculpt(assetId, model);
+  if (!missing && (kitId || ownKit)) {
+    if (ownKit && own.style) model.userData.creature = Object.assign({}, model.userData.creature, { style: own.style });
+    if (ownKit && (own.glow != null || own.lift != null)) kitGlow(model, own.glow, own.lift);
+    if (ownKit && own.eyes) addKitEyes(model, own.eyes);
+    if (ownKit) { let sm = null; model.traverse((o) => { if (!sm && o.isSkinnedMesh) sm = o; }); if (sm) kitFrame(model, sm); }
+  }
+  if (!missing && !opts.primitive && !old && !opts.tint && !SCULPT[assetId] && !kitId && !ownKit) mergeCreatureParts(model, model.userData.clips || G.assets?.clips(assetId));
   const cfg = model.userData.creature || null;
   model.scale.multiplyScalar(scale);
   const s0 = model.scale.x;

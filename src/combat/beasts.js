@@ -17,6 +17,7 @@ import { warnAt, melee, shockwave, after, flatDir, inArc, hurtPlayer, playerAliv
 import { addWard } from './wards.js';
 import { makePages, flapPages, makeMud, makeLostFlame, addFrostCrown } from './bodies.js';
 import { bolt, volley, rockBarrage, EL_COL } from './patterns.js';
+import { toon } from '../core/mats.js';
 
 const _v = new THREE.Vector3(), _w = new THREE.Vector3(), _d = new THREE.Vector3(), _o = new THREE.Vector3();
 
@@ -80,6 +81,98 @@ function scare(e, sec = 2.2) {
 function hasteDt(e, dt) { return dt * (e.haste || 1); }
 
 // ---- the defs ---------------------------------------------------------------------------------------------------------
+// ---- 霜角鹿 crystal antlers (round art-creatures) ---------------------------------------------------------------------
+// Ice grown from the two pedicles of the sculpted body (tools/sculpt/assets/stag_frost.mjs): a beam that sweeps up, out and
+// back, brow / bez / trez tines reaching forward, a forked crown, and a coronet of small shards at each base. Every piece is
+// a six-sided crystal with flat facets and a sharp point; it rides the Head bone as its own mesh because the cel path
+// smooths the normals of a skinned body (the facets would melt). Points: the sculpt's bind-pose metres, +x side (mirrored).
+const ANTLER = [
+  // [path], radius at the root, radius before the point, point length (x radius)
+  [[[0.066, 1.795, 0.686], [0.108, 1.93, 0.666], [0.172, 2.09, 0.612], [0.232, 2.26, 0.534], [0.262, 2.42, 0.452]], 0.034, 0.02, 3.2],
+  [[[0.094, 1.885, 0.676], [0.122, 1.94, 0.79], [0.142, 2.0, 0.88]], 0.021, 0.015, 3.4],     // brow tine
+  [[[0.15, 2.04, 0.632], [0.19, 2.12, 0.74], [0.212, 2.2, 0.8]], 0.019, 0.014, 3.2],        // bez tine
+  [[[0.214, 2.21, 0.56], [0.28, 2.3, 0.63], [0.33, 2.37, 0.66]], 0.018, 0.013, 3],          // trez tine
+  [[[0.258, 2.4, 0.464], [0.254, 2.5, 0.49], [0.236, 2.6, 0.5]], 0.017, 0.012, 3.2],        // crown, inner point
+  [[[0.262, 2.42, 0.452], [0.31, 2.5, 0.4], [0.34, 2.56, 0.35]], 0.016, 0.012, 3],          // crown, outer point
+];
+let antlerGeo = null, antlerMat = null;
+function crystalPath(P, C, path, r0, r1, tipK, seed) {
+  const n = path.length, tw = seed * 0.7;
+  const rings = [];
+  for (let i = 0; i < n; i++) {
+    const p = _v.fromArray(path[i]).clone();
+    const t = (i < n - 1 ? _w.fromArray(path[i + 1]).sub(p) : p.clone().sub(_w.fromArray(path[i - 1]))).normalize();
+    const up = Math.abs(t.y) < 0.9 ? new THREE.Vector3(0, 1, 0) : new THREE.Vector3(1, 0, 0);
+    const a = new THREE.Vector3().crossVectors(t, up).normalize(), b = new THREE.Vector3().crossVectors(t, a);
+    const r = (r0 + (r1 - r0) * (i / (n - 1))) * (i > 0 && i < n - 1 ? 1.12 : 1);   // a growth node at every bend
+    rings.push({ p, t, a, b, r });
+  }
+  const ring = (R, k, tw2) => { const ang = tw + tw2 + (k / 6) * TAU; return R.p.clone().addScaledVector(R.a, Math.cos(ang) * R.r).addScaledVector(R.b, Math.sin(ang) * R.r); };
+  const h0 = path[0][1], hk = (v) => clamp((v.y - h0) / 0.75, 0, 1);
+  const tri = (x, y, z, glint) => {
+    for (const v of [x, y, z]) {
+      P.push(v.x, v.y, v.z);
+      const k = Math.min(1, hk(v) + glint);
+      // deep ice at the root, pale blue up the beam, near-white points
+      C.push(0.46 + 0.5 * k, 0.7 + 0.29 * k, 0.88 + 0.12 * k);
+    }
+  };
+  for (let i = 0; i < n - 1; i++) {
+    const A = rings[i], B = rings[i + 1], tw2 = i * 0.35;
+    for (let k = 0; k < 6; k++) {
+      const a0 = ring(A, k, tw2), a1 = ring(A, k + 1, tw2), b0 = ring(B, k, tw2 + 0.35), b1 = ring(B, k + 1, tw2 + 0.35);
+      tri(a0, b0, b1, 0); tri(a0, b1, a1, 0);
+    }
+  }
+  // the point: a six-faced pyramid past the last ring; the root closed by a fan
+  const L = rings[n - 1], tip = L.p.clone().addScaledVector(L.t, L.r * tipK);
+  for (let k = 0; k < 6; k++) tri(ring(L, k, (n - 2) * 0.35 + 0.35), tip, ring(L, k + 1, (n - 2) * 0.35 + 0.35), 0.35);
+  const F = rings[0];
+  for (let k = 0; k < 6; k++) tri(F.p, ring(F, k + 1, 0), ring(F, k, 0), 0);
+}
+function antlerGeometry() {
+  const P = [], C = [];
+  const R = (i) => ((Math.sin(i * 91.7) * 43758.5) % 1 + 1) % 1;
+  for (const s of [1, -1]) {
+    const m = (pts) => pts.map(([x, y, z]) => [x * s, y, z]);
+    ANTLER.forEach(([path, r0, r1, k], i) => crystalPath(P, C, m(path), r0, r1, k, i + (s > 0 ? 0 : 3)));
+    // coronet: five small shards around the base, leaning out
+    for (let j = 0; j < 5; j++) {
+      const a = (j / 5) * TAU + 0.4, len = 0.05 + R(j + s * 7) * 0.035;
+      const b = [0.066 * s + Math.cos(a) * 0.022, 1.8, 0.686 + Math.sin(a) * 0.022];
+      const d = [Math.cos(a) * 0.8, 1, Math.sin(a) * 0.8 - 0.2];
+      const l = Math.hypot(...d);
+      crystalPath(P, C, [b, [b[0] + d[0] / l * len, b[1] + d[1] / l * len, b[2] + d[2] / l * len]], 0.011, 0.009, 2.6, j * 1.3);
+    }
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(P, 3));
+  g.setAttribute('color', new THREE.Float32BufferAttribute(C, 3));
+  g.computeVertexNormals();   // non-indexed: one normal per facet
+  g.computeBoundingSphere();
+  return g;
+}
+/** Crystal antlers on the Head bone of a sculpted frost stag: the geometry is in bind-pose model space, the bone's inverse
+ *  bind matrix carries it into the bone's own frame (so it follows every clip exactly). */
+function frostAntlers(cr) {
+  let sm = null;
+  cr.model.traverse((o) => { if (!sm && o.isSkinnedMesh && !o.userData.outline) sm = o; });
+  const bones = sm?.skeleton?.bones, hi = bones ? bones.findIndex((b) => b.name === 'Head') : -1;
+  if (hi < 0) return null;
+  if (!antlerGeo) {
+    antlerGeo = antlerGeometry();
+    antlerMat = toon(0xffffff, { vertexColors: true, emissive: 0x3d86c0, emissiveIntensity: 0.55 });
+  }
+  const m = new THREE.Mesh(antlerGeo, antlerMat);
+  m.name = 'FrostAntlers';
+  m.matrixAutoUpdate = false;
+  m.matrix.copy(sm.skeleton.boneInverses[hi]);
+  if (cr.model.userData.kitFrame) m.matrix.multiply(cr.model.userData.kitFrame);   // sculpt space -> the skin's space (creature.js)
+  m.castShadow = true; m.receiveShadow = true;
+  bones[hi].add(m);
+  return m;
+}
+
 export function installBeasts(TYPES) {
   // 流浪书页 — stray pages
   TYPES.paper = {
@@ -400,11 +493,21 @@ export function installBeasts(TYPES) {
 
   // 霜角鹿 — frost stag
   TYPES.froststag = {
-    asset: 'ani_stag', scale: 1.05, tint: 'paper', material: 'flesh', hp: 520, radius: 0.85, height: 2.2, speed: 4.6, sight: 18, immune: ['frozen'],
+    asset: 'sculpt_froststag', scale: 1.05, tint: 'paper', material: 'flesh', hp: 520, radius: 0.85, height: 2.2, speed: 4.6, sight: 18, immune: ['frozen'],
     drops: { stardust: [6, 9], heart: 0.4 }, poise: 210, staggerT: 1.6, mult: { fire: 1.3 },
     clips: { idle: 'Idle', move: 'Walk', run: 'Gallop', attack: 'Attack_Headbutt', kick: 'Attack_Kick', hit: 'Idle_HitReact_Left', death: 'Death', leap: 'Gallop_Jump' },
     onSpawn(e) {
       addWard(e, 'ice', Math.round(e.maxHp * 0.5), { regen: 14 });
+      // the sculpted frost stag (tools/sculpt/assets/stag_frost.mjs) wears its own coat and grows crystal antlers from its
+      // pedicles; the pack stag (?sculpt=0) keeps the old pale recolour and the crown of ice cones
+      const kit = e.cr?.id === 'sculpt_froststag';
+      if (kit) {
+        try { e.data.crown = frostAntlers(e.cr); } catch (err) { G.reportError('combat:antlers', err); }
+        const em = G.fx?.emitter?.('aura_ice', { color: 0xbfefff, scale: 0.7 });
+        if (em) { e.data.aura = em; e.own(() => em.remove()); }
+        e.own(() => { e.data.crown?.parent?.remove(e.data.crown); });
+        return;
+      }
       // a white stag: the sculpted coat carries its colour in the vertices, so the pale coat is set on its own clone
       e.cr?.model.traverse((o) => {
         if (!o.isMesh || o.userData.outline || !o.material || Array.isArray(o.material) || o.userData._frost) return;

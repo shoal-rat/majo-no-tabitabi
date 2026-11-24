@@ -77,9 +77,13 @@ export const SCULPT_TYPES = {
   // broad flat face, the paint reads grey next to the old warm cream — the face is the companion's charm (REVIEW.md)
   dango: ['sculpt_dango'], gohei: ['sculpt_prop_gohei'], broom: ['sculpt_prop_broom'], hip_lantern: ['sculpt_hip_lantern'],
   earth_column: ['sculpt_earth_column_a', 'sculpt_earth_column_b', 'sculpt_earth_column_c', 'sculpt_earth_rubble'],
+  // foes and wildlife sculpted on the pack skeletons (round art-creatures, tools/sculpt/assets/{stag_frost,…}.mjs +
+  // beast_kit.mjs post), swapped in by actors/creature.js KIT_OWN / KIT_BODY; off -> the pack bodies as before. Their
+  // COLOR_0 is the kit's skinned output (like the hen's): lifted once at load by fixSculptColours
+  creatures: ['sculpt_froststag'],
 };
 export const SCULPT_DEFAULT = ['stone_lantern', 'komainu', 'kitsune', 'great_lantern', 'rockfam', 'drywall', 'mill', 'landmarks', 'pot', 'barrel', 'bucket', 'pumpkin',
-  'jar', 'cart', 'hen', 'gohei', 'broom', 'hip_lantern', 'earth_column'];
+  'jar', 'cart', 'hen', 'gohei', 'broom', 'hip_lantern', 'earth_column', 'creatures'];
 // sculpt GLBs whose COLOR_0 was rewritten by the asset's own post step (dango.mjs post, gohei.mjs / hip_lantern.mjs --split /
 // --post: sRGB paint -> linear once) — measured single-encoded, so fixSculptColours must leave them alone
 // facet-kit GLBs (tools/sculpt/assets/rock_facet.mjs) write linear COLOR_0 once as well, and so does the landmark driver
