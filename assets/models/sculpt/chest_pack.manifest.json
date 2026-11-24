@@ -1,0 +1,43 @@
+{
+ "sculpt_chest_pack": {
+  "file": "models/sculpt/chest_pack.glb",
+  "type": "model",
+  "license": "CC0 (original work)",
+  "author": "sculpted for this project",
+  "source": "tools/sculpt/assets/chest_pack.mjs (node tools/sculpt/assets/props_activity_lib.mjs)",
+  "scale": 1,
+  "size": [
+   1.091,
+   0.555,
+   0.7
+  ],
+  "tris": 4724,
+  "lods": [
+   4724,
+   3508,
+   360
+  ],
+  "materials": [
+   "ChestWood_wood",
+   "ChestIron_metal"
+  ],
+  "mats": {
+   "ChestWood_wood": {
+    "surface": "wood",
+    "look": {
+     "detail": 0.35,
+     "rim": 0.3
+    }
+   },
+   "ChestIron_metal": {
+    "surface": "metal",
+    "look": {
+     "spec": 0.6,
+     "specPower": 44,
+     "rim": 0.45
+    }
+   }
+  },
+  "notes": "Iron-banded pack chest for the landmark puzzles (gameplay/wilds-puzzles.js makeChestAt): bevelled planks with gaps, corner posts, iron bands and rivets, brass caps, lock plate, ring handles; barrel lid of staves with bevelled gable ends. chest_pack = body (origin ground centre, front +Z), chest_pack_lid = lid (origin on the hinge line; the game mounts it at (0, 0.54, -0.31) and swings it about X). LOD tris 4724 / 3508 / 360. Vertex colour only (COLOR_0 linear rgb, written once)."
+ }
+}

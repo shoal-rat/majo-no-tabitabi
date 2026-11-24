@@ -1,9 +1,64 @@
 // Small props of the roadside errands (src/gameplay/errands.js): the painter's felt hat and easel, the shepherd's
-// iron stove, the carter's handcart, a sitting stone, the ice sheet over the ford. Primitives only (geo.js), baked
-// where static; nothing here has words.
+// iron stove, the carter's handcart, a sitting stone, the ice sheet over the ford; and the sculpted-prop helper the open
+// country's activity props share (wilds-puzzles.js briar / rubble / pack chest, wilds-rings.js ring gates).
+// Sculpted props (round art-props, tools/sculpt/assets/props_activity_lib.mjs): vertex-coloured GLBs with three LODs,
+// G.sculpt type 'props-activity' (core/assets.js; ?sculpt=0 or a list without it builds the old primitives). Nothing here
+// has words.
 import * as THREE from 'three';
+import { G } from '../core/game.js';
 import { box, cyl, cone, sphere, torus, bakeStatic } from '../core/geo.js';
-import { toon, glowDynamic } from '../core/mats.js';
+import { toon, glowDynamic, own } from '../core/mats.js';
+import { pieces } from '../world/rock-family.js';
+import { sculptVcMat } from '../world/builders/kit.js';
+
+// ---- sculpted props ------------------------------------------------------------------------------------------------
+/** is sculpt asset `id` of the activity props in use (switch on, asset loaded)? */
+export const propsSculptOn = (id) => !!G.sculpt?.on?.('props-activity') && !!G.assets?.raw?.(id);
+
+/**
+ * Which LOD shows from which camera distance, by quality tier (k scales the distances to the object's size):
+ * phones and low start on the middle LOD, med / high on the full one.
+ */
+function lodPlan(k = 1) {
+  const q = G.quality || { name: 'high' };
+  if (q.mobile) return [[1, 0], [2, 12 * k]];
+  if (q.name === 'low') return [[1, 0], [2, 24 * k]];
+  if (q.name === 'med') return [[0, 0], [1, 14 * k], [2, 42 * k]];
+  return [[0, 0], [1, 22 * k], [2, 64 * k]];
+}
+
+/** a vertex-coloured copy of a toon material (white: the GLB's colour is the albedo), tinted when `tint` is given */
+export function propMat(hex, opts, tint = null) {
+  const m = sculptVcMat(toon(hex, opts));
+  if (!tint) return m;
+  const t = own(m); t.color.copy(tint); return t;
+}
+
+/**
+ * A sculpted prop as a THREE.LOD (levels by lodPlan, switched by three each frame against the camera): each level a
+ * group of meshes, one per primitive of that LOD (material by its GLB material name from `mats`, `mats['*']` for the
+ * rest). Geometry is shared by every instance (never edit it). null when the asset is missing or the switch is off.
+ * opts: { k (LOD distance scale), cast, recv, name, levels: [[lod, dist], ...] (overrides the plan) }.
+ */
+export function sculptedProp(id, mats, { k = 1, cast = true, recv = true, name = '', levels = null } = {}) {
+  if (!propsSculptOn(id)) return null;
+  const lod = new THREE.LOD();
+  lod.name = name || id;
+  for (const [l, d] of levels || lodPlan(k)) {
+    const by = pieces(id, l);
+    if (!by) continue;
+    const g = new THREE.Group();
+    for (const [mn, geo] of Object.entries(by)) {
+      const mat = mats[mn] || mats['*'];
+      if (!mat) continue;
+      const mesh = new THREE.Mesh(geo, mat);
+      mesh.castShadow = cast; mesh.receiveShadow = recv;
+      g.add(mesh);
+    }
+    lod.addLevel(g, d);
+  }
+  return lod.levels.length ? lod : null;
+}
 
 /** A wide-brimmed felt traveller's hat with a red band and a pale feather (origin = the brim's centre). */
 export function makeHat() {
