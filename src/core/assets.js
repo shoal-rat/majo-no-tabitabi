@@ -64,6 +64,10 @@ export const SCULPT_TYPES = {
   // trilithon stones, standing stones, dolmen, cairn, wells, bench, bee hives; vertex colours on every LOD
   landmarks: ['sculpt_lm_shrine', 'sculpt_lm_upright', 'sculpt_lm_lintel', 'sculpt_lm_standing_a', 'sculpt_lm_standing_b', 'sculpt_lm_dolmen',
     'sculpt_lm_cairn', 'sculpt_lm_well_a', 'sculpt_lm_well_b', 'sculpt_lm_bench', 'sculpt_lm_hive_skep', 'sculpt_lm_hive_box'],
+  // ground set pieces (round art-ground, tools/sculpt/assets/ground_rocks.mjs, facet kit): granite tor blocks, the quarry's
+  // cut blocks with drill marks and its spoil heaps, baked into the landmark rock set pieces (world/landforms/setpieces.js)
+  ground: ['sculpt_ground_tor_a', 'sculpt_ground_tor_b', 'sculpt_ground_quarry', 'sculpt_ground_spoil', 'sculpt_ground_quarry_face_a',
+    'sculpt_ground_quarry_face_b', 'sculpt_ground_quarry_half'],
   // retired by rockfam (no user left; kept for reference, never loaded by default): the distance-field rocks of 2026-11-17
   rocks: ['sculpt_rock_slab', 'sculpt_rock_outcrop', 'sculpt_rock_standing', 'sculpt_rock_rubble'],
   boulders: ['sculpt_rock_boulder_a', 'sculpt_rock_boulder_b'],
@@ -77,21 +81,30 @@ export const SCULPT_TYPES = {
   // broad flat face, the paint reads grey next to the old warm cream — the face is the companion's charm (REVIEW.md)
   dango: ['sculpt_dango'], gohei: ['sculpt_prop_gohei'], broom: ['sculpt_prop_broom'], hip_lantern: ['sculpt_hip_lantern'],
   earth_column: ['sculpt_earth_column_a', 'sculpt_earth_column_b', 'sculpt_earth_column_c', 'sculpt_earth_rubble'],
+  // foes and wildlife sculpted on the pack skeletons (round art-creatures, tools/sculpt/assets/{stag_frost,…}.mjs +
+  // beast_kit.mjs post), swapped in by actors/creature.js KIT_OWN / KIT_BODY; off -> the pack bodies as before. Their
+  // COLOR_0 is the kit's skinned output (like the hen's): lifted once at load by fixSculptColours
+  creatures: ['sculpt_froststag', 'sculpt_embersnake', 'sculpt_wolf_wild', 'sculpt_bat_star',
+    'sculpt_froststag_lo', 'sculpt_embersnake_lo', 'sculpt_wolf_wild_lo', 'sculpt_bat_star_lo'],
   // the activity props (round art-props, tools/sculpt/assets/props_activity_lib.mjs; gameplay/errands-props.js sculptedProp):
   // the landmark puzzles' briar thicket, rubble heap and pack chest (+ lid), the broom courses' witch's ring gate, the
   // roadside errands' felt hat, easel, stove, handcart and sitting stone; vertex colours on every LOD
   'props-activity': ['sculpt_briar_thicket', 'sculpt_rubble_heap', 'sculpt_chest_pack', 'sculpt_chest_pack_lid', 'sculpt_ring_willow',
     'sculpt_hat_felt', 'sculpt_easel_painter', 'sculpt_stove_iron', 'sculpt_cart_hand', 'sculpt_seat_stone'],
 };
-export const SCULPT_DEFAULT = ['stone_lantern', 'komainu', 'kitsune', 'great_lantern', 'rockfam', 'drywall', 'mill', 'landmarks', 'pot', 'barrel', 'bucket', 'pumpkin',
-  'jar', 'cart', 'hen', 'gohei', 'broom', 'hip_lantern', 'earth_column', 'props-activity'];
+// sculpts built twice (full body / *_lo at about a third of the triangles): each tier loads only its own; the creature
+// code falls back to the other if the tier changes later (actors/creature.js kitPick)
+const SCULPT_LO = new Set(['sculpt_froststag_lo', 'sculpt_embersnake_lo', 'sculpt_wolf_wild_lo', 'sculpt_bat_star_lo']);
+const SCULPT_HI = new Set([...SCULPT_LO].map((id) => id.slice(0, -3)));
+export const SCULPT_DEFAULT = ['stone_lantern', 'komainu', 'kitsune', 'great_lantern', 'rockfam', 'drywall', 'mill', 'landmarks', 'ground', 'pot', 'barrel', 'bucket', 'pumpkin',
+  'jar', 'cart', 'hen', 'gohei', 'broom', 'hip_lantern', 'earth_column', 'creatures', 'props-activity'];
 // sculpt GLBs whose COLOR_0 was rewritten by the asset's own post step (dango.mjs post, gohei.mjs / hip_lantern.mjs --split /
 // --post: sRGB paint -> linear once) — measured single-encoded, so fixSculptColours must leave them alone
 // facet-kit GLBs (tools/sculpt/assets/rock_facet.mjs) write linear COLOR_0 once as well, and so does the landmark driver
 // (tools/sculpt/assets/landmarks_lib.mjs vcAll: the kit's bakeVertexColors, sRGB paint -> linear once), and the activity
 // props (tools/sculpt/assets/props_activity_lib.mjs: the facet kit's writer)
 const SCULPT_VC_OK = new Set(['sculpt_dango', 'sculpt_prop_gohei', 'sculpt_hip_lantern', ...SCULPT_TYPES.rockfam, ...SCULPT_TYPES.drywall, ...SCULPT_TYPES.mill,
-  ...SCULPT_TYPES.landmarks, ...SCULPT_TYPES['props-activity']]);
+  ...SCULPT_TYPES.landmarks, ...SCULPT_TYPES.ground, ...SCULPT_TYPES['props-activity']]);
 function sculptSwitch(G) {
   const p = G.params?.sculpt;
   const types = new Set(p === '0' ? [] : p === 'all' ? Object.keys(SCULPT_TYPES) : !p || p === '1' ? SCULPT_DEFAULT : String(p).split(',').map((s) => s.trim()).filter((s) => SCULPT_TYPES[s]));
@@ -354,8 +367,10 @@ export function createAssets(G) {
       await manifestP;
       if (opts.manifestOnly) return;
       // sculpted objects whose type is switched off are not loaded at all (?sculpt=0 boots exactly as before)
+      const loTier = !!G.quality?.mobile || G.quality?.name === 'low';
       const ids = Object.keys(manifest).filter((id) => manifest[id].type === 'model' && manifest[id].preload !== false
-        && (!G.sculpt.typeOf(id) || G.sculpt.on(G.sculpt.typeOf(id))));
+        && (!G.sculpt.typeOf(id) || G.sculpt.on(G.sculpt.typeOf(id)))
+        && !(loTier ? SCULPT_HI.has(id) : SCULPT_LO.has(id)));
       let done = 0;
       await Promise.all(ids.map((id) => api.load(id).then(() => progress?.(++done / ids.length))));
       progress?.(1);

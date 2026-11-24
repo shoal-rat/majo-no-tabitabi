@@ -16,6 +16,7 @@ import { buildWaysides } from './builders/journey-waysides.js';
 import { buildPracticeField } from './builders/practice-field.js';
 import { buildLandmarks } from './builders/landmarks.js';
 import { buildTrialBasin } from './builders/trial-basin.js';
+import { buildTrialPaving } from './builders/trial-paving.js';
 import { buildJourneyRooms } from './builders/journey-rooms.js';
 import { buildBellcrown,buildEastTown } from './builders/bellcrown.js';
 import { createCityMist } from './city-mist.js';
@@ -215,7 +216,7 @@ export const structuresSystem = {
       await p;
       tRes = performance.now();
     };
-    for (const [name, fn] of [['waysides',buildWaysides],['trialBasin',buildTrialBasin],['homes',buildJourneyRooms],['peacefulCountry',buildEastTown],['landOfMages',buildBellcrown],['practiceField',buildPracticeField],['landmarks',async(c)=>{S.landmarks=await buildLandmarks(c);}]]) {
+    for (const [name, fn] of [['waysides',buildWaysides],['trialBasin',buildTrialBasin],['trialPaving',buildTrialPaving],['homes',buildJourneyRooms],['peacefulCountry',buildEastTown],['landOfMages',buildBellcrown],['practiceField',buildPracticeField],['landmarks',async(c)=>{S.landmarks=await buildLandmarks(c);}]]) {
       try { await fn(ctx); } catch (e) { G.reportError('structures:' + name, e); }
       await ctx.step(name + ':done');
     }
