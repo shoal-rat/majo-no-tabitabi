@@ -1,4 +1,4 @@
-// The title looks out over the Land of Mages from the western approach.
+// The title background: Elaina banks through a sunlit street of the City of Magic (tools/trailer/shots/readme/title-still.js).
 import { G } from '../core/game.js';
 import { t, has } from '../core/i18n.js';
 import { K, el, tel, fmtTime, hintLine, pushModal, popModal, sfx, codeLabel, noteSelfUnlock } from './dom.js';
@@ -8,7 +8,7 @@ import { navList, openSheet, confirmBox } from './panels.js';
 import { isIOS, standalone } from './touchenv.js';
 
 addCss(`
-.mv-title {pointer-events:auto;opacity:0;transition:opacity .55s;color:var(--star);background:#4d6271 url("assets/textures/journey/magic-country-title.webp") center 45% / cover no-repeat;}
+.mv-title {pointer-events:auto;opacity:0;transition:opacity .55s;color:var(--star);background:#514c45 url("assets/textures/journey/magic-country-title.webp") 60% 45% / cover no-repeat;}
 .mv-title.on {opacity:1;}
 .mv-title.out {opacity:0;pointer-events:none;}
 .tt-wash {position:absolute;inset:0;background:radial-gradient(ellipse 46% 56% at 20% 50%,rgba(8,12,28,.42),rgba(8,12,28,0) 72%),linear-gradient(90deg,rgba(10,16,32,.72),rgba(14,22,40,.42) 32%,rgba(14,22,40,0) 62%),linear-gradient(0deg,rgba(8,12,26,.7),rgba(8,12,26,0) 34%);}
