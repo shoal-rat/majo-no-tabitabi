@@ -49,13 +49,27 @@ function walk(dir, out = []) {
   return out;
 }
 
+/** JS source without its comments (string and template literals kept): dev notes in a locale file never reach the screen. */
+function stripComments(src) {
+  let out = '', q = null;
+  for (let i = 0; i < src.length; i++) {
+    const c = src[i];
+    if (q) { out += c; if (c === '\\') out += src[++i] ?? ''; else if (c === q) q = null; continue; }
+    if (c === '"' || c === "'" || c === '`') { q = c; out += c; continue; }
+    if (c === '/' && src[i + 1] === '/') { while (i < src.length && src[i] !== '\n') i++; out += '\n'; continue; }
+    if (c === '/' && src[i + 1] === '*') { const e = src.indexOf('*/', i + 2); i = e < 0 ? src.length : e + 1; continue; }
+    out += c;
+  }
+  return out;
+}
+
 /** Every character the game can put on screen in its own faces, sorted. */
 function wanted() {
   const set = new Set();
   for (let c = 0x20; c < 0x7f; c++) set.add(String.fromCharCode(c));
   for (const c of EXTRA) set.add(c);
   let text = '';
-  for (const f of walk(path.join(ROOT, 'src/locales'))) text += fs.readFileSync(f, 'utf8');
+  for (const f of walk(path.join(ROOT, 'src/locales'))) text += stripComments(fs.readFileSync(f, 'utf8'));
   try { for (const r of Object.values(JSON.parse(fs.readFileSync(path.join(ROOT, 'assets/manifest.json'), 'utf8')))) text += (r.author || '') + (r.license || ''); } catch (e) { /* credits optional */ }
   for (const c of text) if (c.codePointAt(0) >= 0x80 && !/\p{Cc}|\p{Cf}|\p{Zl}|\p{Zp}/u.test(c)) set.add(c);
   return [...set].sort();
