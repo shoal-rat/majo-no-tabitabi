@@ -297,7 +297,8 @@ export function buildSetpieces(G, root) {
       const B = newBake();
       const pool = poolOf(W, l);
       const dx = pool.x - l.x, dz = pool.z - l.z, dl = Math.hypot(dx, dz) || 1, ux = dx / dl, uz = dz / dl, vx = -uz, vz = ux;
-      const g = W.heightAt(l.x, l.z);
+      // the crag's height from the natural hillside: the pool's hollow (world/ground.js poolBed) reaches under its foot
+      const g = (W.naturalHeightAt || W.heightAt)(l.x, l.z);
       const top = Math.max(g, pool.level) + 24;
       // the crag: an arc of tall stratified masses behind the pool, a notch where the water comes over
       for (let k = -3; k <= 3; k++) {

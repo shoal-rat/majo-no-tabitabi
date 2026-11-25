@@ -63,7 +63,7 @@ export function resolveAt(lmId, rec, out = new THREE.Vector3()) {
       // world/landforms/setpieces.js: the crag lip sits 4 m behind the landmark point, 3 m under the crag top
       const dx = p.x - l.x, dz = p.z - l.z, dl = Math.hypot(dx, dz) || 1;
       x = l.x - dx / dl * 4; z = l.z - dz / dl * 4;
-      y = Math.max(W.heightAt(l.x, l.z), p.level) + 21 + dy;
+      y = Math.max((W.naturalHeightAt || W.heightAt)(l.x, l.z), p.level) + 21 + dy;   // as setpieces.js sizes the crag
     }
   } else if (mode === 'clear') {
     // climb out of whatever stands here (tor blocks, a fallen trunk, a cart): first free height, then dy above it

@@ -19,10 +19,11 @@ export function poolSite(l, h) {
   let x = l.x, z = l.z;
   const r = l.kind === 'tarn' ? 7.5 : 5.5;
   if (l.kind === 'cragFalls') {
-    // downhill from the crag foot
+    // downhill from the crag foot, under the fall: its ribbon (setpieces.js) comes down 0.2..3 m out from the crag point,
+    // so the disc (r + 0.9 = 6.4 m) reaches back to ~2 m from it and the fall lands in the water
     const e = 6, gx = h(l.x + e, l.z) - h(l.x - e, l.z), gz = h(l.x, l.z + e) - h(l.x, l.z - e);
     const gl = Math.hypot(gx, gz) || 1;
-    x = l.x - gx / gl * 17; z = l.z - gz / gl * 17;
+    x = l.x - gx / gl * 8.5; z = l.z - gz / gl * 8.5;
   }
   let lip = 1e9;
   for (let k = 0; k < 48; k++) {
