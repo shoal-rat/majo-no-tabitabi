@@ -7,7 +7,7 @@
 //   SMAA       : round 2, on top of MSAA (high): cleans the alpha-tested foliage / thin-geometry edges MSAA leaves.
 //   FXAA       : only when the scene target has no MSAA (low quality).
 import * as THREE from 'three';
-import { CLEAR_CLOUD_BASE, CLOUD_THICKNESS, CLOUD_SLICES_GLSL } from './cloud-layer.js';
+import { CLEAR_CLOUD_BASE, CLOUD_THICKNESS, CLOUD_SLICES_GLSL, CLOUD_RESOLVE_GLSL } from './cloud-layer.js';
 import { createCloudShafts, BEAM_UPSAMPLE_GLSL } from './cloud-shafts.js';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { Pass, FullScreenQuad } from 'three/addons/postprocessing/Pass.js';
@@ -22,6 +22,7 @@ const FS_VERT = /* glsl */`varying vec2 vUv; void main() { vUv = uv; gl_Position
 const COMP_FRAG = /* glsl */`
 #include <packing>
 ${CLOUD_SLICES_GLSL}
+${CLOUD_RESOLVE_GLSL}
 ${BEAM_UPSAMPLE_GLSL}
 uniform sampler2D tScene, tDepth, tAO, tShafts;
 uniform sampler2D tCloudLight,tCloudDepth;
@@ -85,9 +86,9 @@ void main() {
     float b=(uCloudBase+${CLOUD_THICKNESS.toFixed(1)}-uCloudCamera[3].y)/dy;
     float lo=max(0.,min(a,b)), hi=min(3200.,max(a,b));
     if(hi>lo && st>lo) {
-      vec4 cloud=texture2D(tCloudLight,vUv);
+      vec4 cloud=cloudResolve(tCloudLight,vUv);
       float u=clamp((st-lo)/(hi-lo),0.,1.);
-      vec4 depths=texture2D(tCloudDepth,vUv);
+      vec4 depths=cloudResolve(tCloudDepth,vUv);
       vec4 deltas=max(vec4(0.),depths-vec4(0.,depths.xyz));
       vec4 cuts=cloudSlices(hi-lo,lo), starts=vec4(0.,cuts.xyz);
       float od=dot(deltas,clamp((vec4(u)-starts)/max(cuts-starts,vec4(.00001)),0.,1.));

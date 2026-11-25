@@ -7,7 +7,7 @@
 //        dark Moon disc with faint surface detail that truly occludes it, the golden ring, its beads and the diamond glint.
 import * as THREE from 'three';
 import { U, GLSL_ATMO, RS, RM } from './atmo.js';
-import { CLEAR_CLOUD_BASE, CLOUD_THICKNESS } from './cloud-layer.js';
+import { CLEAR_CLOUD_BASE, CLOUD_THICKNESS, CLOUD_RESOLVE_GLSL } from './cloud-layer.js';
 import { cloudFieldUniforms } from './cloud-field.js';
 import { cloudNoise, CLOUD_GLSL } from './cloudVolume.js';
 import { noiseTexture } from './noise.js';
@@ -180,6 +180,7 @@ const FRAG_HIGH = /* glsl */`
 ${COMMON}
 uniform sampler2D uLow;
 uniform vec2 uRes;
+${CLOUD_RESOLVE_GLSL}
 vec3 hash33(vec3 p) {
   p = fract(p * vec3(0.1031, 0.1030, 0.0973));
   p += dot(p, p.yxz + 33.33);
@@ -198,7 +199,7 @@ float stars(vec3 d, float scale, float density) {
 }
 void main() {
   vec3 d = normalize(vDir);
-  vec4 low = texture2D(uLow, gl_FragCoord.xy / uRes);
+  vec4 low = cloudResolve(uLow, gl_FragCoord.xy / uRes);
   vec3 col = low.rgb;
   float cloud = low.a;
   float el = d.y;
