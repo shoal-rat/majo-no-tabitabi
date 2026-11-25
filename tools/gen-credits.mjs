@@ -116,7 +116,8 @@ for (const [name, rows] of [...groupBy(buckets.cc0, cc0Author)].sort(([a], [b]) 
 }
 out.push('', '## 同人角色与项目美术', '',
   '- 伊蕾娜的学徒装与旅行装、芙兰、沙耶等八个演员模型由项目的角色工具制作。几何、服装和配色依原作设计进行同人改编。人形骨架源于 pixiv 的 CC0 样例 HairSample_Female。原作角色设计归相应权利人。[角色生成工具](tools/journey/build-cast.mjs) · [pixiv 样例授权](https://vroid.pixiv.help/hc/en-us/articles/4402614652569)',
-  '- 基础项目的旅行装、两套水着与衣装预览分别记录了网格、纹样、骨架或渲染来源。水着设计参考伊蕾娜相关角色商品。中文字标经图像生成、抠图和逐字校对。早期天空绘景使用了图像生成辅助。[服装制作工具](tools/costume/) · [字标与天空的素材记录](assets/manifest.json)',
+  '- 基础项目的旅行装与两套水着分别记录了网格、纹样或骨架来源。水着设计参考伊蕾娜相关角色商品。中文字标经图像生成、抠图和逐字校对。早期天空绘景使用了图像生成辅助。[服装制作工具](tools/costume/) · [字标与天空的素材记录](assets/manifest.json)',
+  '- 对话立绘与衣装卡是以图像模型绘制的同人插画。服装与配色以游戏内角色模型的渲染为参考，画风统一参照伊蕾娜的第一张立绘，再经抠图与逐张挑选。未使用任何官方图像作为输入。原作角色设计归相应权利人。[立绘与衣装卡的素材记录](assets/manifest.json)',
   '- 清单明确标为 CC0 的项目自制基础模型、道具和动作共 ' + buckets.projectCC0.length + ' 项。这些条目保留各自的许可和制作说明。[自制模型生成器](tools/sculpt/) · [动作工具](tools/anim/)',
 );
 const projectGroups = groupBy(buckets.project.filter(e => !/^bgm_/.test(e.id)), e => e.license);

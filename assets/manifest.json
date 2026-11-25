@@ -19872,27 +19872,29 @@
   "file": "textures/ui/ui_outfit_swim_a.webp",
   "type": "texture",
   "preload": false,
-  "license": "In-game render of the project heroine; see matching character asset for visual reference and credits.",
+  "license": "original (generated)",
+  "author": "Majo no Tabitabi fan game (painted with an image model, then keyed, framed and checked by hand)",
+  "generated": true,
   "size_px": [
    384,
    640
   ],
-  "author": "rendered for this project from the game itself (tools/costume/wardrobe-pics.mjs)",
-  "source": "tools/costume/wardrobe-pics.mjs: Elaina in the \"swim_a\" outfit (src/data/outfits.js), front three-quarter, cut out by difference matting",
-  "notes": "picture on the 衣装 page of the pause scroll (src/ui/wardrobe.js); transparent around her, no text; the page draws the frame. Re-make after a wardrobe rebuild."
+  "source": "Generated full-figure painting of Elaina in the 潮祭 swimsuit (post-game), fan art of the anime character; image model output (Codex CLI image tool) on a #00FF00 ground, chroma-keyed with edge unmixing (the sheer beach shirt keeps its partial alpha). The outfit is copied from a render of this game's 3D model (tools/costume/wardrobe-pics.mjs shots), the style from the Elaina anchor portrait; no official art was used as input. Crown at y 95, soles at y 634.",
+  "notes": "picture on the 衣装 page of the pause scroll (src/ui/wardrobe.js); transparent around her, no text; the page draws the frame. Painted art: re-running tools/costume/wardrobe-pics.mjs would replace it with a model render."
  },
  "ui_outfit_swim_b": {
   "file": "textures/ui/ui_outfit_swim_b.webp",
   "type": "texture",
   "preload": false,
-  "license": "In-game render of the project heroine; see matching character asset for visual reference and credits.",
+  "license": "original (generated)",
+  "author": "Majo no Tabitabi fan game (painted with an image model, then keyed, framed and checked by hand)",
+  "generated": true,
   "size_px": [
    384,
    640
   ],
-  "author": "rendered for this project from the game itself (tools/costume/wardrobe-pics.mjs)",
-  "source": "tools/costume/wardrobe-pics.mjs: Elaina in the \"swim_b\" outfit (src/data/outfits.js), front three-quarter, cut out by difference matting",
-  "notes": "picture on the 衣装 page of the pause scroll (src/ui/wardrobe.js); transparent around her, no text; the page draws the frame. Re-make after a wardrobe rebuild."
+  "source": "Generated full-figure painting of Elaina in the 暮海 swimsuit (post-game), fan art of the anime character; image model output (Codex CLI image tool) on a #00FF00 ground, chroma-keyed with edge unmixing. The outfit is copied from a render of this game's 3D model (tools/costume/wardrobe-pics.mjs shots), the style from the Elaina anchor portrait; no official art was used as input. Crown at y 95, soles at y 634.",
+  "notes": "picture on the 衣装 page of the pause scroll (src/ui/wardrobe.js); transparent around her, no text; the page draws the frame. Painted art: re-running tools/costume/wardrobe-pics.mjs would replace it with a model render."
  },
  "sculpt_prop_broom": {
   "file": "models/sculpt/broom.glb",
@@ -22209,27 +22211,29 @@
   "file": "textures/ui/ui_outfit_apprentice.webp",
   "type": "texture",
   "preload": false,
-  "license": "In-game render of the project heroine; see matching character asset for visual reference and credits.",
+  "license": "original (generated)",
+  "author": "Majo no Tabitabi fan game (painted with an image model, then keyed, framed and checked by hand)",
+  "generated": true,
   "size_px": [
    384,
    640
   ],
-  "author": "rendered for this project from the game itself (tools/costume/wardrobe-pics.mjs)",
-  "source": "tools/costume/wardrobe-pics.mjs: Elaina in the \"apprentice\" outfit (src/data/outfits.js), front three-quarter, cut out by difference matting",
-  "notes": "picture on the 衣装 page of the pause scroll (src/ui/wardrobe.js); transparent around her, no text; the page draws the frame. Re-make after a wardrobe rebuild."
+  "source": "Generated full-figure painting of Elaina in her everyday clothes, fan art of the anime character; image model output (Codex CLI image tool) on a #00FF00 ground, chroma-keyed with edge unmixing. The outfit is copied from a render of this game's 3D model (tools/costume/wardrobe-pics.mjs shots), the style from the Elaina anchor portrait; no official art was used as input. Crown at y 95, soles at y 634.",
+  "notes": "picture on the 衣装 page of the pause scroll (src/ui/wardrobe.js); transparent around her, no text; the page draws the frame. Painted art: re-running tools/costume/wardrobe-pics.mjs would replace it with a model render."
  },
  "ui_outfit_elaina": {
   "file": "textures/ui/ui_outfit_elaina.webp",
   "type": "texture",
   "preload": false,
-  "license": "In-game render of the project heroine; see matching character asset for visual reference and credits.",
+  "license": "original (generated)",
+  "author": "Majo no Tabitabi fan game (painted with an image model, then keyed, framed and checked by hand)",
+  "generated": true,
   "size_px": [
    384,
    640
   ],
-  "author": "rendered for this project from the game itself (tools/costume/wardrobe-pics.mjs)",
-  "source": "tools/costume/wardrobe-pics.mjs: Elaina in the \"elaina\" outfit (src/data/outfits.js), front three-quarter, cut out by difference matting",
-  "notes": "picture on the 衣装 page of the pause scroll (src/ui/wardrobe.js); transparent around her, no text; the page draws the frame. Re-make after a wardrobe rebuild."
+  "source": "Generated full-figure painting of Elaina in her witch's outfit, fan art of the anime character; image model output (Codex CLI image tool) on a #00FF00 ground, chroma-keyed with edge unmixing. The outfit is copied from a render of this game's 3D model (tools/costume/wardrobe-pics.mjs shots), the style from the Elaina anchor portrait; no official art was used as input. Crown at y 95, soles at y 634.",
+  "notes": "picture on the 衣装 page of the pause scroll (src/ui/wardrobe.js); transparent around her, no text; the page draws the frame. Painted art: re-running tools/costume/wardrobe-pics.mjs would replace it with a model render."
  },
  "font_zh_notoserif_ui": {
   "file": "fonts/zh-CN/NotoSerifSC-UI.woff2",
@@ -22245,105 +22249,113 @@
   "file": "textures/ui/ui_portrait_elaina_apprentice.webp",
   "type": "texture",
   "preload": false,
-  "license": "In-game render of a project character; see the matching character asset for visual reference and credits.",
+  "license": "original (generated)",
+  "author": "Majo no Tabitabi fan game (painted with an image model, then keyed, framed and checked by hand)",
+  "generated": true,
   "size_px": [
    320,
    400
   ],
-  "author": "rendered for this project from the game itself (tools/costume/portraits.mjs)",
-  "source": "tools/costume/portraits.mjs: \"elaina_apprentice\" head and shoulders, three-quarter, lens 28 deg, cut out by difference matting",
-  "notes": "dialogue portrait (src/ui/dialogue.js, the arched cameo); transparent around the figure, no text; the page draws the frame. Re-make after the character changes."
+  "source": "Generated 2D portrait of Elaina at fourteen as Fran's apprentice (no hat, no robe), fan art of the anime character; image model output (Codex CLI image tool) on a #00FF00 ground, chroma-keyed with edge unmixing. Design references were renders of this game's own 3D model (tools/costume/portraits.mjs shots) plus the Elaina anchor portrait for style; no official art was used as input. Framed to one face scale for every speaker (eye-to-chin 15% of the frame, eyes at 44%).",
+  "notes": "dialogue portrait (src/ui/dialogue.js, the arched cameo); transparent around the figure, no text; the page draws the frame. Painted art: re-running tools/costume/portraits.mjs would replace it with a model render."
  },
  "ui_portrait_elaina_elaina": {
   "file": "textures/ui/ui_portrait_elaina_elaina.webp",
   "type": "texture",
   "preload": false,
-  "license": "In-game render of a project character; see the matching character asset for visual reference and credits.",
+  "license": "original (generated)",
+  "author": "Majo no Tabitabi fan game (painted with an image model, then keyed, framed and checked by hand)",
+  "generated": true,
   "size_px": [
    320,
    400
   ],
-  "author": "rendered for this project from the game itself (tools/costume/portraits.mjs)",
-  "source": "tools/costume/portraits.mjs: \"elaina_elaina\" head and shoulders, three-quarter, lens 28 deg, cut out by difference matting",
-  "notes": "dialogue portrait (src/ui/dialogue.js, the arched cameo); transparent around the figure, no text; the page draws the frame. Re-make after the character changes."
+  "source": "Generated 2D portrait of Elaina in her witch's robe and hat (the style anchor every other picture was painted to), fan art of the anime character; image model output (Codex CLI image tool) on a #00FF00 ground, chroma-keyed with edge unmixing. Design references were renders of this game's own 3D model (tools/costume/portraits.mjs shots) plus the Elaina anchor portrait for style; no official art was used as input. Framed to one face scale for every speaker (eye-to-chin 15% of the frame, eyes at 44%).",
+  "notes": "dialogue portrait (src/ui/dialogue.js, the arched cameo); transparent around the figure, no text; the page draws the frame. Painted art: re-running tools/costume/portraits.mjs would replace it with a model render."
  },
  "ui_portrait_fran": {
   "file": "textures/ui/ui_portrait_fran.webp",
   "type": "texture",
   "preload": false,
-  "license": "In-game render of a project character; see the matching character asset for visual reference and credits.",
+  "license": "original (generated)",
+  "author": "Majo no Tabitabi fan game (painted with an image model, then keyed, framed and checked by hand)",
+  "generated": true,
   "size_px": [
    320,
    400
   ],
-  "author": "rendered for this project from the game itself (tools/costume/portraits.mjs)",
-  "source": "tools/costume/portraits.mjs: \"fran\" head and shoulders, three-quarter, lens 28 deg, cut out by difference matting",
-  "notes": "dialogue portrait (src/ui/dialogue.js, the arched cameo); transparent around the figure, no text; the page draws the frame. Re-make after the character changes."
+  "source": "Generated 2D portrait of Fran, the Stardust Witch, fan art of the anime character; image model output (Codex CLI image tool) on a #00FF00 ground, chroma-keyed with edge unmixing. Design references were renders of this game's own 3D model (tools/costume/portraits.mjs shots) plus the Elaina anchor portrait for style; no official art was used as input. Framed to one face scale for every speaker (eye-to-chin 15% of the frame, eyes at 44%).",
+  "notes": "dialogue portrait (src/ui/dialogue.js, the arched cameo); transparent around the figure, no text; the page draws the frame. Painted art: re-running tools/costume/portraits.mjs would replace it with a model render."
  },
  "ui_portrait_saya": {
   "file": "textures/ui/ui_portrait_saya.webp",
   "type": "texture",
   "preload": false,
-  "license": "In-game render of a project character; see the matching character asset for visual reference and credits.",
+  "license": "original (generated)",
+  "author": "Majo no Tabitabi fan game (painted with an image model, then keyed, framed and checked by hand)",
+  "generated": true,
   "size_px": [
    320,
    400
   ],
-  "author": "rendered for this project from the game itself (tools/costume/portraits.mjs)",
-  "source": "tools/costume/portraits.mjs: \"saya\" head and shoulders, three-quarter, lens 28 deg, cut out by difference matting",
-  "notes": "dialogue portrait (src/ui/dialogue.js, the arched cameo); transparent around the figure, no text; the page draws the frame. Re-make after the character changes."
+  "source": "Generated 2D portrait of Saya, fan art of the anime character; image model output (Codex CLI image tool) on a #00FF00 ground, chroma-keyed with edge unmixing. Design references were renders of this game's own 3D model (tools/costume/portraits.mjs shots) plus the Elaina anchor portrait for style; no official art was used as input. Framed to one face scale for every speaker (eye-to-chin 15% of the frame, eyes at 44%).",
+  "notes": "dialogue portrait (src/ui/dialogue.js, the arched cameo); transparent around the figure, no text; the page draws the frame. Painted art: re-running tools/costume/portraits.mjs would replace it with a model render."
  },
  "ui_portrait_mother": {
   "file": "textures/ui/ui_portrait_mother.webp",
   "type": "texture",
   "preload": false,
-  "license": "In-game render of a project character; see the matching character asset for visual reference and credits.",
+  "license": "original (generated)",
+  "author": "Majo no Tabitabi fan game (painted with an image model, then keyed, framed and checked by hand)",
+  "generated": true,
   "size_px": [
    320,
    400
   ],
-  "author": "rendered for this project from the game itself (tools/costume/portraits.mjs)",
-  "source": "tools/costume/portraits.mjs: \"mother\" head and shoulders, three-quarter, lens 28 deg, cut out by difference matting",
-  "notes": "dialogue portrait (src/ui/dialogue.js, the arched cameo); transparent around the figure, no text; the page draws the frame. Re-make after the character changes."
+  "source": "Generated 2D portrait of Elaina's mother, fan art of the anime character; image model output (Codex CLI image tool) on a #00FF00 ground, chroma-keyed with edge unmixing. Design references were renders of this game's own 3D model (tools/costume/portraits.mjs shots) plus the Elaina anchor portrait for style; no official art was used as input. Framed to one face scale for every speaker (eye-to-chin 15% of the frame, eyes at 44%).",
+  "notes": "dialogue portrait (src/ui/dialogue.js, the arched cameo); transparent around the figure, no text; the page draws the frame. Painted art: re-running tools/costume/portraits.mjs would replace it with a model render."
  },
  "ui_portrait_father": {
   "file": "textures/ui/ui_portrait_father.webp",
   "type": "texture",
   "preload": false,
-  "license": "In-game render of a project character; see the matching character asset for visual reference and credits.",
+  "license": "original (generated)",
+  "author": "Majo no Tabitabi fan game (painted with an image model, then keyed, framed and checked by hand)",
+  "generated": true,
   "size_px": [
    320,
    400
   ],
-  "author": "rendered for this project from the game itself (tools/costume/portraits.mjs)",
-  "source": "tools/costume/portraits.mjs: \"father\" head and shoulders, three-quarter, lens 28 deg, cut out by difference matting",
-  "notes": "dialogue portrait (src/ui/dialogue.js, the arched cameo); transparent around the figure, no text; the page draws the frame. Re-make after the character changes."
+  "source": "Generated 2D portrait of Elaina's father (mirrored so he faces the text), fan art of the anime character; image model output (Codex CLI image tool) on a #00FF00 ground, chroma-keyed with edge unmixing. Design references were renders of this game's own 3D model (tools/costume/portraits.mjs shots) plus the Elaina anchor portrait for style; no official art was used as input. Framed to one face scale for every speaker (eye-to-chin 15% of the frame, eyes at 44%).",
+  "notes": "dialogue portrait (src/ui/dialogue.js, the arched cameo); transparent around the figure, no text; the page draws the frame. Painted art: re-running tools/costume/portraits.mjs would replace it with a model render."
  },
  "ui_portrait_exam": {
   "file": "textures/ui/ui_portrait_exam.webp",
   "type": "texture",
   "preload": false,
-  "license": "In-game render of a project character; see the matching character asset for visual reference and credits.",
+  "license": "original (generated)",
+  "author": "Majo no Tabitabi fan game (painted with an image model, then keyed, framed and checked by hand)",
+  "generated": true,
   "size_px": [
    320,
    400
   ],
-  "author": "rendered for this project from the game itself (tools/costume/portraits.mjs)",
-  "source": "tools/costume/portraits.mjs: \"exam\" head and shoulders, three-quarter, lens 28 deg, cut out by difference matting",
-  "notes": "dialogue portrait (src/ui/dialogue.js, the arched cameo); transparent around the figure, no text; the page draws the frame. Re-make after the character changes."
+  "source": "Generated 2D portrait of the Robetta witch who turns Elaina down, fan art of the anime character; image model output (Codex CLI image tool) on a #00FF00 ground, chroma-keyed with edge unmixing. Design references were renders of this game's own 3D model (tools/costume/portraits.mjs shots) plus the Elaina anchor portrait for style; no official art was used as input. Framed to one face scale for every speaker (eye-to-chin 15% of the frame, eyes at 44%).",
+  "notes": "dialogue portrait (src/ui/dialogue.js, the arched cameo); transparent around the figure, no text; the page draws the frame. Painted art: re-running tools/costume/portraits.mjs would replace it with a model render."
  },
  "ui_portrait_innkeeper": {
   "file": "textures/ui/ui_portrait_innkeeper.webp",
   "type": "texture",
   "preload": false,
-  "license": "In-game render of a project character; see the matching character asset for visual reference and credits.",
+  "license": "original (generated)",
+  "author": "Majo no Tabitabi fan game (painted with an image model, then keyed, framed and checked by hand)",
+  "generated": true,
   "size_px": [
    320,
    400
   ],
-  "author": "rendered for this project from the game itself (tools/costume/portraits.mjs)",
-  "source": "tools/costume/portraits.mjs: \"innkeeper\" head and shoulders, three-quarter, lens 28 deg, cut out by difference matting",
-  "notes": "dialogue portrait (src/ui/dialogue.js, the arched cameo); transparent around the figure, no text; the page draws the frame. Re-make after the character changes."
+  "source": "Generated 2D portrait of the innkeeper in the Country of Mages, fan art of the anime character; image model output (Codex CLI image tool) on a #00FF00 ground, chroma-keyed with edge unmixing. Design references were renders of this game's own 3D model (tools/costume/portraits.mjs shots) plus the Elaina anchor portrait for style; no official art was used as input. Framed to one face scale for every speaker (eye-to-chin 15% of the frame, eyes at 44%).",
+  "notes": "dialogue portrait (src/ui/dialogue.js, the arched cameo); transparent around the figure, no text; the page draws the frame. Painted art: re-running tools/costume/portraits.mjs would replace it with a model render."
  },
  "sculpt_rock_field": {
   "file": "models/sculpt/rock_field.glb",

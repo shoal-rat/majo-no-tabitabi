@@ -238,19 +238,34 @@ piece is drawn in code here and none reproduces either show's cards, logos or le
   city gets all its earlier stamps on the first region it enters.
 - **Ribbon bookmark**: a wine ribbon hangs over the grimoire page's top edge (`.mn-body::after`).
 
-### Dialogue portraits
-The cameo shows a head-and-shoulders picture of the speaker, rendered by the game itself from the character's own 3D
-model — never official art. `tools/costume/portraits.mjs` (+ `portraits.shot.js`) uses the wardrobe pictures' method:
-the figure and the lights on a layer of their own, the world hidden, drawn over a dark and a light flat ground, cut out by
-difference matting. Every speaker gets the same lens (28°), distance (2.6 m) and framing round the head bone, so all
-share one scale; Elaina looks to the right of her picture (she speaks from the left of the box), the others to the left.
-Out: `assets/textures/ui/ui_portrait_<id>.webp` (320×400, 9–21 KB, manifest `ui_portrait_<id>`, licence "In-game
-render"): `elaina_apprentice`, `elaina_elaina`, `fran`, `saya`, `mother`, `father`, `exam`, `innkeeper`.
+### Dialogue portraits (painted, 2026-11-25)
+The cameo shows a painted head-and-shoulders 立绘 of the speaker: a 2D anime illustration made with the Codex CLI image
+tool (the director's call), replacing the earlier renders of the 3D models. Out: `assets/textures/ui/ui_portrait_<id>.webp`
+(320×400 with alpha, 13–24 KB, manifest `ui_portrait_<id>`, licence "original (generated)", `generated: true`):
+`elaina_apprentice`, `elaina_elaina`, `fran`, `saya`, `mother`, `father`, `exam`, `innkeeper`.
 - `G.ui.portraitOf(who) -> url | null` (`dialogue.js portraitOf`): the manifest picture for a story speaker id; Elaina's
   follows `G.player.outfit` (the witch's robe when that outfit has none). `story/dialogue.js` passes it as
   `say({ portrait })`; speakers without a picture (roadside travellers, the narrator has no cameo) keep the glyph.
-- Re-run `node tools/costume/portraits.mjs [--only id,…]` after a character's look changes; `--no-shoot` re-cuts the
-  last shots (to change the crop: `ABOVE` / `BELOW` in the tool).
+
+**Making one (a new speaker, a redo).** The scripts live outside the repo; this is the recipe.
+- **Reference**: render the character's own model with `node tools/costume/portraits.mjs --only <id>`. Take
+  `.tmp/play/portraits/<id>_light.png` as the costume and colour reference. The tool also writes the webp, so restore the
+  painted file afterwards (`git checkout -- assets/textures/ui/`). Never feed official art or stills to the generator.
+- **Prompt**: name the anime (《魔女之旅》 / Wandering Witch: The Journey of Elaina) and the character; the director found this
+  much more accurate. Attach two images in this order: `-i` the style anchor (the `elaina_elaina` painting on its green
+  ground) and `-i` the model render, and say "image 1 is style and scale only, do not draw Elaina". Ask for:
+  - a 1024×1536 half-body to the waist, three-quarter view, a gentle expression, no hands in frame;
+  - one flat #00FF00 ground and no green anywhere in the character.
+  Make 2–3 candidates and check hands, hats and that the costume matches the model.
+- **Key**: the key colour is the border median; greenness g = G − max(R, B). The background is every strongly green region
+  touching the border, plus any green pocket larger than about 24 px. Give soft alpha only in a thin band next to it,
+  unmixed from the key colour and despilled, so greenish details inside the figure (teal eyes) survive.
+- **Frame**: one face scale for every speaker. Measure the eye line and the chin on the painting, then crop so
+  eye-to-chin = 15 % of the frame height with the eyes at 44 %. The generator's scale drifts about ±20 % between images.
+- **Facing**: Elaina looks to the right of her picture (she speaks from the left of the box) and the others to the left.
+  A speaker facing the wrong way may be mirrored if the costume is symmetric (the father is).
+- **Encode**: WebP q76, alpha q85, `-sharp_yuv`, at 320×400. Add the manifest row with `node tools/manifest-patch.mjs`,
+  then run `node tools/gen-credits.mjs`.
 
 ### Hooks kept
 Class names the acceptance scripts and other systems read are unchanged (`.mn-subtabs .st`, `.mn-list .scroll .mn-row`,
