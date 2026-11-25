@@ -84,20 +84,56 @@ export function createScenes(S) {
       i * 0.065 + 0.4,
       0,
     ).rotation.y = i * 0.2;
+  // the loose tiles on the open patch of the accident roof: the roof's own tile materials, lying on the plaster gable
+  // under the patch (world/builders/bellcrown.js accident()). Each stays on its side of the ridge: scattered [x, z, yaw]
+  // (metres / rad from the 'repair' anchor) -> gathered in two neat rows, so the path between lies in one roof plane.
+  // East of the ridge they avoid the spots where the broken fragments (bellcrown.js shards) break the surface:
+  // x 0.3-0.5 and 0.95-1.25 in three bands of z.
+  const accidentRoof = G.structures?.places?.accidentRoof;
   const broken = new T.Group();
   group.add(broken);
   const tiles = [];
+  const scattered = [
+      [-0.92, -0.35, 0.6],
+      [-0.58, 0.3, -0.4],
+      [-0.34, -0.75, 1.1],
+      [0.66, 0.28, -0.25],
+      [0.5, -0.6, 0.3],
+      [0.74, 0.8, 0.25],
+      [0.9, -0.62, -0.35],
+    ],
+    gathered = [
+      [-0.6, -0.35],
+      [-0.6, -0.05],
+      [-0.6, -0.65],
+      [0.72, -0.15],
+      [0.72, -0.45],
+      [0.72, 0.15],
+      [0.72, -0.75],
+    ];
   for (let i = 0; i < 7; i++) {
     const piece = mesh(
       broken,
       new T.BoxGeometry(0.36, 0.075, 0.25),
-      material(i % 2 ? 0x9a554f : 0xb47566, true),
+      accidentRoof?.tiles?.[i % 2] || material(i % 2 ? 0x9a554f : 0xb47566, true),
     );
-    const origin = V((i - 3) * 0.39, 0.04 + (i % 2) * 0.03, 0.22 * Math.sin(i * 2.1)),
-      dest = V(((i % 4) - 1.5) * 0.36, 0.08, Math.floor(i / 4) * 0.25 - 0.18);
-    tiles.push({ piece, origin, dest });
-    piece.position.copy(origin);
-    piece.rotation.y = Math.sin(i) * 0.8;
+    piece.castShadow = piece.receiveShadow = true;
+    // poses are set when the repair step begins (reset)
+    tiles.push({ piece, origin: V(), dest: V(), yaw: scattered[i][2], from: new T.Quaternion(), to: new T.Quaternion() });
+  }
+  const up = V(0, 1, 0),
+    roll = V(0, 0, 1),
+    tilt = new T.Quaternion();
+  // lay a tile flat on the patch: `at` comes in as the (x, z) it rests on and leaves as its centre; `q` = tilt to the
+  // roof plane x turn `yaw` within it
+  function lay(at, q, yaw) {
+    const half = 0.0375,
+      side = Math.sign(at.x) || 1,
+      a = Math.atan(accidentRoof.pitch);
+    tilt.setFromAxisAngle(roll, -side * a);
+    q.setFromAxisAngle(up, yaw).premultiply(tilt);
+    at.y = accidentRoof.patchY(broken.position.x + at.x) - broken.position.y + half * Math.cos(a);
+    at.x += side * half * Math.sin(a);
   }
   const demonstration = [];
   let key = '',
@@ -138,7 +174,18 @@ export function createScenes(S) {
     if (basket.visible) basket.position.copy(S.anchor('franLesson'));
     if (broken.visible) {
       broken.position.copy(S.anchor('repair'));
-      for (const { piece, origin } of tiles) piece.position.copy(origin);
+      tiles.forEach((tile, i) => {
+        tile.origin.set(scattered[i][0], 0.04, scattered[i][1]);
+        tile.dest.set(gathered[i][0], 0.04, gathered[i][1]);
+        tile.from.setFromAxisAngle(up, tile.yaw);
+        tile.to.identity();
+        if (accidentRoof?.patchY) {
+          lay(tile.origin, tile.from, tile.yaw);
+          lay(tile.dest, tile.to, 0);
+        }
+        tile.piece.position.copy(tile.origin);
+        tile.piece.quaternion.copy(tile.from);
+      });
     }
     if (course.visible)
       hoops.forEach(({ frame }, i) => {
@@ -271,10 +318,10 @@ export function createScenes(S) {
     if (!partial) return;
     repairT += dt;
     const k = Math.min(1, repairT / 1.1);
-    tiles.forEach(({ piece, origin, dest }, i) => {
+    tiles.forEach(({ piece, origin, dest, from, to }, i) => {
       piece.position.lerpVectors(origin, dest, k);
       piece.position.y += Math.sin(k * Math.PI) * (0.36 + i * 0.09);
-      piece.rotation.set(0, (1 - k) * Math.sin(i) * 0.8, 0);
+      piece.quaternion.slerpQuaternions(from, to, k);
     });
     if (k >= 1) {
       effect(broken.position, 0xb4e6ec, 0.6);

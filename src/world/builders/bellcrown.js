@@ -427,7 +427,11 @@ function accident(ctx, site) {
     },
     x: BELL.x + x,
     z: BELL.z + z,
-    top: H + h + w * 0.5 * slope + 0.09
+    top: H + h + w * 0.5 * slope + 0.09,
+    // the open patch shows the plaster gable; the loose tiles of the repair step (story/episode-scenes.js) lie on it
+    tiles: [plain, lightClay],
+    pitch: (w * 0.5 * slope) / ((w - 0.06) / 2),
+    patchY: (wx) => H + h + w * 0.5 * slope - entry.pitch * Math.abs(wx - entry.x)
   };
   entry.setRepaired(false);
   ctx.place('accidentRoof', entry);
