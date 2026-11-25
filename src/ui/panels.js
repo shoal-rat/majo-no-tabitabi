@@ -125,6 +125,9 @@ function settingRows() {
   if (touchRows) secs.splice(2, 0, touchRows);
   if (touchUI()) { const v = secs.find((x) => x.head === 'ui.settings.view'); if (v) v.rows = v.rows.filter((r) => r.k !== 'sens'); }
   else secs.push({ head: 'ui.settings.keys', rows: [...REBIND.map((k) => ({ k, label: 'ui.settings.key.' + k, type: 'key' })), { k: '_reset', label: 'ui.settings.keyReset', type: 'action' }] });
+  // Sprint: hold or toggle (its own small group, so the rows above are left alone)
+  secs.push({ head: 'ui.settings.movement', rows: [{ k: 'sprintMode', label: 'ui.settings.sprintMode', type: 'choice',
+    opts: () => [{ v: 'hold', l: t('ui.settings.sprintModeHold') }, { v: 'toggle', l: t('ui.settings.sprintModeToggle') }] }] });
   const locs = locales();
   if (locs.length > 1) secs.push({ head: 'ui.settings.lang', rows: [{ k: 'lang', label: 'ui.settings.lang', type: 'choice', opts: () => locales().map((l) => ({ v: l.code, l: l.name })) }] });
   return secs;
@@ -134,6 +137,8 @@ function settingRows() {
 // The first code of an action is its own key (shown in every hint); G.settings.keys = { action: code } holds the changes.
 // A key already used by another rebindable action is swapped over to it, so no two actions ever share one.
 const REBIND = ['forward', 'back', 'left', 'right', 'jump', 'descend', 'sprint', 'dodge', 'broom', 'interact', 'attack', 'cast', 'guard', 'heal', 'lock', 'summon', 'ultimate', 'wheel', 'map', 'journal', 'spellbook'];
+// Auto-forward goes through the same form: it starts unbound (an empty list) and the player picks the key
+REBIND.push('autoForward');
 const DEFAULT_LISTS = Object.fromEntries(REBIND.map((k) => [k, (BINDINGS[k] || []).slice()]));
 const DEFAULT_KEYS = Object.fromEntries(REBIND.map((k) => [k, DEFAULT_LISTS[k][0]]));
 const CAPTURE_CODES = [
@@ -155,6 +160,7 @@ export function applyKeyBindings() {
     const b = B[k]; if (!b) continue;
     const used = (c) => REBIND.some((o) => o !== k && want[o] === c);
     const list = [want[k], ...DEFAULT_LISTS[k].filter((c) => c !== want[k] && !used(c))];
+    if (typeof list[0] !== 'string' || !list[0]) list.length = 0;   // unbound action: [] rather than [undefined]
     b.length = 0; b.push(...list);
   }
   G.events?.emit?.('input:rebound');
@@ -172,6 +178,34 @@ function rebind(action, code) {
   s.keys = keys;
   applyKeyBindings();
   return other || true;
+}
+/** The other rebindable action whose chosen key is `code`, or null. Only first keys are asked about: a secondary
+ *  default (an arrow, ShiftRight, Mouse1) gives way on its own inside applyKeyBindings. */
+function keyOwner(action, code) {
+  const keys = (G.settings && G.settings.keys) || {};
+  const cur = (k) => keys[k] || DEFAULT_KEYS[k];
+  return REBIND.find((k) => k !== action && cur(k) === code) || null;
+}
+/** A key already belongs to another action: ask before taking it over. "Swap over" is the plain rebind (that action
+ *  gets the key we had); anything else leaves every binding as it is. */
+function askKeySwap(action, code, other, after) {
+  const keys = (G.settings && G.settings.keys) || {};
+  const mine = keys[action] || DEFAULT_KEYS[action];
+  const done = (swap) => {
+    if (swap && rebind(action, code)) {
+      sfx('ui_select', 0.6);
+      try { G.save?.writeSettings(); } catch (e) { G.reportError('ui:settings', e); }
+    }
+    try { after && after(); } catch (e) { G.reportError('ui:settings', e); }
+  };
+  try {
+    confirmBox(UI.root, {
+      title: t('ui.settings.keyTakenTitle'),
+      text: t('ui.settings.keyTakenText', { key: codeLabel(code), action: t('ui.settings.key.' + other), mine: codeLabel(mine) }),
+      yes: t('ui.settings.keySwapYes'),
+      no: t('ui.settings.keySwapNo'),
+    }).then(done).catch((e) => G.reportError('ui:settings', e));
+  } catch (e) { G.reportError('ui:settings', e); done(false); }
 }
 
 /** The settings form. Parent calls .keys() each frame while it has focus. Writes through G.save.writeSettings(). */
@@ -288,6 +322,8 @@ export function createSettings(parent) {
     const d = capturing; if (!d) return;
     if (code.startsWith('Mouse')) tookT = performance.now();
     endCapture();
+    const owner = keyOwner(d.k, code);                                  // a key another action already wears: ask first
+    if (owner) { askKeySwap(d.k, code, owner, paint); return; }
     if (rebind(d.k, code)) { sfx('ui_select', 0.6); try { G.save?.writeSettings(); } catch (e) { G.reportError('ui:settings', e); } }
     paint();
   }
@@ -361,10 +397,14 @@ export function createControls(parent) {
       for (const [desc, keys] of g.rows) {
         const r = el('div', 'row', s);
         const ks = el('div', 'ks', r);
-        const labels = Array.isArray(keys) ? keys : keyLabels(keys);
+        // The two rows the table spells out by hand - the walk row (W A S D) and the spell digits (1 - 8) - are
+        // rebuilt from the live bindings, so a rebound key shows up here too; null means keep the table's labels.
+        const live = liveKeyLabels(desc);
+        const labels = live || (Array.isArray(keys) ? keys : keyLabels(keys));
+        const spaced = !live && !Array.isArray(keys);
         labels.forEach((l, i) => {
           if (l === '–') { el('span', 'or', ks, l); return; }
-          if (i > 0 && !Array.isArray(keys)) el('span', 'or', ks, '/');
+          if (i > 0 && spaced) el('span', 'or', ks, '/');
           keycap(l, ks, 'sm');
         });
         tel('div', 'ds', r, 'ui.controls.' + desc);
@@ -373,6 +413,14 @@ export function createControls(parent) {
   }
   render();
   return { el: root, render };
+}
+
+/** The two rows whose caps the table above spells out by hand: the walk row (W A S D) and the spell digits (1 - 8).
+ *  Rebuilt from keyLabels() so a rebound key shows up here too; null = keep the table's own labels. */
+function liveKeyLabels(desc) {
+  if (desc === 'move') return ['forward', 'left', 'back', 'right'].map((a) => keyLabels(a)[0] || '');
+  if (desc === 'select') return [keyLabels('el1')[0] || '', '–', keyLabels('el8')[0] || '', t('ui.controls.wheelScroll')];
+  return null;
 }
 
 // ---- modal plumbing for the sheets below ----------------------------------------------------------------------

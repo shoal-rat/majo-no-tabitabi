@@ -13,6 +13,7 @@ export const BINDINGS = {
   jump: ['Space'],              // on the broom: climb
   descend: ['KeyC', 'ControlLeft'],
   sprint: ['ShiftLeft', 'ShiftRight'], // on the broom: boost
+  autoForward: [],              // auto-forward (toggle): empty by default, the player picks the key in the settings
   broom: ['KeyF'],              // 唤帚: summon / dismiss the broom
   interact: ['KeyE'],
   dodge: ['KeyQ'],              // 闪身
@@ -42,6 +43,7 @@ export function setKeyLabelHook(fn) { labelHook = typeof fn === 'function' ? fn 
 /** Human-readable key label for an action (first binding), e.g. keyLabel('interact') -> 'E'. */
 export function keyLabel(action) {
   if (labelHook) { const l = labelHook(action); if (l) return l; }
+  // an unbound action (auto-forward starts empty) yields '', which the label shows as unbound
   const c = (BINDINGS[action] || [''])[0] || '';
   if (has('core.key.' + c)) return t('core.key.' + c);
   if (c.startsWith('Key')) return c.slice(3);

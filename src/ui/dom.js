@@ -43,6 +43,7 @@ export function layoutFlag(name, dflt) { const v = raw('ui.layout.' + name); ret
 export const key = (action) => G.input.keyLabel(action);
 /** Label of one key / button code ('KeyW' -> 'W', 'Mouse0' -> the locale's word for it). */
 export function codeLabel(c) {
+  if (!c) return t('ui.settings.keyUnbound');   // an action with no key yet (auto-forward until the player picks one)
   if (has('core.key.' + c)) return t('core.key.' + c);
   if (c.startsWith('Key')) return c.slice(3);
   if (c.startsWith('Digit')) return c.slice(5);

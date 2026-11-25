@@ -82,6 +82,7 @@ function build() {
     slideT: 0, onSlide: false, groundY: 0, support: null, splashCd: 0, glideT: 0,
     wingsLift: 0, immuneTemp: [], expT: 0, lastHurtT: -9, idleT: 0, landLock: 0,
   };
+  S.sprintOn = false; S.autoFwd = false;   // sprint-toggle latch / auto-forward latch (both set in readInput)
   P._S = S;
 
   // ---- character ----
@@ -426,7 +427,25 @@ function readInput(P, S) {
   const ok = G.mode === 'play' && P.control && !P.dead && S.lockT <= 0 && S.stunT <= 0 && !S.frozen;
   const I = INPUT;
   I.mx = ok ? inp.moveX : 0; I.my = ok ? inp.moveY : 0;
+  // Auto-forward (toggle): one press walks forward on, the next stops it. Forward or back cancels it, and
+  // losing control - dialogue, a cutscene, a menu, the map, death, a stun - clears it, so she never starts
+  // walking on her own the moment a conversation ends. A short action lock (a stagger, a full-body clip: lockT)
+  // only pauses it: she walks on once the lock is over.
+  if (G.mode !== 'play' || !P.control || P.dead || S.stunT > 0 || S.frozen) {
+    S.autoFwd = false;
+  } else if (ok) {
+    if (inp.pressed('autoForward')) S.autoFwd = !S.autoFwd;
+    if (inp.held('back') || inp.held('forward')) S.autoFwd = false;
+    if (S.autoFwd) I.my = Math.max(I.my, 1);
+  }
   I.sprint = ok && inp.held('sprint');
+  // Sprint: hold or toggle, chosen in the settings. Toggle latches on one press and off on the next; hold
+  // works as before. A menu keeps the latch; death does not.
+  if (P.dead) S.sprintOn = false;
+  if (ok && G.settings && G.settings.sprintMode === 'toggle') {
+    if (inp.pressed('sprint')) S.sprintOn = !S.sprintOn;
+    I.sprint = !!S.sprintOn;
+  } else if (ok) S.sprintOn = inp.held('sprint');
   I.jumpP = ok && inp.pressed('jump'); I.jumpH = ok && inp.held('jump'); I.jumpR = inp.released('jump');
   I.down = ok && inp.held('descend');
   I.dodge = ok && inp.pressed('dodge');

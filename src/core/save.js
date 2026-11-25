@@ -59,6 +59,10 @@ export function defaultState() {
 }
 
 export const defaultSettings = () => ({ master: 0.8, music: 0.6, sfx: 0.85, sens: 1, invertY: false, quality: 'high', shake: true, hints: true, lang: 'zh-CN', postAO: true, postBloom: true, postShafts: true, look: 'soft', cinematic: true,
+  // key rebinding (src/ui/panels.js): action -> the one code the player picked; empty = every key stays at its default
+  keys: {},
+  // sprint ('hold' = keep Shift down, 'toggle' = press once to latch; src/player/player.js readInput)
+  sprintMode: 'hold',
   // touch controls (src/ui/touch.js): 'auto' = on phones / tablets; button size and opacity; drag-to-look speed
   touch: 'auto', touchSize: 1, touchAlpha: 0.8, touchSens: 1,
   // phones / tablets: true = never render fewer than 1080 lines (dynamic resolution only sheds scene cost; core/boot.js)
