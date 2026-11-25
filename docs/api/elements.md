@@ -75,7 +75,9 @@ hinfo.reaction is one of: conduct steam melt freeze shatter overload fan mire ig
 Kinds: `puddle` 水洼 (puddle: water landing on ground), `charged` 电光水洼 (charged puddle), `icesheet` 冰封水洼 (frozen puddle), `steam` 蒸汽云 (steam cloud), `mud` 泥沼 (mire),
 `frost` 霜地 (frost ground: a big ice burst), `lava` 熔岩 (lava). Field = `{ id, kind, x, z, y, r, t, life, power, team, source }`. ≤ 18 at once;
 the same kind overlapping grows / refreshes. Ice sheets and charged water fall back to puddles; spell rain quenches lava.
-Steam swallows hostile fire projectiles flying into it. Looks are persistent G.fx.shape handles + timed kit accents.
+Steam swallows hostile fire projectiles flying into it. Looks are persistent G.fx.shape handles + timed kit accents; the
+ground discs are draped on the terrain (centred on the ground under the field's centre, following the slope), accents sit
+on the ground under them. `y` stays the rules' surface (highest ground under the disc).
 - **★ `G.elements.fieldAt(pos, kind?)`** → the most recent field holding (pos.x, pos.z) (pos.y optional: feet within ~1.9 m of
   the surface; steam: inside the 4.6 m cloud) or null.
 - `G.elements.fieldsNear(pos, r, cb)`, `G.elements.fields` (live array, read-only).

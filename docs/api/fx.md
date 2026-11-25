@@ -112,14 +112,18 @@ has the five beats; the 对波 (beam clash) struggle is a set piece; reactions h
 - opts: pos, up, fwd, r0, r1, h, span, start, dur, delay, grow [a,b], erode [a,b] (threshold over life: <0 = solid at birth,
   ~1 = gone), soft, tile [u,v], scroll [u,v], color, color2 (rim), core (heart tone ×), add (0 = premultiplied alpha … 1 =
   additive), I, body (alpha of the body under the rim), twist, wobble (tongue), **rise** (sphere only, m/s, slowing — smoke),
-  handle (true → { pos, up, fwd, I, dims(r0,r1,h,span), color(a,b), erode(a,b), kill(sec) }; handles live until killed).
+  handle (true → { pos, up, fwd, I, dims(r0,r1,h,span), color(a,b), erode(a,b), kill(sec) }; handles live until killed),
+  **drape** (disc only: every vertex stands as high above the terrain as the centre does, sampled from
+  `G.terrain.dataTexture`, a little lower on cliffs and in fresh crater bowls where the 2 m texture rides above the land
+  mesh; centre it on `G.terrain.dataHeightAt(x, z)`. Ground fields use it so puddles follow slopes).
 - 'smoke' mode is lit by the shared ambient colour and its sphere silhouette frays (no hard disc edge). 'seams' = the
   cells' seams as lines (ground cracks; thins outward). Painted texture: R billow, G streak, B cells, A invented glyph band
   (no ring-with-bar shapes — nothing that reads as a real letter).
 - Pool full → the oldest fire-and-forget shape is stolen; handles are never stolen (null is returned).
 
 **Kit (`G.fx.kit`, `src/fx/kit.js`)** — element signatures built from shapes, fire-and-forget, scaled by quality:
-shock, dome, mark(pos, r, 'scorch'|'frost'|'wet'|'crack'|'glow', dur), glyphs (talisman ring, `handle` option), tongues,
+shock, dome, mark(pos, r, 'scorch'|'frost'|'wet'|'crack'|'glow', dur) (tilted onto `G.world.groundPlane` under it, so a
+mark on a slope lies along it; platforms count as ground), glyphs (talisman ring, `handle` option), tongues,
 fireball, smoke (rising puffs; repeated calls make a column), crown, sheet, crystals, coldMist, strokes, gustCone,
 whirl (`flame: true` = fire whirl), shards, dustSkirt, petals, crescents, mirrors.
 - Frost marks are radial feather streaks; scorch is warm charcoal (no red); cracks are seam lines.

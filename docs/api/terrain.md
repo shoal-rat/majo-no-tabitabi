@@ -95,6 +95,12 @@ System object: export const terrainSystem = { name: 'terrain', pausable: true, i
 - settle(): builds every chunk the current camera needs, with no time budget. Use it after a teleport or a camera cut.
 - stats(): { drawn, built, builds, buildMs, triangles, pending } for the land mesh. triangles is the selected count before culling.
 - Read-only references: mesh (THREE.BatchedMesh named 'terrain', castShadow and receiveShadow on), material, uniforms (trTime, trLodCam, trData, trScorch, trNoise, ...), lod (TerrainLOD), scorchLayer (ScorchLayer: paint, tick, at), dataTexture, noiseTexture.
+- dataHeightAt(x, z): the ground height as dataTexture holds it (bilinear between texel centres, half floats). Draped fx
+  discs (`G.fx.shape({ drape: true })`) are centred on it so they lie on the texture's ground exactly.
+- `G.world.groundPlane(x, z, r, out, h?, lift?, maxGrade?)`: least-squares plane of the ground under a disc of radius r
+  (tilt capped, lowered until no sample is more than `lift` under it) → out.y, out.up. Used by the fx kit's ground marks.
+- `G.world.naturalHeightAt(x, z)`: the analytic land before the pool beds; `baseHeightAt` = it with the hollows cut into
+  the hillside for the two rock-held pools, down to just under their water (`world/ground.js` poolBed, `landforms/pools.js`).
 
 **Events the terrain listens to**
 - 'terrain:deformed' {x, z, r, amount, x0, x1, z0, z1}: refreshes that rectangle plus a 2 m margin, rebuilding the chunks in view in the same frame. When amount < 0 it also paints a soft scorched rim (radius 0.85·r, strength up to 0.45).
@@ -325,7 +331,8 @@ taken away again on the same clock.
   healed ones are dropped; a v1 triple list loads with its clocks starting at load). Bits `G.flora.wreck.BITS`: CHARRED 1, FELLED 2 (stump), GONE 4 (shattered; rubble for stone ≥ 0.9 m),
   CRACKED 8. Records point at instances by position (10 cm), so a density change only skips (and keeps) what is missing.
   Written on `'save:collect'`; re-applied whenever `G.state` is replaced (load / new game), after resetting this run's wreck.
-- **Derived, nothing saved**: crater ponds (water table), broken rock on heaves (the heave stamp has r = 3.6, rim 0).
+- **Derived, nothing saved**: crater ponds (water table; any dig or heap that reaches a pond resurveys it, so a crater
+  dug through its lip lowers it to the new lip), broken rock on heaves (the heave stamp has r = 3.6, rim 0).
 - A maxed save (240 stamps): ~0.2 s to replay + one coalesced terrain refresh on the next frame (was ~1.4 s before the
   terrain batched restore refreshes). Save size ≈ 7 KB scars + ≤ 7 KB flora.
 

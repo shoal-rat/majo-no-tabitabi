@@ -8,6 +8,7 @@
 //   kinds: 'disc' | 'ring' (flat, radii r0..r1) · 'cyl' | 'cone' (along up, radii r0 → r1 over h) · 'dome' (r0, h) ·
 //          'sphere' (r0, h = vertical radius) · 'tongue' (flame lick: base radius r0, height h) · 'arc' (slash crescent:
 //          outer r1, thickest inner r0, span radians)
+//   drape: true (disc): lies on the terrain (setGround), each vertex as high above the ground as the centre is.
 //   tex: 'billow' | 'streak' | 'cells' | 'glyph' | 'seams' (the cells' dark seams as bright lines: ground cracks)    mode: 'flame' | 'sheet' | 'smoke' (lit) | 'glow' | 'glyph' | 'shell'
 import * as THREE from 'three';
 import { fireVertex, fireFragment } from './fireVolumes.js';
@@ -33,6 +34,9 @@ attribute vec4 i7;                // scrollU, scrollV, channel, start angle
 attribute vec4 i8;                // tileU, tileV, intensity, core
 attribute vec4 i9;                // twist, soft, wobble, body alpha
 uniform float uTime;
+uniform sampler2D uGround;        // terrain data texture: r = ground height (setGround)
+uniform vec3 uGroundBox;          // half extent, 1 / (2 half extent), 1 when bound
+float groundH(vec2 xz) { return texture2D(uGround, (xz + uGroundBox.x) * uGroundBox.y).r; }
 varying vec2 vG;
 varying vec2 vTex;
 varying vec4 vA;
@@ -88,6 +92,16 @@ void main() {
     p = rad * mix(i3.y, inner, v) * s + Y * 0.03; n = Y;
   }
   vec3 wp = i0.xyz + p;
+  // draped disc (h < 0): each vertex as high above the ground under it as the centre is above the ground under the
+  // centre, so a puddle or an ice sheet lies along the slope instead of standing out flat over it. The 2 m texture
+  // rounds a cliff or a fresh crater bowl differently from the land mesh (up to ~0.8 m), so there it hugs a little lower.
+  if (kind == 0 && i3.z < 0.0 && uGroundBox.z > 0.5) {
+    // one texel either way: slope, and how much the texels bend upward (bilinear rides that much above a bowl)
+    float h0 = groundH(wp.xz), hxp = groundH(wp.xz + vec2(2.0, 0.0)), hxm = groundH(wp.xz - vec2(2.0, 0.0));
+    float hzp = groundH(wp.xz + vec2(0.0, 2.0)), hzm = groundH(wp.xz - vec2(0.0, 2.0));
+    float grade = 0.25 * length(vec2(hxp - hxm, hzp - hzm)), bowl = 0.125 * (hxp + hxm + hzp + hzm - 4.0 * h0);
+    wp.y += h0 - groundH(i0.xz) - 0.45 * max(0.0, grade - 0.55) - max(0.0, bowl);
+  }
   if (kind == 3) wp.y += i9.z * age * (1.0 - 0.4 * t);      // spheres: 'rise' (m/s, slowing) — smoke puffs drift up
   vec4 mvPosition = viewMatrix * vec4(wp, 1.0);
   gl_Position = projectionMatrix * mvPosition;
@@ -276,7 +290,8 @@ export class Shapes {
     geo.instanceCount = 0;
     this.geo = geo;
     this.texture = makeNoiseTexture(256);
-    const mat = fxMaterial({ uniforms: { uNoise: { value: this.texture } }, vertexShader: VERT, fragmentShader: FRAG });
+    const mat = fxMaterial({ uniforms: { uNoise: { value: this.texture }, uGround: { value: null }, uGroundBox: { value: new THREE.Vector3(1, 0.5, 0) } }, vertexShader: VERT, fragmentShader: FRAG });
+    this.groundTex = null;
     this.mesh = new THREE.Mesh(geo, mat);
     this.mesh.frustumCulled = false;
     this.mesh.renderOrder = renderOrder;
@@ -287,7 +302,7 @@ export class Shapes {
   }
 
   /**
-   * opts: { kind, pos, up, fwd, r0, r1, h, span, start, dur, delay, grow:[a,b], erode:[a,b], soft, tex, tile:[u,v],
+   * opts: { kind, pos, up, fwd, r0, r1, h, span, start, dur, delay, grow:[a,b], erode:[a,b], soft, tex, tile:[u,v], drape,
    *         scroll:[u,v], color, color2, core, add, mode, I, twist, wobble, body, handle (bool) }
    * colours are linear THREE.Color-compatible (hex is taken as sRGB).
    */
@@ -306,7 +321,7 @@ export class Shapes {
     d[b] = p.x; d[b + 1] = p.y; d[b + 2] = p.z; d[b + 3] = birth;
     d[b + 4] = up.x; d[b + 5] = up.y; d[b + 6] = up.z; d[b + 7] = dur;
     d[b + 8] = fw.x; d[b + 9] = fw.y; d[b + 10] = fw.z; d[b + 11] = KIND[o.kind] ?? 0;
-    d[b + 12] = o.r0 ?? 0; d[b + 13] = o.r1 ?? (o.r0 ?? 1); d[b + 14] = o.h ?? 1; d[b + 15] = o.span ?? Math.PI * 2;
+    d[b + 12] = o.r0 ?? 0; d[b + 13] = o.r1 ?? (o.r0 ?? 1); d[b + 14] = o.drape ? -1 : o.h ?? 1; d[b + 15] = o.span ?? Math.PI * 2;
     if (o.color && o.color.isColor) _c.copy(o.color); else _c.set(o.color ?? 0xffffff);
     if (o.color2 && o.color2.isColor) _c2.copy(o.color2); else _c2.set(o.color2 ?? 0xffffff);
     d[b + 16] = _c.r; d[b + 17] = _c.g; d[b + 18] = _c.b; d[b + 19] = MODE[o.mode] ?? 0;
@@ -327,6 +342,14 @@ export class Shapes {
     } else this.meta[s] = null;
     this.liveList.push(s);
     return h || true;
+  }
+
+  /** Terrain the draped discs lie on: the ground data texture (r = height) covering ±half m, or null (flat discs). */
+  setGround(tex, half) {
+    const u = this.mesh.material.uniforms;
+    this.groundTex = tex || null;
+    u.uGround.value = this.groundTex;
+    u.uGroundBox.value.set(half, 0.5 / half, this.groundTex ? 1 : 0);
   }
 
   release(s) {

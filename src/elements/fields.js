@@ -4,6 +4,9 @@
 // creatures, props: its STATUS each tick (soaked, chilled, muddy, set alight like burning grass). DAMAGE follows the same
 // friendly-fire rule as apply(): the caster's own side is spared. The look is a few persistent fx shapes per field
 // (shared instanced batch, no draw calls of their own) plus timed accents.
+// y is the surface the rules test feet against (the highest ground under the disc). The look is draped on the terrain
+// (fx shapes `drape`), centred on the ground under the field's centre (f.base): it follows the slope instead of standing
+// out flat over the downhill side. Accents sit on the ground under them.
 // The rules are the general ones of 元素交织 (docs/api/elements.md): water in any form (wet thing, puddle, rain, steam)
 // + thunder → charged, + ice → frozen, + fire → steam, + earth → mud; fire melts ice; wind carries what it touches.
 //
@@ -44,13 +47,15 @@ export function createFields(E) {
     if (r > 0.5) for (let i = 0; i < 4; i++) { const a = i * 1.5708 + 0.4; y = Math.max(y, G.world.heightAt(x + Math.cos(a) * r * 0.6, z + Math.sin(a) * r * 0.6)); }
     return y;
   };
+  /** height the look is centred on: the ground under the centre as the draped disc's terrain texture holds it */
+  const lay = (f) => { f.base = f.kind === 'steam' ? f.y : G.terrain?.dataHeightAt?.(f.x, f.z) ?? G.world.heightAt(f.x, f.z); };
   const camD = (x, y, z) => { const c = G.camera?.position; return c ? Math.hypot(c.x - x, c.y - y, c.z - z) : 0; };
   const quality = () => clamp(G.quality?.particles ?? 1, 0.3, 1);
 
   // ---- visuals ------------------------------------------------------------------------------------------------------
   function shape(o) {
     const F = fx(); if (!F?.shape) return null;
-    const h = F.shape({ ...o, handle: true });
+    const h = F.shape({ ...o, handle: true, drape: o.kind === 'disc' });   // ground discs lie on the terrain
     return h && h !== true ? h : null;
   }
   const LOOK = {
@@ -95,7 +100,8 @@ export function createFields(E) {
     undress(f, 0.01);
     const make = LOOK[f.kind];
     if (!make) return;
-    f.look = make(f, _p.set(f.x, f.y + 0.04, f.z)).filter(Boolean);
+    lay(f);
+    f.look = make(f, _p.set(f.x, f.base + 0.04, f.z)).filter(Boolean);
     for (const h of f.look) h.dims(0.01, 0.01);
     if (f.kind === 'lava') {
       try { f.em = G.fx?.emitter?.('embers', { radius: f.r * 0.7, scale: 0.9 }) || null; if (f.em) f.em.pos.set(f.x, f.y + 0.2, f.z); } catch (e) { f.em = null; }
@@ -118,7 +124,7 @@ export function createFields(E) {
       const h = L[i];
       if (!h || !h.alive) continue;
       if (f.kind === 'steam' && i === 0) { h.dims(f.r * 0.15 * s, f.r * 1.1 * s); h.pos.set(f.x, f.y + 0.16, f.z); }
-      else { const rr = f.r * (i === 0 ? 1 : f.kind === 'icesheet' || f.kind === 'lava' ? 1.06 : f.kind === 'mud' ? 0.85 : 0.96); h.dims(0, rr * s); h.pos.set(f.x, f.y + 0.04 + i * (f.kind === 'lava' ? 0.06 : 0.03), f.z); }
+      else { const rr = f.r * (i === 0 ? 1 : f.kind === 'icesheet' || f.kind === 'lava' ? 1.06 : f.kind === 'mud' ? 0.85 : 0.96); h.dims(0, rr * s); h.pos.set(f.x, f.base + 0.04 + i * (f.kind === 'lava' ? 0.06 : 0.03), f.z); }
       h.I = (h._I0 ??= h.I) * (0.4 + 0.6 * endK);
     }
   }
@@ -144,6 +150,7 @@ export function createFields(E) {
     const f = {
       id: nextId++, kind, x, z, y: surfY(kind, x, z, r), r: Math.min(RMAX[kind], r), t: 0, life: o.life ?? LIFE[kind], power: o.power ?? 1,
       team: o.team || 'neutral', source: o.source || null, dead: false, tick: Math.random() * 0.2, fxT: 0, vx: 0, vz: 0, look: null, em: null, light: null,
+      base: 0,
     };
     list.push(f);
     dress(f);
@@ -249,7 +256,7 @@ export function createFields(E) {
     const far = camD(f.x, f.y, f.z);
     if (far > 120 || !F) { f.fxT = 0.5; return; }
     const q = quality();
-    const pt = (rr) => { const a = Math.random() * TAU, d = Math.sqrt(Math.random()) * f.r * rr; return _p.set(f.x + Math.cos(a) * d, f.y + 0.12, f.z + Math.sin(a) * d); };
+    const pt = (rr) => { const a = Math.random() * TAU, d = Math.sqrt(Math.random()) * f.r * rr, x = f.x + Math.cos(a) * d, z = f.z + Math.sin(a) * d; return _p.set(x, G.world.heightAt(x, z) + 0.12, z); };
     switch (f.kind) {
       case 'charged': {
         f.fxT = 0.22 / Math.max(0.5, q);
@@ -269,7 +276,7 @@ export function createFields(E) {
         break;
       case 'lava':
         f.fxT = rnd(0.3, 0.55) / q;
-        if (K) { K.tongues(pt(0.7), 1, 0.3, rnd(0.6, 1.1), { dur: 0.8, I: 1.3 }); if (Math.random() < 0.35) K.smoke(pt(0.6).setY(f.y + 0.6), 1.1, { n: 1, dur: 2.4, rise: 1.6 }); }
+        if (K) { K.tongues(pt(0.7), 1, 0.3, rnd(0.6, 1.1), { dur: 0.8, I: 1.3 }); if (Math.random() < 0.35) { const S = pt(0.6); S.y += 0.48; K.smoke(S, 1.1, { n: 1, dur: 2.4, rise: 1.6 }); } }
         break;
       case 'icesheet':
       case 'frost':
@@ -278,7 +285,7 @@ export function createFields(E) {
         break;
       case 'puddle':
         f.fxT = rnd(0.6, 1.2);
-        if (K && Math.random() < 0.5) K.shock(pt(0.8).setY(f.y + 0.06), rnd(0.4, 0.8), 0xbfe8ff, { dur: 0.6, width: 0.12, add: 0.4, I: 0.9 });
+        if (K && Math.random() < 0.5) { const S = pt(0.8); S.y -= 0.06; K.shock(S, rnd(0.4, 0.8), 0xbfe8ff, { dur: 0.6, width: 0.12, add: 0.4, I: 0.9 }); }
         break;
       default: f.fxT = 1;
     }
@@ -480,7 +487,7 @@ export function createFields(E) {
         f.y = surfY('steam', f.x, f.z, 0);
         f.r = Math.min(RMAX.steam, f.r + dt * 0.15);
       }
-      else if ((f.yT = (f.yT || 0) - dt) <= 0) { f.yT = 1; f.y = surfY(f.kind, f.x, f.z, f.r); }   // the ground may have moved (craters)
+      else if ((f.yT = (f.yT || 0) - dt) <= 0) { f.yT = 1; f.y = surfY(f.kind, f.x, f.z, f.r); lay(f); }   // the ground may have moved (craters)
       if (f.kind === 'steam' && E.weather.isRainingAt(f.x, f.z) && f.life - f.t > 2) f.life -= dt;   // rain beats steam down
       if (f.kind === 'lava' && E.weather.isSpellRainAt?.(f.x, f.z)) { quench(f, f.team); continue; }
       if ((f.tick -= dt) <= 0) { f.tick = TICK[f.kind] || 0.4; try { tick(f); } catch (e) { G.reportError('elements:field:' + f.kind, e); } }

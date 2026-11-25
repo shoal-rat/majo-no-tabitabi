@@ -21,6 +21,14 @@ const ROAD_CAP = 30, RIVER_CAP = 120;
 /** Texel centre (world) of column i. */
 const wx = (i) => -DATA_HALF + (i + 0.5) * DATA_CELL;
 
+/** Ground height (R channel) of the data texture at (x, z), bilinear between texel centres as the GPU filters it. */
+export function dataHeightAt(tex, x, z) {
+  const N = DATA_N, a = tex.image.data, half = THREE.DataUtils.fromHalfFloat;
+  const u = Math.min(N - 1.0001, Math.max(0, (x + DATA_HALF) / DATA_CELL - 0.5)), v = Math.min(N - 1.0001, Math.max(0, (z + DATA_HALF) / DATA_CELL - 0.5));
+  const i = Math.floor(u), j = Math.floor(v), fu = u - i, fv = v - j, k = (j * N + i) * 4, row = N * 4;
+  return (1 - fv) * ((1 - fu) * half(a[k]) + fu * half(a[k + 4])) + fv * ((1 - fu) * half(a[k + row]) + fu * half(a[k + row + 4]));
+}
+
 export function createDataTexture(arr0 = null) {
   const N = DATA_N;
   const arr = arr0 || new Uint16Array(N * N * 4);

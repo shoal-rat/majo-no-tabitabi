@@ -14,7 +14,7 @@ import { toon, own } from '../../core/mats.js';
 import { LANDMARKS } from '../../data/landmarks.js';
 import { protoRock, Bake, rockShader, PALS, sstep } from './rockgeo.js';
 import { lfMats, LU } from './lfmats.js';
-import { poolOf } from './pools.js';
+import { poolOf, poolDiscRadius } from './pools.js';
 import { familyParts, rockId, NEUTRAL } from '../rock-family.js';
 
 const groundId = (n) => 'sculpt_ground_' + n;
@@ -297,7 +297,8 @@ export function buildSetpieces(G, root) {
       const B = newBake();
       const pool = poolOf(W, l);
       const dx = pool.x - l.x, dz = pool.z - l.z, dl = Math.hypot(dx, dz) || 1, ux = dx / dl, uz = dz / dl, vx = -uz, vz = ux;
-      const g = W.heightAt(l.x, l.z);
+      // the crag's height from the natural hillside: the pool's hollow (world/ground.js poolBed) reaches under its foot
+      const g = (W.naturalHeightAt || W.heightAt)(l.x, l.z);
       const top = Math.max(g, pool.level) + 24;
       // the crag: an arc of tall stratified masses behind the pool, a notch where the water comes over
       for (let k = -3; k <= 3; k++) {
@@ -311,8 +312,8 @@ export function buildSetpieces(G, root) {
       const bx = l.x - ux * 4, bz = l.z - uz * 4, bg = W.heightAt(bx, bz), lip = top - 3;
       rock(B, shade, bx, bg + (lip - bg) * 0.45, bz, 5.2, (lip - bg) * 0.58, 5.2, 0.4, 'crag', 2, 0.02, 'notch');
       col(bx, bz, 4, bg - 1, lip);
-      // pool rim: low rocks all round, tall enough to hold the water
-      for (const q of pool.rim) if (q.a % 0.5 < 0.27) {
+      // pool rim: low rocks all round, tall enough to hold the water (gaps only where the ground is above the water line)
+      for (const q of pool.rim) if (q.a % 0.5 < 0.27 || q.ground < pool.level - 0.25) {
         const need = pool.level - q.ground + 0.5;
         rock(B, shade, q.x, q.ground + need * 0.4, q.z, 1.6 + r() * 0.8, Math.max(0.6, need * 0.7), 1.4 + r() * 0.6, q.a, 'tor', Math.round(q.a * 10), 0.08, 'rim');
       }
@@ -364,7 +365,7 @@ export function buildSetpieces(G, root) {
 }
 
 function poolDisc(pool, mat) {
-  const g = new THREE.CircleGeometry(pool.r + 0.9, 28); g.rotateX(-Math.PI / 2);
+  const g = new THREE.CircleGeometry(poolDiscRadius(pool.r), 28); g.rotateX(-Math.PI / 2);
   const m = new THREE.Mesh(g, mat); m.position.set(pool.x, pool.level, pool.z); m.renderOrder = 3; m.name = 'setpiece_pool';
   return m;
 }
