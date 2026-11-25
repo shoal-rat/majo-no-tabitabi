@@ -9,6 +9,7 @@
 //   G.assets.want(id)             -> true once model(id) is the real model; until then keeps a load of it going (actors)
 //   G.assets.progress()           -> { got, total, files, done, retrying } bytes of the boot set (the boot bar)
 //   G.assets.stream()             -> after the world is ready: the preloaded files the boot did not wait for start coming
+//   await G.assets.fetchUrl(url)  -> bytes of a file outside the manifest through the same queue (null on failure)
 // Every file comes through one network queue (see "network" below): few requests at a time, most important first, a
 // stalled or failed request is retried, a failure is never cached.
 import * as THREE from 'three';
@@ -622,6 +623,14 @@ export function createAssets(G) {
       if (info.type === 'model') { try { return await fetchBytes(BASE + info.file, { ...stat(id), prio: PRIO.now, go: null, small: false }); } catch (e) { return null; } }
       const buf = await api.load(id);
       return buf ? buf.slice(0) : null;
+    },
+    /**
+     * The bytes of any file of the game (not in the manifest: the terrain cache) through the same queue: aborted after
+     * NET.stallMs without a byte, o.tries tries (default NET.tries). null when it could not be had (the caller's fallback).
+     */
+    async fetchUrl(url, o = {}) {
+      const s = { id: url, prio: o.prio ?? PRIO.now, seq: 0, go: null, got: 0, size: 0, tries: o.tries || NET.tries, retrying: false, fails: 0, failedAt: 0, small: false };
+      try { return await fetchBytes(url, s); } catch (e) { return null; }
     },
     /** AnimationClip[] of a loaded model (possibly empty). Clips of the models named in `clipsFrom` are merged in. */
     clips(id) {

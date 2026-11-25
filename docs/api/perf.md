@@ -655,7 +655,9 @@ not change, and asked whether the game can load in the background. Reproduced wi
 3. `load()` kept a failed promise (`null`) in its cache: every later `load(id)` returned `null` at once. One failed
    request for her model = `createActor()` built the primitive stand-in (`placeholderModel()`, the capsule) and nothing
    ever swapped the real one in; `setOutfit()` failed in 19 ms every time (cause of the "outfit does nothing" reports).
-4. A background tab gets no animation frames: the shader warm-up (`render/warmup.js` waited for `requestAnimationFrame`)
+4. `world/terrain/textures.js` fetched the 6 MB terrain cache (`assets/_terrain_cache/*.gz`) the same bare way during the
+   terrain system's init: an error fell back to computing the field, a stall held 「铺开山川……」 for good.
+5. A background tab gets no animation frames: the shader warm-up (`render/warmup.js` waited for `requestAnimationFrame`)
    stopped until the player came back to the tab, and `boot.js` yielded between systems with a 0 ms timer (one second
    each in a background tab).
 
@@ -665,7 +667,8 @@ not change, and asked whether the game can load in the background. Reproduced wi
   in the browser's pool with no byte and be taken for stalled). The body is read as a stream; 18 s without a byte
   (connect, headers or body) aborts it. Stalled or failed requests are tried again after 1.5 / 3 / 6 / 12 / 20 s, 4 tries
   (her model 8); 404 / 410 are final. A load that still fails is **not cached**: the next `load(id)` starts over (5 s
-  cool-down). Textures retry on error too.
+  cool-down). Textures retry on error too. `G.assets.fetchUrl(url, { tries })` gives files outside the manifest the same
+  path: the terrain cache uses it with one try, so a stall falls back to computing the field like an error does.
 - **Order** (`bootOrder`): her model for this save (the save's outfit, `?outfit=` wins) + `anim_ual` / `anim_miko` (8
   tries) → her other outfit → the story cast near the save's position (`data/journey-cast.js castNear`) → every
   non-character preload model (the world builds from them) → the other people's models. The boot waits for all but the
@@ -694,6 +697,7 @@ before / after pairs that are compared ran side by side.
 | a foe's model stalls three times (`char_villager_c:stall:3`) | (capsule foe) | the boot did not wait for it; the foe heals in place, its rogue dress and tint kept |
 | 8 Mbit/s, 150 ms (`--throttle 8000,150`), first 45 s on the title | bar 5.5 → 5.9 % | bar 12 → 24 %, 「… 26.2 → 66.2 / 107.0 MB」 |
 | same link: models in / world ready (ms from navigation) | 176,585 / 217,414 | 138,573 / 182,265 |
+| the terrain cache's connection hangs (`--fault _terrain_cache:stall`) | held at 「铺开山川……」 (still there 210 s after the stall when the run gave up) | dropped after 18 s, the field computed (terrain init 27.0 s; 2.2 s from the cache), game started |
 | boot in a background tab (`--hidden`) | not ready after 300 s (held at 「正在唤醒大地……」, the warm-up) | ready after 29 s while hidden |
 | boot set (normal boot, high tier) | ≈ 146 MB, ≈ 400 files | 108.4 MB, 378 files; the other people's 46 MB after |
 
