@@ -368,8 +368,9 @@ function accident(ctx, site) {
   band(g, 0, 1.15, d / 2 + 0.05, 1.2, 2.3, 0.1, wood);
   band(g, 0, 5.3, d / 2 + 0.05, 1.25, 2.25, 0.1, wood);
   band(g, 0, 5.55, d / 2 + 0.11, 0.8, 1.3, 0.04, glass);
-  const plain = mat.tile(0x7d4658),
-    lightClay = mat.tile(0x935a6b);
+  // the roof sits at the canyon floor in the tall houses' shadow: a darker plum (0x7d4658) read as a black shape there
+  const plain = mat.tile(0xb57a90),
+    lightClay = mat.tile(0xc48c9f);
   const patched = new THREE.Group(),
     shards = new THREE.Group();
   for (let i = -5; i <= 5; i++)
@@ -426,7 +427,11 @@ function accident(ctx, site) {
     },
     x: BELL.x + x,
     z: BELL.z + z,
-    top: H + h + w * 0.5 * slope + 0.09
+    top: H + h + w * 0.5 * slope + 0.09,
+    // the open patch shows the plaster gable; the loose tiles of the repair step (story/episode-scenes.js) lie on it
+    tiles: [plain, lightClay],
+    pitch: (w * 0.5 * slope) / ((w - 0.06) / 2),
+    patchY: (wx) => H + h + w * 0.5 * slope - entry.pitch * Math.abs(wx - entry.x)
   };
   entry.setRepaired(false);
   ctx.place('accidentRoof', entry);

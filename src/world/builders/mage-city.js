@@ -367,8 +367,11 @@ export function townhouse(site, o) {
     stepped = !lite && kind === 'gable' && hs(2) < 0.42, // phones and the low tier keep the plainer houses
     timber = !lite && st > 3 && hs(3) < 0.3,
     turret = !lite && !o.cap && st >= 4 && w >= 5.6 && hs(4) < 0.16;
+  // the capped low houses round the accident roof (lowZone) stand at the canyon floor in the tall houses' shadow, where
+  // plum tiles read black: they take the gold tiles, so the accident roof (bellcrown.js accident()) is the one plum roof there
+  const mixed = ROOFMIX[(seed * 5 + 3) % ROOFMIX.length];
   const ti = stepped ? 2 : timber ? 0 : (seed * 3 + 1) % 4,
-    roofM = o.roof || ROOFMIX[(seed * 5 + 3) % ROOFMIX.length];
+    roofM = o.roof || (o.cap && mixed === ROOF.plum ? ROOF.gold : mixed);
   const c = Math.cos(yaw),
     s = Math.sin(yaw);
   const W = (lx, lz) => [x + lx * c + lz * s, z - lx * s + lz * c];
