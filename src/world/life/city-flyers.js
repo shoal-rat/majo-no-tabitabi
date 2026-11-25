@@ -9,8 +9,8 @@
 // The heroine: they wave when she flies close (once in a while), give way (they never touch her), and now and then
 // one falls in beside her for a few seconds before peeling off. Balconies she is landing on are left to her.
 // Story: nobody is ever inside a staged zone (crash roof during the accident, the inn, the practice field during the
-// lesson / ring course, the gate during the fly-through and the parting); during cutscenes / dialogue (G.mode !== 'play')
-// everyone near the camera or the heroine fades out.
+// lesson / ring course, the gate during the fly-through and the parting). A dialogue or a cutscene leaves everyone
+// else as they are (scaling the ones near her away read as people shrinking during a talk).
 import * as THREE from 'three';
 import { CITY } from '../../data/journey-map.js';
 import { buildCityPlan, activeKeepOut, inKeepOut } from './city-flyers-plan.js';
@@ -694,10 +694,9 @@ export function createCityLife(G, root, tier) {
     }
     for (const a of st.flyers) {
       try { stepFlyer(a, dt, H); } catch (e) { G.reportError?.('life:city:flyer', e); a.mode = 'gone'; a.hidden = true; a.hideT = 30; }
-      // visibility: story zones, cutscenes near the camera, hidden agents
+      // visibility: story zones, hidden agents
       let sT = a.hidden || a.mode === 'gone' || a.mode === 'inside' ? 0 : 1;
       if (sT && inKeepOut(st.keep, a.x, a.y, a.z, 3)) sT = 0;
-      if (sT && G.mode !== 'play' && (a.dist < 40 || Math.hypot(a.x - cam.x, a.y - cam.y, a.z - cam.z) < 40)) sT = 0;
       if (a.leg === 'in' || a.leg === 'out') { const r = Math.hypot(a.x - st.plan.cx, a.z - st.plan.cz) - st.plan.R; if (r > 220) sT = Math.min(sT, Math.max(0, 1 - (r - 220) / 120)); }
       a.sT = sT;
       a.s += Math.sign(a.sT - a.s) * Math.min(Math.abs(a.sT - a.s), dt * 1.6);

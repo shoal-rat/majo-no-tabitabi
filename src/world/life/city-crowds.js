@@ -3,8 +3,8 @@
 // calling to a neighbour, waving at a witch going past or turning to talk to one who lands beside them. Down in the
 // dim street canyons there are fewer: people browsing at lamp-lit shop fronts and a few walkers (merchants, mages with
 // hats, couples, children running). They keep to the street lines (never into a wall cell of the walk grid), step
-// aside for the heroine, stop and look up when a broom passes low, and stay out of the story zones; during cutscenes /
-// dialogue everyone close to the heroine or the camera fades out.
+// aside for the heroine, stop and look up when a broom passes low, and stay out of the story zones. A dialogue or a cutscene
+// leaves them as they are: they used to be scaled away near her then, which players saw as people shrinking.
 import * as THREE from 'three';
 import { inKeepOut } from './city-flyers-plan.js';
 import { CITY_LIFE } from '../../data/city-life.js';
@@ -278,7 +278,6 @@ export function createCityCrowds(G, st, tier, dens) {
         a.dist = dh;
         let sT = 1;
         if (inKeepOut(st.keep, a.x, a.y, a.z, 1)) sT = 0;
-        if (G.mode !== 'play' && dh < 16) sT = 0;
         a.sT = sT;
         a.s += Math.sign(a.sT - a.s) * Math.min(Math.abs(a.sT - a.s), dt * 1.5);
         a.clipT += dt * a.rate; a.prevT += dt;

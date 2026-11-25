@@ -424,9 +424,17 @@ dialogue in swim_b (`wardrobe-8`), the page in its three states with click / key
 (`wardrobe-7`), save → reload in a throwaway profile (`wardrobe-save-*` / `wardrobe-load-*`: after `majo_finished` swim_b
 comes back with no swap; in episode two a saved 日常服 loads as 魔女服).
 
-**Pictures.** `node tools/costume/wardrobe-pics.mjs` (default ids `apprentice,elaina,swim_a,swim_b`; ~1 min) renders her in the
-game over two flat grounds and cuts her out. The scene pass's light shafts are switched off while shooting (they streak the
-grounds and broke the matting). `ui_outfit_miko.webp` (the old heroine's picture) is no longer referenced.
+**Pictures** (painted since 2026-11-25). The four cards `ui_outfit_<id>` (384×640 WebP with alpha) are full-figure 2D
+paintings made with the Codex CLI image tool, keyed off a #00FF00 ground. The style matches the dialogue portraits: the
+`elaina_elaina` portrait is the style anchor, and the recipe is in `docs/api/ui.md` "Dialogue portraits".
+- **Reference**: `node tools/costume/wardrobe-pics.mjs` (default ids `apprentice,elaina,swim_a,swim_b`; ~1 min) renders her
+  in the game over two flat grounds; the light shafts are off while shooting because they broke the matting. The render is
+  the reference for each outfit's design. The tool also overwrites the card files, so restore the painted ones afterwards.
+- **Swimsuit cards**: post-game content (they unlock with `majo_finished`). They copy the in-game swimsuit models unchanged,
+  and those come from Elaina's official swimsuit prize figures. Swim A's sheer shirt keeps its partial alpha.
+- **Framing**: the crown of her head at y 95 and the soles at y 634, the same pose on every card (three-quarter to the
+  right, the wand in her right hand).
+- `ui_outfit_miko.webp` (the old heroine's picture) is no longer referenced.
 
 **The page** (`src/ui/wardrobe.js`, strings `src/locales/zh-CN/ui.wardrobe.js`): 4 columns; a card the player may not pick yet
 (and is not wearing) shows no picture — the robe-stand pictogram, a lock and when it opens (`ui.wardrobe.lock.<flag>`);
@@ -434,4 +442,4 @@ tapping it shakes the card. On touch the line under the selected card reads 「�
 
 **A fifth outfit**: a model on the same skeleton (+ manifest row with chains), a row in `OUTFITS` (with `unlock`), the
 strings in `ui.wardrobe.js`, a pictogram in `icons.js`, a `WASH` colour in `ui/wardrobe.js`, the id in wardrobe-pics' default
-list; five cards need `.wd-grid` columns changed.
+list (for its reference render) and a painted card (see "Pictures"); five cards need `.wd-grid` columns changed.

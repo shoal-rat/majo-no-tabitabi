@@ -7,6 +7,9 @@
 //   node tools/costume/portraits.mjs [--only fran,saya] [--no-shoot] (re-cut the last shots) [--no-install]
 // Re-run it after a character's look changed (tools/journey/build-cast.mjs). No official art: in-game renders only.
 // Out: assets/textures/ui/ui_portrait_<id>.webp (manifest ui_portrait_<id>, type texture), work files in .tmp/portraits/.
+// Since 2026-11-25 the shipped portraits are PAINTED (docs/api/ui.md "Dialogue portraits"). Use this tool for the model
+// reference renders (.tmp/play/portraits/<id>_light.png). It overwrites the painted files and manifest rows, so restore them
+// afterwards (git checkout -- assets/textures/ui/ assets/manifest.json), unless the render is meant to ship.
 import fs from 'node:fs';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';

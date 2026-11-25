@@ -399,7 +399,6 @@ export function mageResidents(ctx) {
       a.dist = Math.hypot(a.x - cam.x, a.y - cam.y, a.z - cam.z);
       let sT = a.dist < 88 ? 1 : 0;
       if (sT && inKeepOut(keep, a.x, a.y, a.z, 2)) sT = 0;
-      if (sT && G.mode !== 'play' && a.dist < 30) sT = 0;
       a.s += Math.sign(sT - a.s) * Math.min(Math.abs(sT - a.s), dt * 1.6);
       if (a.s <= 0.002) continue;
       const lod = pool.lodOf(a.dist);

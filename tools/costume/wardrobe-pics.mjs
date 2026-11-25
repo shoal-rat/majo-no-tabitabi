@@ -9,6 +9,9 @@
 // Re-run it after an outfit's look changed (tools/journey/build-cast.mjs, tools/journey/swimwear.mjs). --only keeps the shared
 // frame only when the tallest outfit (the witch's hat: elaina) is among the ids.
 // Out: assets/textures/ui/ui_outfit_<id>.webp (manifest ui_outfit_<id>, type texture), work files in .tmp/wardrobe-pics/.
+// Since 2026-11-25 the shipped cards are PAINTED (docs/api/heroine.md "Wardrobe (journey)", "Pictures"). Use this tool for the
+// model reference renders. It overwrites the painted files and manifest rows, so restore them afterwards
+// (git checkout -- assets/textures/ui/ assets/manifest.json), unless the render is meant to ship.
 import fs from 'node:fs';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
