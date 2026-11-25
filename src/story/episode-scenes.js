@@ -304,7 +304,7 @@ export function createScenes(S) {
       dur: 0.35,
     });
     return new Promise((done) => {
-      collision = { time: 0, start, end, roof, facing, side, done };
+      collision = { time: 0, start, end, roof, facing, side, done, land: S.npcs.standPoint('saya', 'roof') };
     });
   }
   function animateCrash(dt) {
@@ -324,7 +324,8 @@ export function createScenes(S) {
     }
     if (c.hit) {
       const k = Math.min(1, (c.time - 1.1) / 0.48);
-      pos.lerp(c.roof.clone().add(V(1.3, 0.1, 0)), k);
+      // she lands where she then stands for the repair step (episode-cast standPoint), on the ridge
+      pos.lerp(c.land, k);
     }
     S.npcs.airPose('saya', pos, Math.atan2(-c.facing.x, -c.facing.z), !c.hit);
     if (c.time >= 1.65) {

@@ -65,24 +65,32 @@ export function createCast(story) {
     n.anchor = anchor;
     n.air = false;
     if (!anchor) return;
-    n.pos.copy(story.anchor(anchor));
-    if (n.id === 'father') {
-      n.pos.x += anchor === 'home' ? 2.3 : 1.75;
-      n.pos.z -= 0.65;
+    standPoint(n.id, anchor, n.pos);
+  }
+  // Where an NPC stands at an anchor. A point moved aside from the anchor is set down on the surface under it (a step
+  // of the roof, a slope of the land) instead of keeping the anchor's height.
+  function standPoint(id, anchor, out = new THREE.Vector3()) {
+    out.copy(story.anchor(anchor));
+    const x = out.x,
+      y = out.y,
+      z = out.z;
+    if (id === 'father') {
+      out.x += anchor === 'home' ? 2.3 : 1.75;
+      out.z -= 0.65;
     }
-    if (n.id === 'mother' && anchor === 'home') {
-      n.pos.x -= 2.5;
-      n.pos.z += 0.9;
+    if (id === 'mother' && anchor === 'home') {
+      out.x -= 2.5;
+      out.z += 0.9;
     }
-    if (n.id === 'saya' && anchor === 'innDesk') n.pos.x += 1;
-    if (n.id === 'saya' && anchor === 'roof') {
-      n.pos.x += 1.8;
-      n.pos.z -= 0.8;
+    if (id === 'saya' && anchor === 'innDesk') out.x += 1;
+    // on the flat ridge of the accident roof, north of the broken patch, looking down at it (anchor face 0 = south)
+    if (id === 'saya' && anchor === 'roof') out.z -= 2.3;
+    if (id === 'fran' && anchor === 'franTrial') {
+      out.x += 3;
+      out.z -= 1;
     }
-    if (n.id === 'fran' && anchor === 'franTrial') {
-      n.pos.x += 3;
-      n.pos.z -= 1;
-    }
+    if (out.x !== x || out.z !== z) out.y = G.world.groundAt(out.x, out.z, y + 0.75);
+    return out;
   }
   function spawn(n) {
     if (n.actor || n.loading || !G.assets.info(n.asset)) return;
@@ -180,6 +188,7 @@ export function createCast(story) {
     stage,
     update,
     airPose,
+    standPoint,
     get: (id) => byId[id],
     actor: (id) => byId[id]?.actor ?? extra(id)?.actor ?? null,
     isPresent: (id) => !!(byId[id]?.actor ?? extra(id)?.actor),
