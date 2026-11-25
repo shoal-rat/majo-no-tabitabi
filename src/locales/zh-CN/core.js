@@ -33,7 +33,7 @@ export default {
     failed: '启动失败：',
     sky: '点亮天空……', terrain: '铺开山川……', flora: '种下草木……', landforms: '勾勒群山……', life: '唤来鸟雀与游鱼……', structures: '搭起街巷与屋顶……',
     physics: '唤醒万物之理……', elements: '调和水火风雷……', props: '摆放器物……', destruction: '记下大地的伤痕……', fx: '点起萤火……', audio: '调试弦音……',
-    ui: '展开卷轴……', gameplay: '装好旅行行囊……', player: '唤醒伊蕾娜……', spells: '整理魔法笔记……', combat: '布置练习场……', story: '写下故事……',
+    ui: '展开卷轴……', gameplay: '装好旅行行囊……', craft: '备好手艺……', player: '唤醒伊蕾娜……', spells: '整理魔法笔记……', combat: '布置练习场……', story: '写下故事……',
   },
   key: {
     Space: '空格', ShiftLeft: 'Shift', ShiftRight: 'Shift', ControlLeft: 'Ctrl', Escape: 'Esc', Tab: 'Tab', Enter: '回车', Backspace: '退格',
