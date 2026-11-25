@@ -8,7 +8,7 @@ import { loadFontsWithin } from '../core/fonts.js';
 import { touchSpells } from './model.js';
 import { createHud } from './hud.js';
 import { createStage } from './stage.js';
-import { createDialogue, portraitOf } from './dialogue.js';
+import { createDialogue, portraitOf, preloadPortraits } from './dialogue.js';
 import { createWheel } from './wheel.js';
 import { createTitle } from './title.js';
 import { createMenu } from './menu.js';
@@ -80,6 +80,8 @@ export const uiSystem = {
       say: (o) => dialogue.say(o),
       /** portraitOf(who) -> url | null: the in-game portrait of a story speaker (say({ portrait })) */
       portraitOf,
+      /** preloadPortraits([who, …]): fetch these speakers' portraits ahead of their lines (G.dialogue does it per script) */
+      preloadPortraits,
       /** the episode / country registry (src/data/episodes.js): read by the journal, map, title cards; register() for data packs and probes */
       episodes: { list: episodes, countries, countryOfRegion, episodeOfQuest, register: registerEpisodes, stampArt },
       // ---- full-screen layers ----

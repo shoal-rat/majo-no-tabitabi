@@ -161,6 +161,8 @@ export function createDialogue(story) {
     if (!ctx.partner) { // first speaker that is a present NPC
       for (const ln of L) { const w = fill(ln.who, ctx.vars); if (w && w !== 'elaina' && w !== 'dango' && w !== 'narrator' && G.npcs?.isPresent?.(w)) { ctx.partner = w; break; } }
     }
+    // every speaker's portrait is asked for now, not when the line comes up (on a slow link it then arrived too late)
+    if (!ctx.skipped) G.ui?.preloadPortraits?.(L.map((ln) => ln && ln.who && fill(ln.who, ctx.vars)).filter((w) => w && w !== 'narrator'));
     cur = ctx;
     G.events.emit('dialogue:start', { id: sid });
     const prevMode = G.mode;

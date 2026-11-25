@@ -249,6 +249,11 @@ render"): `elaina_apprentice`, `elaina_elaina`, `fran`, `saya`, `mother`, `fathe
 - `G.ui.portraitOf(who) -> url | null` (`dialogue.js portraitOf`): the manifest picture for a story speaker id; Elaina's
   follows `G.player.outfit` (the witch's robe when that outfit has none). `story/dialogue.js` passes it as
   `say({ portrait })`; speakers without a picture (roadside travellers, the narrator has no cameo) keep the glyph.
+- Loading (`dialogue.js` `pic()`): each picture is one kept `<img>`, fetched ahead: `G.ui.preloadPortraits([who, …])` (G.dialogue
+  calls it with a script's speakers when it starts) and every `ui_portrait_*` one at a time from 4 s after play begins. A
+  failed request is asked again after 2.5 s, one silent for 12 s gets a second request beside it (8 tries). Until the
+  picture is there the cameo shows the speaker's initial, then the picture fades in (`.dlg-port.late`). Up to 2.0.1 the
+  picture was asked for only when its line appeared and the arch stayed empty while it loaded (slow links: all story).
 - Re-run `node tools/costume/portraits.mjs [--only id,…]` after a character's look changes; `--no-shoot` re-cuts the
   last shots (to change the crop: `ABOVE` / `BELOW` in the tool).
 
