@@ -98,19 +98,18 @@
 ## 同人角色与项目美术
 
 - 伊蕾娜的学徒装与旅行装、芙兰、沙耶等八个演员模型由项目的角色工具制作。几何、服装和配色依原作设计进行同人改编。人形骨架源于 pixiv 的 CC0 样例 HairSample_Female。原作角色设计归相应权利人。[角色生成工具](tools/journey/build-cast.mjs) · [pixiv 样例授权](https://vroid.pixiv.help/hc/en-us/articles/4402614652569)
-- 基础项目的旅行装、两套水着与衣装预览分别记录了网格、纹样、骨架或渲染来源。水着设计参考伊蕾娜相关角色商品。中文字标经图像生成、抠图和逐字校对。早期天空绘景使用了图像生成辅助。[服装制作工具](tools/costume/) · [字标与天空的素材记录](assets/manifest.json)
+- 基础项目的旅行装与两套水着分别记录了网格、纹样或骨架来源。水着设计参考伊蕾娜相关角色商品。中文字标经图像生成、抠图和逐字校对。早期天空绘景使用了图像生成辅助。[服装制作工具](tools/costume/) · [字标与天空的素材记录](assets/manifest.json)
+- 对话立绘与衣装卡是以图像模型绘制的同人插画。服装与配色以游戏内角色模型的渲染为参考，画风统一参照伊蕾娜的第一张立绘，再经抠图与逐张挑选。未使用任何官方图像作为输入。原作角色设计归相应权利人。[立绘与衣装卡的素材记录](assets/manifest.json)
 - 清单明确标为 CC0 的项目自制基础模型、道具和动作共 107 项。这些条目保留各自的许可和制作说明。[自制模型生成器](tools/sculpt/) · [动作工具](tools/anim/)
 
 项目制作记录也可按清单标识查找。
 
 - `char_akari` [制作工具](tools/costume/wardrobe-build.mjs)
 - `sfx_broom_tailwind`
-- `lettering_zh_title`、`lettering_zh_plaque_shrine`、`lettering_zh_banner_sun`、`lettering_zh_banner_fox`
+- `lettering_zh_title`、`lettering_zh_plaque_shrine`、`lettering_zh_banner_sun`、`lettering_zh_banner_fox`、`ui_outfit_swim_a`、`ui_outfit_swim_b`、`ui_outfit_apprentice`、`ui_outfit_elaina`、`ui_portrait_elaina_apprentice`、`ui_portrait_elaina_elaina`、`ui_portrait_fran`、`ui_portrait_saya`、`ui_portrait_mother`、`ui_portrait_father`、`ui_portrait_exam`、`ui_portrait_innkeeper`
 - `char_akari_swim_b`、`char_akari_swim_a` [制作工具](tools/costume/wardrobe-build.mjs)
-- `ui_outfit_swim_a`、`ui_outfit_swim_b`、`ui_outfit_apprentice`、`ui_outfit_elaina` [制作工具](tools/costume/wardrobe-pics.mjs)
 - `sky_traveller_cloudbank`
 - `char_fran`、`char_saya`、`char_elaina_mother`、`char_innkeeper`、`char_exam_witch`、`char_elaina`、`char_elaina_father`、`char_elaina_apprentice`、`char_elaina_swim_a`、`char_elaina_swim_b` [制作工具](tools/journey/build-cast.mjs)
-- `ui_portrait_elaina_apprentice`、`ui_portrait_elaina_elaina`、`ui_portrait_fran`、`ui_portrait_saya`、`ui_portrait_mother`、`ui_portrait_father`、`ui_portrait_exam`、`ui_portrait_innkeeper` [制作工具](tools/costume/portraits.mjs)
 
 ## 程序库
 
