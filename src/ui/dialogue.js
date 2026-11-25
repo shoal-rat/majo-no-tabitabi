@@ -35,6 +35,9 @@ addCss(`
   background: radial-gradient(ellipse 90% 60% at 50% 115%, rgba(10,15,32,.55), rgba(10,15,32,0) 70%); box-shadow: inset 0 0 18u rgba(6,10,24,.45); }
 .dlg-port .ic { position: relative; font-size: 70u; filter: drop-shadow(0 0 10u rgba(236,217,164,.35)); }
 .dlg-port .ic.glyph { font-size: 66u; font-weight: 600; line-height: 1; }
+/* a picture that arrived after its line appeared fades in where the speaker's initial stood */
+.dlg-port.late img { animation: dlg-port-in .35s ease-out both; }
+@keyframes dlg-port-in { from { opacity: 0; } }
 .dlg-text { font: 400 20u/1.75 var(--fb); letter-spacing: .04em; color: var(--ink); white-space: pre-wrap; min-height: 70u; }
 .dlg-text .rest { opacity: 0; }
 /* narration (no speaker, no portrait): a quiet diary line, centred on faint ruled lines under a small flourish */
@@ -91,6 +94,52 @@ export function portraitOf(who) {
   return null;
 }
 
+// ---- portrait pictures ----------------------------------------------------------------------------------------------
+// Players on slow links saw an empty cameo all story long: the picture was asked for only when its line appeared, a
+// request that stalled was never asked again, and the arch showed nothing while it waited. Now each file is one kept
+// <img>, fetched ahead (the speakers of a script when it starts, every portrait one at a time once play begins); a failed
+// request is tried again after PIC_RETRY ms, and a second one goes out beside a request that has given nothing for
+// PIC_STALL ms. If the picture is not there 0.3 s into the line the cameo shows the speaker's initial; the picture fades
+// in in its place.
+const PICS = new Map();   // url -> { url, img, tries, at, pend: Set<img>, lowOnly, on: fn(record) once it arrives }
+const PIC_RETRY = 2500, PIC_STALL = 12000, PIC_TRIES = 8;
+const isPicUrl = (p) => /^(data:|blob:|https?:|\.{0,2}\/|assets\/)/.test(p) || /\.(png|jpe?g|webp|svg)$/i.test(p);
+
+/** The picture record of a url; asks the network when there is nothing usable in flight (cheap: call it every frame).
+ *  low: the warm-up's ask. A script's speakers ask with high priority (an image outside the page is low by default and
+ *  waits behind the world's model downloads). */
+function pic(url, low = false) {
+  let p = PICS.get(url);
+  if (!p) PICS.set(url, (p = { url, img: null, tries: 0, at: -1e9, pend: new Set() }));
+  if (p.img || p.tries >= PIC_TRIES || (p.tries && /^(data:|blob:)/.test(url))) return p;
+  const age = performance.now() - p.at;
+  // a second ask beside one that stalled, or beside a warm-up's low-priority ask once a line wants the picture
+  if (p.pend.size ? p.pend.size < 2 && (age >= PIC_STALL || (!low && p.lowOnly)) : age >= (p.tries ? PIC_RETRY : 0)) askPic(p, low);
+  return p;
+}
+function askPic(p, low) {
+  const im = new Image();
+  im.decoding = 'async';
+  im.fetchPriority = low ? 'low' : 'high';
+  im.alt = '';
+  p.lowOnly = (p.pend.size ? p.lowOnly : true) && low;
+  p.pend.add(im); p.tries++; p.at = performance.now();
+  im.onload = () => {
+    if (p.img) return;
+    p.img = im;
+    const f = p.on; p.on = null; f?.(p);   // the line waiting for it shows it now, not on the next game frame
+    for (const o of p.pend) o.onload = o.onerror = null;
+    p.pend.clear();
+  };
+  im.onerror = () => { p.pend.delete(im); p.at = performance.now(); };
+  // a retry asks under another query so no cache or half-dead connection hands back the failed answer
+  im.src = p.tries > 1 && !/^(data:|blob:)/.test(p.url) ? p.url + (p.url.includes('?') ? '&' : '?') + 'try=' + p.tries : p.url;
+}
+/** Fetch the portraits of these speakers ahead of their lines (ids as in a script's `who`). */
+export function preloadPortraits(whos) {
+  for (const w of whos || []) { const u = portraitOf(w); if (u && isPicUrl(u)) pic(u); }
+}
+
 export function createDialogue(root) {
   const R = el('div', 'layer mv-dlg', root);
   const choicesEl = el('div', 'dlg-choices', R);
@@ -105,15 +154,43 @@ export function createDialogue(root) {
   let ownMode = false, releaseAt = -1, hideAt = -1;
   let visible = false;
 
+  let waitPic = null;       // the picture record the line on screen still waits for (its initial stands in meanwhile)
+  let waitName = '', waitT = 0;   // whose initial, from when (a picture a moment away is not preceded by a flash of it)
+  let warm = null, warmAt = 0;   // every portrait, fetched one at a time once play begins
+
   function setPortrait(p, name) {
     clear(port);
+    port.classList.remove('late');
+    waitPic = null;
     let on = false;
+    const initial = () => { if (name) icon(Array.from(String(name))[0], '', port); };
+    waitName = ''; waitT = G.time.real;
     if (p && typeof p === 'object' && p.nodeType === 1) { port.appendChild(p); on = true; }
     else if (typeof p === 'string' && p) {
-      if (/^(data:|blob:|https?:|\.{0,2}\/|assets\/)/.test(p) || /\.(png|jpe?g|webp|svg)$/i.test(p)) { const im = el('img', '', port); im.src = p; im.alt = ''; on = true; }
+      if (isPicUrl(p)) { const P = pic(p); if (P.img) port.appendChild(P.img); else { waitPic = P; P.on = late; waitName = name ? String(name) : ''; } on = true; }
       else if (hasIcon(p) || Array.from(p).length <= 2) { icon(p, '', port); on = true; }
-    } else if (p === true && name) { icon(Array.from(String(name))[0], '', port); on = true; }
+    } else if (p === true && name) { initial(); on = true; }
     box.classList.toggle('has-port', on);
+  }
+  /** the waiting picture takes the initial's place the moment it arrives */
+  function late(P) { if (waitPic !== P || !P.img) return; clear(port); port.appendChild(P.img); port.classList.add('late'); waitPic = null; }
+  /** per frame: a waiting picture that was lost is asked for again; the warm-up goes on one picture at a time */
+  function pollPic() {
+    if (waitPic) {
+      if (waitPic.img) late(waitPic);
+      else {
+        pic(waitPic.url);
+        if (waitName && G.time.real - waitT > 0.3) { icon(Array.from(waitName)[0], '', port); waitName = ''; }
+      }
+    }
+    if (warm === null && G.mode === 'play' && G.assets?.ids) {
+      warm = G.assets.ids('ui_portrait_').map((id) => G.assets.info(id)?.file).filter(Boolean).map((f) => 'assets/' + f);
+      warmAt = G.time.real + 4;   // the people and places near her ask first
+    }
+    if (warm && warm.length && G.time.real >= warmAt) {
+      const P = pic(warm[0], true);
+      if (P.img || !P.pend.size) warm.shift();   // arrived, or failed for now (asked again when a line needs it)
+    }
   }
 
   function finish(result) {
@@ -199,6 +276,7 @@ export function createDialogue(root) {
 
     update(rdt) {
       const frame = G.time.frame;
+      pollPic();
       if (!cur) {
         if (visible && hideAt >= 0 && frame >= hideAt) { visible = false; hideAt = -1; R.classList.remove('on'); }
         if (ownMode && releaseAt >= 0 && frame >= releaseAt) {

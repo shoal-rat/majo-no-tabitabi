@@ -246,6 +246,12 @@ tool (the director's call), replacing the earlier renders of the 3D models. Out:
 - `G.ui.portraitOf(who) -> url | null` (`dialogue.js portraitOf`): the manifest picture for a story speaker id; Elaina's
   follows `G.player.outfit` (the witch's robe when that outfit has none). `story/dialogue.js` passes it as
   `say({ portrait })`; speakers without a picture (roadside travellers, the narrator has no cameo) keep the glyph.
+- Loading (`dialogue.js` `pic()`): each picture is one kept `<img>`, fetched ahead: `G.ui.preloadPortraits([who, …])` (G.dialogue
+  calls it with a script's speakers when it starts; high fetch priority) and every `ui_portrait_*` one at a time from 4 s
+  after play begins (low priority; a line that wants one of those adds a high-priority ask). A
+  failed request is asked again after 2.5 s, one silent for 12 s gets a second request beside it (8 tries). If the
+  picture is not there 0.3 s into the line the cameo shows the speaker's initial; the picture then fades in (`.dlg-port.late`). Up to 2.0.1 the
+  picture was asked for only when its line appeared and the arch stayed empty while it loaded (slow links: all story).
 
 **Making one (a new speaker, a redo).** The scripts live outside the repo; this is the recipe.
 - **Reference**: render the character's own model with `node tools/costume/portraits.mjs --only <id>`. Take
