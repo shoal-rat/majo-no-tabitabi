@@ -99,6 +99,8 @@ System object: export const terrainSystem = { name: 'terrain', pausable: true, i
   discs (`G.fx.shape({ drape: true })`) are centred on it so they lie on the texture's ground exactly.
 - `G.world.groundPlane(x, z, r, out, h?, lift?, maxGrade?)`: least-squares plane of the ground under a disc of radius r
   (tilt capped, lowered until no sample is more than `lift` under it) → out.y, out.up. Used by the fx kit's ground marks.
+- `G.world.naturalHeightAt(x, z)`: the analytic land before the pool beds; `baseHeightAt` = it with the hollows cut into
+  the hillside for the two rock-held pools, down to just under their water (`world/ground.js` poolBed, `landforms/pools.js`).
 
 **Events the terrain listens to**
 - 'terrain:deformed' {x, z, r, amount, x0, x1, z0, z1}: refreshes that rectangle plus a 2 m margin, rebuilding the chunks in view in the same frame. When amount < 0 it also paints a soft scorched rim (radius 0.85·r, strength up to 0.45).

@@ -1,6 +1,7 @@
 import { TRIAL_LAKE, trialViewHeight, dryTrialHeight, floodedTrialHeight, trialLakeActive, trialLakeContains, changeTrialLake } from './trial-lake.js';
 import { CITY, JOURNEY_ANCHORS, JOURNEY_POI, journeyIndoor } from '../data/journey-map.js';
 import { bellPaving, bellRegion, bellLevel } from '../data/bellcrown.js';
+import { POOL_LANDMARKS, POOL_DEPTH, poolDiscRadius, poolSite } from './landforms/pools.js';
 // Ground truth of the world: analytic terrain height, walkable platforms, colliders, regions.
 // Pure logic (no meshes). Everything else — terrain mesh, flora, player physics, AI — queries this module.
 import * as THREE from 'three';
@@ -299,8 +300,33 @@ export function setTrialLake(on) {
   return true;
 }
 
-/** The untouched, analytic terrain height at (x,z). Deterministic, no state. Sea floor is about -16. */
-export function baseHeightAt(x, z) {
+/** The untouched, analytic terrain height at (x,z) (pool beds included). Deterministic, no state. Sea floor is about -16. */
+export function baseHeightAt(x, z) { return poolBed(x, z, naturalHeightAt(x, z)); }
+
+// Rock-held pools (landforms/pools.js) lie on a hillside with their water at the lowest point of their rim. The slope
+// above that is cut down to POOL_DEPTH under the water across the disc and a step beyond it, then rises back to the
+// hillside over the pool's bank width (only ever lowered: the lip and the slope below stay as they are). So the pool
+// sits in a hollow cut into the hill, its rim stones stand on the cut floor, and no edge of the water stands out over
+// the falling slope.
+let poolBeds = null;
+function poolBed(x, z, h) {
+  if (!poolBeds) poolBeds = POOL_LANDMARKS().map((l) => poolSite(l, naturalHeightAt)).filter(Boolean).map((p) => {
+    const R = poolDiscRadius(p.r) + 0.6;
+    return { x: p.x, z: p.z, y: p.level - POOL_DEPTH, R, reach: R + p.bank };
+  });
+  for (let i = 0; i < poolBeds.length; i++) {
+    const b = poolBeds[i];
+    if (h <= b.y) continue;
+    const dx = x - b.x, dz = z - b.z;
+    if (dx > b.reach || dx < -b.reach || dz > b.reach || dz < -b.reach) continue;
+    const w = smoothstep(b.reach, b.R, Math.hypot(dx, dz));
+    if (w > 0) h += (b.y - h) * w;
+  }
+  return h;
+}
+
+/** The analytic terrain before the pool beds: what landforms/pools.js places the pools on. */
+export function naturalHeightAt(x, z) {
   // A continuous east-west landmass with a walkable meadow spine, folded ridges on the
   // northern horizon, and two coastlines outside the story route. Everything samples it.
   const end = Math.abs(x);
@@ -383,7 +409,6 @@ export function groundPlane(x, z, r, out, h = heightAt, lift = 0.12, maxGrade = 
   out.up.set(-b, 1, -c).normalize();
   return out;
 }
-
 
 // ---- regions ------------------------------------------------------------------------------
 const inPoi = (p, x, z, pad = 0) => Math.hypot(x - p.x, z - p.z) < p.r + pad;
@@ -616,7 +641,7 @@ export function isReserved(x,z,pad=0) {
 export const world = {
   WORLD, VEIL, POI, ANCHORS, ROADS, RIVERS, BRIDGES, SKY_ISLES, STONE_LANTERNS, GREAT_LANTERNS, MOUNTAIN, MOAT,
   seaLevel: SEA_LEVEL, SUN_DIR,
-  heightAt, baseHeightAt, normalAt, slopeAt, groundPlane, groundAt, ceilingAt, slabAt, raycastGround, isWater, sample, isReserved,
+  heightAt, baseHeightAt, naturalHeightAt, normalAt, slopeAt, groundPlane, groundAt, ceilingAt, slabAt, raycastGround, isWater, sample, isReserved,
   deform, onDeform, deformOffsetAt, protectionAt, carveGuard, saveSpellScars, restoreSpellScars, spellScarList,
   trialLake:TRIAL_LAKE, setTrialLake, trialLakeActive, trialLakeContains,
   /** True where the land is fully warded (no ground fire, no craters). */

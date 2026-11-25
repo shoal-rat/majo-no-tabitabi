@@ -83,7 +83,11 @@ the cells within 130 m draw hi), ~45–80 draw calls added in a busy view. Init 
 The journey's landforms system builds only the countryside set pieces (`landforms/setpieces.js`, `G.landforms.setpieces`):
 granite tors (stacked rounded slabs + outliers), the crag falls (an arc of stratified masses, a falling-water ribbon with
 the landforms fall material, a rock-held plunge pool), the quarry face (blocky lime tiers) and the tarn rim. Pools
-(`landforms/pools.js`, `poolOf(W, landmark)`) are flat discs at a level just above the highest ground under them; their
-rock rims are built tall enough all round, so water never hangs over a slope (shared with the flora reeds / lily pads).
+(`landforms/pools.js`, `poolOf(W, landmark)`) are flat discs whose water stands just above the lowest natural ground on
+their rim, the lip they would spill over (`poolSite`, from `G.world.naturalHeightAt`). `world/ground.js` cuts the hillside
+above that down to `POOL_DEPTH` (0.3 m) under the water across the disc, rising back in a bank (4 m of rock under the
+crag, an 11 m grassy slope round the tarn), so the pool sits in a
+hollow cut into the hill and its low rock rim stands on the cut floor: no water hangs over a slope (shared with the flora
+reeds / lily pads; the crag pool's rim is closed wherever the ground is lower than the water).
 One mesh per piece (vertex colours, `lfMats().rock`), medium pieces hidden past 1100 m, cylinder colliders on the big
 blocks (tag `landmark_rock`). `?nolandforms=1` skips them.
