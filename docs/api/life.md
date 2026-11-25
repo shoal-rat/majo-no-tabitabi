@@ -167,8 +167,8 @@ where she looks / streets / shop fronts near her (one move per 0.5 s, never some
 flight path, jeweller flight, inn) always; the crash roof r 34 during quest steps `collision` / `repair`; the inn; the
 practice field (r + 45 m, up to field + 70 m) during `teach` / `course` / `praise`; the gate (r 42 m) during `gate` /
 `depart` (the gate lanes and gate commuters are not used then). Nobody inside an active zone is drawn (scale fade), local
-waypoints are pushed out of them, perches inside them are not used. While `G.mode !== 'play'` every flyer within 40 m of
-her or the camera, and every townsperson within 16 m of her, fades out.
+waypoints are pushed out of them, perches inside them are not used. A dialogue or a cutscene does not hide anyone (until
+2.0.1 everyone near her was scaled away while `G.mode !== 'play'`, which players saw as people shrinking during a talk).
 **Data.** `src/data/bellcrown.js` `CITY_LIFE` (places agent): `bounds`, `ground`, `gate` (archW / archH / depth / face),
 `practice`, `spires`, `towers`, `squares`, `streets`, `skyLanes` ({ y, width, loop, pts }), `wallWalk`, `keepOut`,
 `balconies` (filled by the builder; kinds balcony / roof / bridge), `shopFronts`, `ready`. The plan waits for `ready`.
