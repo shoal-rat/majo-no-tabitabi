@@ -358,6 +358,33 @@ export function normalAt(x, z, out = new THREE.Vector3()) {
 /** Slope in radians (0 = flat). */
 export function slopeAt(x, z) { return Math.acos(clamp(normalAt(x, z, _n).y, -1, 1)); }
 
+const _bed = new Float32Array(25 * 3);
+/**
+ * The plane a flat disc of radius r lies on when laid on the ground at (x, z) (the fx kit's wet / scorch / frost marks): least
+ * squares over the centre and three rings, tilted at most `maxGrade` (rise per metre), then lowered until no sample lies
+ * more than `lift` under it. On a slope the disc lies along the slope; on a ridge, a bank or a cliff its overhang sinks
+ * into the ground instead of hanging in the air. Writes out.y (plane height at the centre) and out.up (unit normal,
+ * a THREE.Vector3); returns out. h(x, z) samples the ground (default heightAt).
+ */
+export function groundPlane(x, z, r, out, h = heightAt, lift = 0.12, maxGrade = 0.7) {
+  const R = Math.max(0.3, r);
+  let n = 0, s = 0, sx = 0, sz = 0, k = 0;
+  const put = (dx, dz) => { const y = h(x + dx, z + dz); _bed[n * 3] = dx; _bed[n * 3 + 1] = dz; _bed[n * 3 + 2] = y; n++; s += y; sx += y * dx; sz += y * dz; k += dx * dx; };
+  put(0, 0);
+  // 8 even angles per ring: sum dx² = sum dz², sum dx·dz = 0, so the fit separates into the mean and two slopes
+  for (let ring = 1; ring <= 3; ring++) for (let i = 0; i < 8; i++) { const a = (i + ring * 0.5) * Math.PI / 4, d = R * ring / 3; put(Math.cos(a) * d, Math.sin(a) * d); }
+  let b = sx / k, c = sz / k;
+  const g = Math.hypot(b, c);
+  if (g > maxGrade) { b *= maxGrade / g; c *= maxGrade / g; }
+  const y0 = s / n;
+  let over = 0;
+  for (let i = 0; i < n; i++) over = Math.max(over, y0 + b * _bed[i * 3] + c * _bed[i * 3 + 1] - _bed[i * 3 + 2]);
+  out.y = y0 - Math.max(0, over - lift);
+  out.up.set(-b, 1, -c).normalize();
+  return out;
+}
+
+
 // ---- regions ------------------------------------------------------------------------------
 const inPoi = (p, x, z, pad = 0) => Math.hypot(x - p.x, z - p.z) < p.r + pad;
 
@@ -589,7 +616,7 @@ export function isReserved(x,z,pad=0) {
 export const world = {
   WORLD, VEIL, POI, ANCHORS, ROADS, RIVERS, BRIDGES, SKY_ISLES, STONE_LANTERNS, GREAT_LANTERNS, MOUNTAIN, MOAT,
   seaLevel: SEA_LEVEL, SUN_DIR,
-  heightAt, baseHeightAt, normalAt, slopeAt, groundAt, ceilingAt, slabAt, raycastGround, isWater, sample, isReserved,
+  heightAt, baseHeightAt, normalAt, slopeAt, groundPlane, groundAt, ceilingAt, slabAt, raycastGround, isWater, sample, isReserved,
   deform, onDeform, deformOffsetAt, protectionAt, carveGuard, saveSpellScars, restoreSpellScars, spellScarList,
   trialLake:TRIAL_LAKE, setTrialLake, trialLakeActive, trialLakeContains,
   /** True where the land is fully warded (no ground fire, no craters). */

@@ -24,6 +24,7 @@ import { FlashLights } from './lights.js';
 import { FloatText, TEXT_K } from './text.js';
 import { Ambient } from './ambient.js';
 import { Shapes } from './shapes.js';
+import { DATA_HALF } from '../world/terrain/textures.js';
 import { makeKit } from './kit.js';
 import { installMagic } from './magic.js';
 import { Circles, makeCircleTexture, CIRCLE, WARD, BURST } from './circles.js';
@@ -720,6 +721,7 @@ export const fxSystem = {
       ambient.update(dt, now, _w);
     }
     runBeams(dt);
+    if (shapes.groundTex !== (G.terrain?.dataTexture || null)) shapes.setGround(G.terrain?.dataTexture, DATA_HALF);   // draped discs
     if (dt > 0) shapes.update(now, dt, G.camera.position);
     api.magic?.update?.(dt, now);
     api.duel?.update?.(dt, rdt, now);

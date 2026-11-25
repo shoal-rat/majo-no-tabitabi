@@ -21,6 +21,16 @@ export function makeKit(env) {
   const q = () => env.quality();
   const at = (x, y, z) => _p.set(x, y, z);
   const gy = (p) => env.ground(p.x, p.z, p.y);
+  /** the plane of the ground under a disc of radius r at pos (world/ground.js groundPlane); flat at the ground without it */
+  const _bed = { y: 0, up: new THREE.Vector3(0, 1, 0) };
+  let bedRef = 0;
+  const bedGround = (x, z) => env.ground(x, z, bedRef);
+  const bed = (p, r) => {
+    bedRef = p.y;
+    if (G.world?.groundPlane) return G.world.groundPlane(p.x, p.z, r, _bed, bedGround);
+    _bed.y = gy(p); _bed.up.set(0, 1, 0);
+    return _bed;
+  };
   /** a horizontal unit vector perpendicular-ish to dir (for arc reference axes) */
   const side = (dir, out) => { out.set(-dir.z, 0, dir.x); if (out.lengthSq() < 1e-6) out.set(1, 0, 0); return out.normalize(); };
 
@@ -39,17 +49,17 @@ export function makeKit(env) {
     },
     /** dark scorch / wet / frost mark on the ground that slowly dissolves */
     mark(pos, r, kind = 'scorch', dur = 7) {
-      const y = gy(pos) + 0.03;
-      const P = at(pos.x, y, pos.z);
-      if (kind === 'scorch') add({ kind: 'disc', pos: P, r0: 0, r1: r, dur, grow: [0.6, 1], erode: [0.12, 0.95], tex: 'billow', tile: [3, 1], color: 0x161210, color2: 0x3a2d24,
+      const B = bed(pos, r);   // lies on the ground under the disc, not flat out over a slope
+      const P = at(pos.x, B.y + 0.03, pos.z);
+      if (kind === 'scorch') add({ kind: 'disc', pos: P, up: B.up, r0: 0, r1: r, dur, grow: [0.6, 1], erode: [0.12, 0.95], tex: 'billow', tile: [3, 1], color: 0x161210, color2: 0x3a2d24,
         mode: 'smoke', body: 0.85, soft: 0.05, core: 0.6 });
-      else if (kind === 'frost') add({ kind: 'disc', pos: P, r0: 0, r1: r, dur, grow: [0.25, 1], erode: [0.18, 0.95], tex: 'streak', tile: [Math.max(6, Math.round(r * 4)), 0.7], color: 0xa8d8f4, color2: 0xffffff,
+      else if (kind === 'frost') add({ kind: 'disc', pos: P, up: B.up, r0: 0, r1: r, dur, grow: [0.25, 1], erode: [0.18, 0.95], tex: 'streak', tile: [Math.max(6, Math.round(r * 4)), 0.7], color: 0xa8d8f4, color2: 0xffffff,
         mode: 'sheet', body: 0.45, soft: 0.05, I: 1.1 });     // feathery frost: streaks run outward from the centre
-      else if (kind === 'wet') add({ kind: 'disc', pos: P, r0: 0, r1: r, dur, grow: [0.4, 1], erode: [0.18, 0.95], tex: 'billow', tile: [2, 1], color: 0x1d3b52, color2: 0x9fe0ff,
+      else if (kind === 'wet') add({ kind: 'disc', pos: P, up: B.up, r0: 0, r1: r, dur, grow: [0.4, 1], erode: [0.18, 0.95], tex: 'billow', tile: [2, 1], color: 0x1d3b52, color2: 0x9fe0ff,
         mode: 'sheet', body: 0.45, soft: 0.04, I: 0.9 });
-      else if (kind === 'crack') add({ kind: 'disc', pos: P, r0: 0, r1: r, dur, grow: [0.5, 1], erode: [0.55, 0.98], tex: 'seams', tile: [3, 1], color: 0x140f0c, color2: 0x2a2019,
+      else if (kind === 'crack') add({ kind: 'disc', pos: P, up: B.up, r0: 0, r1: r, dur, grow: [0.5, 1], erode: [0.55, 0.98], tex: 'seams', tile: [3, 1], color: 0x140f0c, color2: 0x2a2019,
         mode: 'smoke', body: 1.0, soft: 0.03, core: 1 });
-      else if (kind === 'glow') add({ kind: 'disc', pos: P, r0: 0, r1: r, dur, grow: [0.6, 1], erode: [0.05, 0.95], tex: 'billow', tile: [3, 1], color: 0xffd27a, color2: 0xffffff,
+      else if (kind === 'glow') add({ kind: 'disc', pos: P, up: B.up, r0: 0, r1: r, dur, grow: [0.6, 1], erode: [0.05, 0.95], tex: 'billow', tile: [3, 1], color: 0xffd27a, color2: 0xffffff,
         mode: 'glow', add: 1, I: 0.9, soft: 0.2 });
     },
     /** glyph (talisman) circle: rotating band of invented glyphs */

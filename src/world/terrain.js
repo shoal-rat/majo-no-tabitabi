@@ -7,7 +7,7 @@
 import * as THREE from 'three';
 import { TerrainLOD } from './terrain/lod.js';
 import { createTerrainMaterial } from './terrain/shader.js';
-import { createDataTextureAsync, createNoiseTexture, refreshDataRect, ScorchLayer, bakeWallMask } from './terrain/textures.js';
+import { createDataTextureAsync, createNoiseTexture, refreshDataRect, ScorchLayer, bakeWallMask, dataHeightAt } from './terrain/textures.js';
 import { createWater } from './water.js';
 import { bakeDetail } from './terrain/detail.js';
 import { createClutter } from './terrain/clutter.js';
@@ -45,6 +45,8 @@ export const terrainSystem = {
 
     const api = {
       mesh: lod.mesh, material, uniforms: U, lod, scorchLayer: scorch, dataTexture: data, noiseTexture: noise, detail,
+      /** Ground height as the data texture holds it (2 m texels, half floats): what draped fx discs lie on. */
+      dataHeightAt: (x, z) => dataHeightAt(data, x, z),
       /** ★ Re-sample the ground inside [x0,x1]×[z0,z1] (world metres): chunks in view are rebuilt now. */
       refresh(x0, x1, z0, z1) {
         if (x0 > x1) [x0, x1] = [x1, x0];
