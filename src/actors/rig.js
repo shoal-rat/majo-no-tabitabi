@@ -162,7 +162,8 @@ function tintMerged(mesh, src, o) {
   return c;
 }
 
-/** Primitive stand-in when the model asset is missing (never crash a subset build). */
+/** Primitive stand-in when the model asset is missing or not loaded yet (never crash a subset build). An actor built
+ *  from it asks for its model in the background (G.assets.want) and its owner swaps the real one in (healActor). */
 function placeholderModel() {
   const g = new THREE.Group();
   const body = new THREE.Mesh(new THREE.CapsuleGeometry(0.22, 0.8, 4, 10), toon(0xfbf6ec));
@@ -181,6 +182,34 @@ function placeholderModel() {
 }
 
 /**
+ * Self-healing actors (players reported a heroine who stayed a capsule for a whole story after a connection dropped
+ * while her model loaded): an actor built from the stand-in is replaced by the real one as soon as its model is in.
+ * Call every frame while `old.placeholder` (cheap; keeps the load going): null until the model is ready, then the new
+ * actor — built with `opts`, given the old one's state (adopt: clips and times, look, tint, the props on its bones),
+ * the fields its owner added to it, the same parent, place and visibility, its other children, its footGround — and
+ * the old one freed. The caller stores the new actor wherever it kept the old. (The heroine goes through the
+ * wardrobe's swap, which does the same.)
+ */
+// the rig's own state made on first use: stays with its rig (the contact blob is freed with the old one)
+const RIG_LAZY = new Set(['_blob', '_cb', '_lock', '_seeOff', '_lookOn', '_lodN', '_lodAcc', '_camD', '_castDrop', '_breathPh', '_talkT']);
+export function healActor(old, opts = {}) {
+  if (!old?.placeholder || !G.assets?.want?.(old.assetId)) return null;
+  const rig = createActor(old.assetId, opts);
+  if (rig.placeholder) { rig.dispose(); return null; }
+  rig.adopt(old);
+  for (const k of Object.keys(old)) if (!(k in rig) && !RIG_LAZY.has(k)) rig[k] = old[k];   // what the owner keeps on it (rogue dress, shade flag …)
+  const a = old.group, b = rig.group;
+  b.position.copy(a.position); b.quaternion.copy(a.quaternion); b.scale.copy(a.scale); b.visible = a.visible;
+  for (const c of [...a.children]) if (c !== old.model) b.add(c);
+  a.parent?.add(b);
+  rig.footGround = old.footGround;
+  rig.update(0);
+  rig.resetSprings();
+  old.dispose();
+  return rig;
+}
+
+/**
  * Create a character.
  * @param {string} assetId  e.g. 'char_akari'
  * @param {object} opts { castShadow=true, receiveShadow=true, state='idle', footGround?(x,z)->y, lookLimits?{yaw,pitch} }
@@ -189,7 +218,7 @@ export function createActor(assetId, opts = {}) {
   const info = G.assets?.info(assetId) || {};
   const boneNames = { ...DEFAULT_BONES, ...(info.bones || {}) };
   let model = G.assets?.ready?.(assetId) ? G.assets.model(assetId) : null;
-  if (!model) model = placeholderModel();
+  if (!model) { model = placeholderModel(); if (G.assets?.has?.(assetId)) G.assets.want?.(assetId); }
   const group = new THREE.Group();
   group.name = 'actor:' + assetId;
   group.add(model);
@@ -287,6 +316,8 @@ export function createActor(assetId, opts = {}) {
 
   const actor = {
     assetId, group, model, mixer, bones, info,
+    /** Built from the primitive stand-in (its model was not loaded yet): healActor() replaces it once the model is in. */
+    get placeholder() { return !!model.userData.placeholder; },
     get flightMotion() { return ride?.metrics || null; },
     /** Current state of the full-body layer, and of the upper overlay ('' if none). */
     current: '', upperState: '',

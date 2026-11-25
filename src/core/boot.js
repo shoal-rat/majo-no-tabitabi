@@ -12,7 +12,7 @@ import * as i18n from './i18n.js';
 import { t, setLocale } from './i18n.js';
 import { createDynRes, createPacer } from '../render/dynres.js';
 import { pickQuality, mobileDevice } from '../render/gpubench.js';
-import { mark, addSpan, sliceDone } from './boottime.js';
+import { mark, addSpan, sliceDone, slice } from './boottime.js';
 import { compileWorld, warmDraw } from '../render/warmup.js';
 
 /** Quality presets (G.quality). Systems read these in init(); a change takes effect after reload. */
@@ -195,7 +195,9 @@ async function bootInner(systems) {
     G.events.emit('boot:progress', { frac, text: progText });
   };
   G.bootProgress = () => ({ frac: progFrac, text: progText, ready: G.bootReady === true });
-  const breathe = () => new Promise((r) => setTimeout(r, 0));
+  // a yield between systems: after the next painted frame while visible, at once in a background tab (a 0 ms timer
+  // waits a whole second there, once per system; players asked whether the game can load in the background)
+  const breathe = () => slice(0) || Promise.resolve();
 
   G.assets = createAssets(G);
   progress(0.02, t('core.boot.assets'));
@@ -222,7 +224,13 @@ async function bootInner(systems) {
   G.bootReady = false;
   const loadWorld = async () => {
     const backdrop = document.getElementById('boot');
-    try { await G.assets.init((f) => progress(0.05 + f * 0.3, t('core.boot.assets'))); } catch (e) { G.reportError('assets', e); }
+    // models: the bar moves with the megabytes that arrived (of this boot's set), and says so while a file is retried
+    const mb = (b) => (b / 1e6).toFixed(1);
+    const onAssets = (p) => {
+      const f = p.total > 0 ? p.got / p.total : p.files ? (p.done + p.failed) / p.files : 0;
+      progress(0.05 + Math.min(1, f) * 0.3, t(p.retrying ? 'core.boot.retry' : 'core.boot.bytes', { got: mb(p.got), total: mb(p.total) }));
+    };
+    try { await G.assets.init(onAssets); } catch (e) { G.reportError('assets', e); }
     mark('assets');
     for (let i = ei; i < systems.length; i++) {
       progress(0.35 + 0.5 * ((i - ei) / Math.max(1, systems.length - ei)), t('core.boot.' + (systems[i]?.name || 'waking')));
@@ -248,6 +256,7 @@ async function bootInner(systems) {
   if (legacy) {
     await loadWorld();
     G.bootReady = true;
+    G.assets.stream?.();
     G.setMode('title');
     startLoop(early);
     if (G.params.autostart) document.getElementById('boot')?.remove();
@@ -264,6 +273,7 @@ async function bootInner(systems) {
     if (showTitle && bootEl) bootEl.classList.add('under');
     G.worldReady = loadWorld().then(() => {
       G.bootReady = true;
+      G.assets.stream?.();   // the people's models the boot did not wait for (core/assets.js)
       G.events.emit('boot:ready', {});
       requestAnimationFrame(() => requestAnimationFrame(() => mark('firstFrame')));
       if (G.params.autostart) document.getElementById('boot')?.remove(); // test runs: no fade covering screenshots

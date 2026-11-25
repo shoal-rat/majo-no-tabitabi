@@ -256,6 +256,12 @@ Developer switches: `?outfit=<id>` starts in that outfit (wins over the save); `
    There is never a frame with none, two, a T-pose or the bare base.
 4. Petals (`fx 'petals'`) + soft light motes (`'heal'`) and a cloth rustle + sparkle cover the change; made from the pause
    scroll they play when play resumes. A change on load (`start()`, the save's outfit) is quiet.
+5. Bad networks (docs/api/perf.md "Loading on a bad network"): a model that cannot be had after its tries is not cached as
+   missing. The story's (quiet) choice is asked for again until it arrives; the player's choice resolves false,
+   `wardrobe.failed` names it and the 衣装 card says `ui.wardrobe.unavailable` (a toast if the scroll was closed); picking
+   it again tries again. If she was built from the primitive stand-in (`rig.placeholder`: her model was lost at boot),
+   every player update asks `G.assets.want(asset)` and, the moment it is in, runs this same swap for the outfit she wears
+   (`wardrobe.heals` counts them).
 
 `rig.adopt(old)` (src/actors/rig.js) carries: both animation layers (state, clip, weight, fade, time, speed, one-shot / done,
 onDone / next, locomotion phase and gait weights), `current` / `upperState`, every plain number / flag of the rig (exertion,

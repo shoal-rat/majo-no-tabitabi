@@ -27,6 +27,9 @@ export default {
   boot: {
     waking: '正在唤醒大地……',
     assets: '正在取出行囊……',
+    // 载入模型时：按已经到手的大小走进度；连接卡住、正在重新取某个文件时换成 retry（{got} / {total} 是 MB 数）
+    bytes: '正在取出行囊…… {got} / {total} MB',
+    retry: '连接不稳，正在重新取…… {got} / {total} MB',
     failed: '启动失败：',
     sky: '点亮天空……', terrain: '铺开山川……', flora: '种下草木……', landforms: '勾勒群山……', life: '唤来鸟雀与游鱼……', structures: '搭起街巷与屋顶……',
     physics: '唤醒万物之理……', elements: '调和水火风雷……', props: '摆放器物……', destruction: '记下大地的伤痕……', fx: '点起萤火……', audio: '调试弦音……',

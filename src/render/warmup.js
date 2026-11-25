@@ -7,8 +7,19 @@
 //                               texture upload, no compile). list = [[assetId, opts], ...]
 // Nothing here changes what is drawn or simulated; it only moves work to the first quiet frames after start.
 import { acquireCreature } from '../actors/creature.js';
+import { slice } from '../core/boottime.js';
 
-const nextFrame = () => new Promise((r) => requestAnimationFrame(() => r()));
+// one painted frame while the page is visible. A background tab gets no animation frames at all, so the boot used to
+// stop here until the player came back to the tab (players asked whether the game can load in the background): hidden,
+// it goes on at once (a message task), and a page hidden while it waits is let go by the visibility change.
+const nextFrame = () => (typeof document !== 'undefined' && document.visibilityState !== 'visible'
+  ? slice(0) || Promise.resolve()
+  : new Promise((r) => {
+    let done = false;
+    const go = () => { if (done) return; done = true; document.removeEventListener?.('visibilitychange', go); r(); };
+    requestAnimationFrame(go);
+    document.addEventListener?.('visibilitychange', go);
+  }));
 
 /**
  * Compile every material of the scene, visible or not. Boot pass (docs/api/perf.md "Boot and loading"): compiled for
