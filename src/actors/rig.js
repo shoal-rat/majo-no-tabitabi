@@ -97,6 +97,12 @@ function lib(assetId, model) {
     L.full.set(c.name, clip);
     L.names.add(c.name);
   }
+  // 'Name@tag' in clips.js: the same tracks as a separate clip, so the mixer gives that state its own action and it can
+  // cross-fade from a state that plays the original (two states on one action would fight over its weight and time)
+  for (const k in CLIPS) {
+    const n = CLIPS[k].clip, at = n ? n.indexOf('@') : -1, base = at > 0 && L.full.get(n.slice(0, at));
+    if (base && !L.full.has(n)) { L.full.set(n, new THREE.AnimationClip(n, base.duration, base.tracks)); L.names.add(n); }
+  }
   libs.set(assetId, L);
   return L;
 }

@@ -695,7 +695,7 @@ function land(P, S, speed) {
   S.fallMaxVy = 0;
   if (fell > 3.5) {
     G.events.emit('player:land', { speed: fell });
-    S.squashV -= clamp(fell / 16, 0.05, 1.1) * 3.2;
+    S.squashV -= clamp(fell / 16, 0.05, 1.1) * 2.2;   // a quiet landing: the knees take most of it
     const moving = Math.hypot(P.vel.x, P.vel.z) > 1.5;
     if (fell > 9) {
       _v1.copy(P.pos); _v1.y += 0.15;
@@ -718,7 +718,7 @@ function tryJump(P, S, I) {
     P.vel.y = MOVE.JUMP + (S.support?.vel?.y > 0 ? S.support.vel.y : 0);
     S.jumpCut = false; S.jumpHeldT = 0; S.airT = 0;
     S.rig.play('jump', { restart: true, next: 'fall' });
-    S.squashV += 2.2;
+    S.squashV += 1.2;
     _v1.copy(P.pos); _v1.y += 0.1;
     if (Math.hypot(P.vel.x, P.vel.z) > 6) G.fx?.burst('dust', _v1, { power: 0.4, scale: 0.6 });
     G.events.emit('player:jump', { air: false });
@@ -1274,7 +1274,7 @@ function placeVisuals(dt) {
     S.accF = damp(S.accF || 0, acc, 10, dt);
     bank = clamp(-yawRate * P.speed * 0.012, -0.16, 0.16);
     pitch = (P.sprinting ? 0.07 : 0) + clamp(S.accF * 0.0035, -0.11, 0.09);
-  }
+  } else if (P.state === 'air') pitch = 0.04 + Math.min(0.08, Math.hypot(P.vel.x, P.vel.z) * 0.012);   // airborne: a slight forward lean
   S.prevSpeed = P.speed;
   S.bank = damp(S.bank, bank, 8, dt); S.pitch = damp(S.pitch, pitch, 6, dt);
   // squash spring
