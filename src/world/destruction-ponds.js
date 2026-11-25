@@ -116,13 +116,15 @@ export function createPonds(G) {
 
   return {
     mesh, list: ponds,
-    /** 'terrain:deformed' hook: craters get surveyed next update; a reset clears the ponds in that patch. */
+    /** 'terrain:deformed' hook: craters get surveyed next update, and so does every pond the change reaches (a crater
+     *  dug through a pond's lip lowers it to the new lip instead of leaving it hanging over the hole); a reset clears the
+     *  ponds in that patch. */
     onDeform(e) {
       if (e.kind === 'resetSpell') {
         for (let i = ponds.length - 1; i >= 0; i--) if (Math.hypot(ponds[i].x - e.x, ponds[i].z - e.z) < e.r + 2) remove(ponds[i]);
         return;
       }
-      if (e.amount < -0.4) { if (pendingCheck.length < 32) pendingCheck.push([e.x, e.z, e.r]); return; }
+      if (e.amount < -0.4 && pendingCheck.length < 32) pendingCheck.push([e.x, e.z, e.r]);
       for (const p of ponds) if (Math.abs(p.x - e.x) < e.r + p.r && Math.abs(p.z - e.z) < e.r + p.r) pendingCheck.push([p.x, p.z, p.R]);
     },
     /** Water magic: fills the bowl it lands in (if it is one). */

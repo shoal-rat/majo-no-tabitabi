@@ -331,7 +331,8 @@ taken away again on the same clock.
   healed ones are dropped; a v1 triple list loads with its clocks starting at load). Bits `G.flora.wreck.BITS`: CHARRED 1, FELLED 2 (stump), GONE 4 (shattered; rubble for stone ≥ 0.9 m),
   CRACKED 8. Records point at instances by position (10 cm), so a density change only skips (and keeps) what is missing.
   Written on `'save:collect'`; re-applied whenever `G.state` is replaced (load / new game), after resetting this run's wreck.
-- **Derived, nothing saved**: crater ponds (water table), broken rock on heaves (the heave stamp has r = 3.6, rim 0).
+- **Derived, nothing saved**: crater ponds (water table; any dig or heap that reaches a pond resurveys it, so a crater
+  dug through its lip lowers it to the new lip), broken rock on heaves (the heave stamp has r = 3.6, rim 0).
 - A maxed save (240 stamps): ~0.2 s to replay + one coalesced terrain refresh on the next frame (was ~1.4 s before the
   terrain batched restore refreshes). Save size ≈ 7 KB scars + ≤ 7 KB flora.
 
