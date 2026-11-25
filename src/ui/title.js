@@ -27,7 +27,7 @@ addCss(`
 .tt-menu .btn .ic {font-size:15u;color:var(--brass2);opacity:.9;}
 .tt-menu .btn:hover,.tt-menu .btn.sel {color:#fffaf0;background:linear-gradient(90deg,rgba(236,217,164,.2),rgba(236,217,164,0) 82%);}
 .tt-menu .info {font:400 13.5u/1.4 var(--fb);color:rgba(246,233,204,.82);margin:0 0 8u 66u;text-shadow:var(--halo);}
-.tt-load {bottom:7.8%;width:260u;font:400 13u/1.6 var(--fb);color:rgba(255,247,232,.8);text-shadow:var(--halo);}
+.tt-load {bottom:7.8%;width:300u;font:400 13u/1.6 var(--fb);color:rgba(255,247,232,.8);text-shadow:var(--halo);}
 .tt-load .lb {height:2u;margin-top:4u;border-radius:1u;background:rgba(255,247,232,.18);}
 .tt-load i {display:block;height:2u;border-radius:1u;background:linear-gradient(90deg,var(--brass),var(--brass2));box-shadow:0 0 6u rgba(236,217,164,.6);transition:width .25s;}
 .mv-title.ready .tt-load {display:none;}

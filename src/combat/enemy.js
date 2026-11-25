@@ -6,7 +6,7 @@ import { t } from '../core/i18n.js';
 import { PAL, glow } from '../core/mats.js';
 import { clamp, damp, dampAngle, angleDiff, TAU } from '../core/util.js';
 import { acquireCreature } from '../actors/creature.js';
-import { createActor, makeActorShadowBlob } from '../actors/rig.js';
+import { createActor, makeActorShadowBlob, healActor } from '../actors/rig.js';
 import { cancelTimers } from './attacks.js';
 import { initPoise } from './wards.js';
 
@@ -298,6 +298,11 @@ export class Enemy {
       this.cr.place(this.pos.x, y, this.pos.z, this.yaw); this.cr.update(dt);
     }
     if (this.actor) {
+      // built while its model was still loading (the people's models keep coming after play starts): the real one in
+      if (this.actor.placeholder) {
+        const h = healActor(this.actor, { castShadow: true });
+        if (h) { this.actor = h; this.view = h.group; }
+      }
       const g = this.actor.group;
       g.position.set(this.pos.x, y, this.pos.z);
       g.rotation.y = this.yaw;
@@ -350,7 +355,7 @@ export class Enemy {
       a.footGround = null;
       let p = actorPool.get(this._actorKey);
       if (!p) actorPool.set(this._actorKey, (p = []));
-      if (p.length < 4 && !this.def.noPool) { a.stop?.('upper', 0); a.play('idle', { fade: 0 }); p.push(a); }
+      if (p.length < 4 && !this.def.noPool && !a.placeholder) { a.stop?.('upper', 0); a.play('idle', { fade: 0 }); p.push(a); }
       else { try { a.dispose(); a.model?.traverse((o) => { if (o.isSkinnedMesh && o.skeleton) o.skeleton.dispose(); }); } catch (e) { G.reportError('combat:actor', e); } }
       this.actor = null;
     }

@@ -30,6 +30,13 @@
 // --dpr      device pixel ratio of the emulated screen (default 1; a phone is ~3: --mobile --size 844x390 --dpr 3).
 //            Screenshots are then saved at device pixels (2532x1170 for that phone).
 // --profile  name of a persistent browser profile under .tmp/profiles/ (keeps the save between runs; default: throwaway).
+// Bad networks (docs/api/perf.md "Loading on a bad network"):
+// --throttle kbps[,latencyMs]  a slow link for every request (CDP Network.emulateNetworkConditions), e.g. 4000,150
+// --fault    sub:stall|fail[:n][,…]  the first n (default 1) requests whose URL contains `sub` hang with no answer
+//            (stall: a dead connection) or are reset (fail). E.g. --fault elaina_apprentice.glb:stall,prop_:fail:3
+//            The script can end every fault at once: window.__mvFaults('off') (e.g. "the connection came back").
+// --hidden   boot in a background tab (another tab in front, real background throttling) until the game is ready
+// --boot-timeout s  how long to wait for the game to become ready (default: --timeout, 90..240)
 // Without a script: waits 2.5 s and saves final.png.
 // Output folder: .tmp/play/<name>/ (printed at the end). Exit code 0 = no errors, 2 = errors were reported.
 import fs from 'node:fs';
@@ -64,7 +71,28 @@ if (!TITLE) usp.set('autostart', '1');
 if (!usp.has('mute')) usp.set('mute', '1');
 if (opt('quality')) usp.set('quality', opt('quality'));
 
-const page = await launch({ width: W, height: H, profileDir: opt('profile') ? path.join(TMP, 'profiles', opt('profile').replace(/[^\w.-]/g, '_')) : null });
+const HIDDEN = args.includes('--hidden');
+const page = await launch({ width: W, height: H, backgroundThrottling: HIDDEN, profileDir: opt('profile') ? path.join(TMP, 'profiles', opt('profile').replace(/[^\w.-]/g, '_')) : null });
+if (opt('throttle')) {
+  const [kbps, lat = 100] = opt('throttle').split(',').map(Number);
+  await page.send('Network.enable');
+  await page.send('Network.emulateNetworkConditions', { offline: false, latency: lat, downloadThroughput: (kbps * 1000) / 8, uploadThroughput: (kbps * 1000) / 8 });
+}
+const faults = (opt('fault') || '').split(',').filter(Boolean).map((f) => { const [sub, kind = 'fail', n = 1] = f.split(':'); return { sub, kind, n: Number(n) || 1 }; });
+const faultLog = [];
+if (faults.length) {
+  await page.send('Fetch.enable', { patterns: faults.map((f) => ({ urlPattern: '*' + f.sub + '*', requestStage: 'Request' })) });
+  page.on('Fetch.requestPaused', (p) => {
+    const f = faults.find((x) => x.n > 0 && p.request.url.includes(x.sub));
+    if (!f) { page.send('Fetch.continueRequest', { requestId: p.requestId }).catch(() => {}); return; }
+    f.n--;
+    faultLog.push([+((Date.now() - t0) / 1000).toFixed(1), f.kind, p.request.url.slice(p.request.url.lastIndexOf('/') + 1)]);
+    if (f.kind === 'fail') page.send('Fetch.failRequest', { requestId: p.requestId, errorReason: 'ConnectionReset' }).catch(() => {});
+    // stall: left paused, no answer ever comes (the page's own timeout has to notice)
+  });
+  await page.send('Runtime.addBinding', { name: '__mvFaults' });
+  page.on('Runtime.bindingCalled', (p) => { if (p.name === '__mvFaults') { for (const f of faults) f.n = 0; faultLog.push([+((Date.now() - t0) / 1000).toFixed(1), 'off', '(script)']); } });
+}
 const MOBILE = args.includes('--mobile');
 const DPR = Number(opt('dpr', 1)) > 0 ? Number(opt('dpr', 1)) : 1;
 if (!MOBILE && DPR !== 1) await page.send('Emulation.setDeviceMetricsOverride', { width: W, height: H, deviceScaleFactor: DPR, mobile: false });
@@ -111,12 +139,24 @@ let result;
 const t0 = Date.now();
 try {
   await page.goto(url + '?' + usp.toString());
+  let front = null;
+  if (HIDDEN) { // a blank tab in front: the game tab is now a background tab (document hidden, no animation frames)
+    await new Promise((r) => setTimeout(r, 300));
+    front = await (await fetch(`http://127.0.0.1:${page.port}/json/new?about:blank`, { method: 'PUT' })).json();
+    console.log('booting in a background tab: ' + await page.evaluate('document.visibilityState').catch(() => '?'));
+  }
   let ready = false;
-  while (Date.now() - t0 < Math.max(90000, Math.min(timeout, 240000))) { // boot can take minutes when several runs share the GPU
+  const bootWait = opt('boot-timeout') ? Number(opt('boot-timeout')) * 1000 : Math.max(90000, Math.min(timeout, 240000));
+  while (Date.now() - t0 < bootWait) { // boot can take minutes when several runs share the GPU
     const r = await page.evaluate(TITLE ? "(window.__mvReady === 'failed') ? 'failed' : (window.__game && window.__game.mode === 'title' && window.__T ? true : null)" : 'window.__mvReady === undefined ? null : window.__mvReady').catch(() => null);
     if (r === true) { ready = true; break; }
     if (r === 'failed') break;
     await new Promise((r2) => setTimeout(r2, 150));
+  }
+  if (front) {
+    console.log(`background tab: ${ready ? 'ready' : 'not ready'} after ${((Date.now() - t0) / 1000).toFixed(1)} s, still ${await page.evaluate('document.visibilityState').catch(() => '?')}`);
+    await fetch(`http://127.0.0.1:${page.port}/json/close/${front.id}`).catch(() => {});
+    await new Promise((r) => setTimeout(r, 300));
   }
   if (!ready) {
     code = 2;
@@ -154,6 +194,7 @@ if (logs.length) {
   if (logs.length > 40) console.log(`  … ${logs.length - 40} more`);
 }
 if (bad.length) code = 2;
+if (faultLog.length) console.log('faults injected:\n  ' + faultLog.map((f) => f.join(' ')).join('\n  '));
 if (result !== undefined) console.log('result: ' + JSON.stringify(result, null, 1));
 if (shots.length) console.log('screenshots:\n  ' + shots.join('\n  '));
 console.log(code === 0 ? 'OK (no errors)' : 'FINISHED WITH ERRORS');

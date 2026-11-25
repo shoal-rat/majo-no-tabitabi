@@ -96,6 +96,8 @@ export function createWardrobe(parent) {
 
   const worn = () => G.player?.outfit || OUTFITS[0].id;
   const pending = () => G.player?._S?.wardrobe?.pending || null;
+  // an outfit whose model could not be had (a bad connection): its card says so; choosing it again tries again
+  const failed = () => G.player?._S?.wardrobe?.failed || null;
   const open = (o) => outfitUnlocked(o, G.state);
   const touch = () => !!G.input?.touch;
 
@@ -109,6 +111,7 @@ export function createWardrobe(parent) {
       c._worn.style.display = o.id === w && !p ? '' : 'none';
       clear(c._go);
       if (o.id === p) tel('span', '', c._go, 'ui.wardrobe.changing');
+      else if (o.id === failed()) tel('span', '', c._go, 'ui.wardrobe.unavailable');
       else if (c._lock) tel('span', '', c._go, 'ui.wardrobe.locked');
       else if (touch()) tel('span', '', c._go, 'ui.wardrobe.tapWear');
       else hintLine(c._go, 'ui.wardrobe.wear', { key: codeLabel('Enter') });
@@ -170,7 +173,11 @@ export function createWardrobe(parent) {
     sfx('ui_select', 0.6);
     const p = G.player.setOutfit(o.id);
     paint();
-    Promise.resolve(p).then((ok) => { if (!ok) sfx('ui_error', 0.5); if (R.isConnected) paint(); });
+    Promise.resolve(p).then((ok) => {
+      if (!ok) sfx('ui_error', 0.5);
+      if (R.isConnected) paint();
+      else if (!ok && failed() === o.id) G.ui?.toast?.(t('ui.wardrobe.unavailable'));   // the scroll was closed meanwhile
+    });
   }
 
   return {

@@ -637,3 +637,68 @@ Per face: MV WenKai 331 KB, MV Brush 616 KB, MV Running 448 KB, MV Serif 516 KB 
   hand-lettered faces rebuild from the full TTFs kept in `assets/fonts/zh-CN` (not loaded by the game; the trailer editor
   renders captions from them); the serif needs `--src serif=NotoSerifSC[wght].ttf` (not in the repo).
 - The release copy still ships the full TTFs with the rest of `assets/` (hosted, never fetched by the game).
+
+## Loading on a bad network (2026-11-25)
+
+Players (mostly mainland China, Windows laptops, the game over GitHub Pages) reported a boot bar that "always gets stuck"
+(one waited 20+ minutes), a heroine who was a white capsule with a dark ball head for the whole game, clothes that would
+not change, and asked whether the game can load in the background. Reproduced with `tools/play.mjs` (new switches:
+`--throttle kbps,latency`, `--fault sub:stall|fail[:n]`, `--hidden`, `window.__mvFaults('off')` from a script).
+
+### Causes (confirmed)
+1. `core/assets.js` `loadModel()` used a bare `fetch()`: no timeout, no stall check, no retry. `init()` awaited
+   `Promise.all` over every preload model, so ONE connection that stopped sending held the boot forever (bar frozen at
+   34.9 %, `--fault elaina_apprentice.glb:stall`).
+2. All ~400 requests went out at once. Over HTTP/2 they share the line, so almost nothing finished until the end: on an
+   8 Mbit/s link the bar sat at 2–6 % for 45 s and crawled 26 → 34 % over the next 70 s (a player on 1 Mbit/s sees eight
+   times that). The bar counted finished files, not bytes.
+3. `load()` kept a failed promise (`null`) in its cache: every later `load(id)` returned `null` at once. One failed
+   request for her model = `createActor()` built the primitive stand-in (`placeholderModel()`, the capsule) and nothing
+   ever swapped the real one in; `setOutfit()` failed in 19 ms every time (cause of the "outfit does nothing" reports).
+4. `world/terrain/textures.js` fetched the 6 MB terrain cache (`assets/_terrain_cache/*.gz`) the same bare way during the
+   terrain system's init: an error fell back to computing the field, a stall held 「铺开山川……」 for good.
+5. A background tab gets no animation frames: the shader warm-up (`render/warmup.js` waited for `requestAnimationFrame`)
+   stopped until the player came back to the tab, and `boot.js` yielded between systems with a 0 ms timer (one second
+   each in a background tab).
+
+### What changed
+- **One network queue** (`core/assets.js`, "network"): at most 8 requests at a time + 4 for files under 160 KB over
+  HTTP/2 or 3 (`navigation.nextHopProtocol`); 5 + 1 over HTTP/1.1 (the browser's 6 connections per host: more would wait
+  in the browser's pool with no byte and be taken for stalled). The body is read as a stream; 18 s without a byte
+  (connect, headers or body) aborts it. Stalled or failed requests are tried again after 1.5 / 3 / 6 / 12 / 20 s, 4 tries
+  (her model 8); 404 / 410 are final. A load that still fails is **not cached**: the next `load(id)` starts over (5 s
+  cool-down). Textures retry on error too. `G.assets.fetchUrl(url, { tries })` gives files outside the manifest the same
+  path: the terrain cache uses it with one try, so a stall falls back to computing the field like an error does.
+- **Order** (`bootOrder`): her model for this save (the save's outfit, `?outfit=` wins) + `anim_ual` / `anim_miko` (8
+  tries) → her other outfit → the story cast near the save's position (`data/journey-cast.js castNear`) → every
+  non-character preload model (the world builds from them) → the other people's models. The boot waits for all but the
+  last group, and a file that keeps failing only costs its tries. The other people (≈ 38 MB, used by foes and duels)
+  come with `G.assets.stream()` once the world is ready (boot.js), behind on-demand loads.
+- **Honest bar**: `G.assets.progress()` = bytes of the boot set against the real file sizes (`build.mjs assetBytes()` →
+  `__ASSET_BYTES__`); the line reads `core.boot.bytes` (「正在取出行囊…… 12.3 / 108.4 MB」) and `core.boot.retry` while a
+  file is being fetched again.
+- **Self-healing actors** (`actors/rig.js`): an actor built from the stand-in asks for its model (`G.assets.want(id)`,
+  cheap per frame); `actor.placeholder`; `healActor(old, opts)` builds the real one, `adopt()`s the stand-in's state and
+  the fields its owner keeps on it, takes its place and frees it. Foes heal in `combat/enemy.js render()` (a stand-in is
+  never pooled); the heroine through the wardrobe's own swap (heroine.md "Wardrobe", step 5). `ready(id)` is true only
+  with the animation files the model borrows (`clipsFrom`), and `clips(id)` merges them only when all are in.
+- **Background tab**: `warmup.js nextFrame` goes on at once (message task) while the page is hidden; `boot.js breathe()`
+  uses `slice(0)`.
+
+### Results (`play`, throwaway profiles)
+Measured on a busy machine (load average 150–260: another session's browsers ran too), so times are one run each; the
+before / after pairs that are compared ran side by side.
+
+| case | before | after |
+| --- | --- | --- |
+| her model's connection hangs (`--fault elaina_apprentice.glb:stall`) | bar frozen at 34.9 % (「正在取出行囊……」) for good | stall noticed at 18 s, 「连接不稳，正在重新取……」, world ready at 50 s |
+| her model's request is reset once (+ the witch outfit's) | capsule for the whole game; `setOutfit('elaina')` false in 19 ms; still a capsule 30 s later | retried once: her real model; `setOutfit` true in 98 ms |
+| her model fails for minutes (`fail:999`, then `__mvFaults('off')`) | (capsule for good) | the game starts with the stand-in after its tries; real model 2.7 s after the connection is back (`wardrobe.heals` 1) |
+| a foe's model stalls three times (`char_villager_c:stall:3`) | (capsule foe) | the boot did not wait for it; the foe heals in place, its rogue dress and tint kept |
+| 8 Mbit/s, 150 ms (`--throttle 8000,150`), first 45 s on the title | bar 5.5 → 5.9 % | bar 12 → 24 %, 「… 26.2 → 66.2 / 107.0 MB」 |
+| same link: models in / world ready (ms from navigation) | 176,585 / 217,414 | 138,573 / 182,265 |
+| the terrain cache's connection hangs (`--fault _terrain_cache:stall`) | held at 「铺开山川……」 (still there 210 s after the stall when the run gave up) | dropped after 18 s, the field computed (terrain init 27.0 s; 2.2 s from the cache), game started |
+| boot in a background tab (`--hidden`) | not ready after 300 s (held at 「正在唤醒大地……」, the warm-up) | ready after 29 s while hidden |
+| boot set (normal boot, high tier) | ≈ 146 MB, ≈ 400 files | 108.4 MB, 378 files; the other people's 46 MB after |
+
+On the dev server (HTTP/1.1) `G.assets.net.peak` = 6; a normal boot makes no retries.

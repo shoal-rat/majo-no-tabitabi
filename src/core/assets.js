@@ -6,6 +6,12 @@
 //   await G.assets.load(id)       -> load one asset on demand (resolves when usable)
 //   await G.assets.arrayBuffer(id)-> raw file bytes (e.g. for AudioContext.decodeAudioData)
 //   G.assets.texture(id)          -> THREE.Texture (loads lazily)
+//   G.assets.want(id)             -> true once model(id) is the real model; until then keeps a load of it going (actors)
+//   G.assets.progress()           -> { got, total, files, done, retrying } bytes of the boot set (the boot bar)
+//   G.assets.stream()             -> after the world is ready: the preloaded files the boot did not wait for start coming
+//   await G.assets.fetchUrl(url)  -> bytes of a file outside the manifest through the same queue (null on failure)
+// Every file comes through one network queue (see "network" below): few requests at a time, most important first, a
+// stalled or failed request is retried, a failure is never cached.
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import * as SkeletonUtils from 'three/addons/utils/SkeletonUtils.js';
@@ -13,10 +19,30 @@ import { toonGradient, hookMaterial } from './mats.js';
 import { assetStat, mark, slice } from './boottime.js';
 import { makeCelMaterial, buildOutlines, smoothNormals, mergeFaceLines, mergeByMaterial, buildShadowProxy, hairBand, hairDarkTag, earPivots, setCelFix, CEL_FIX, buildSeeLines, SEE_LINES } from '../actors/celmat.js';
 import { bindFlightCloth } from '../actors/flight-cloth.js';
-import { HEROINE_ASSETS } from '../data/outfits.js';   // wardrobe: every outfit of hers gets the flight cloth
+import { HEROINE_ASSETS, outfitById, journeyOutfit } from '../data/outfits.js';   // wardrobe: every outfit of hers gets the flight cloth
 import { mergeCelParts } from '../actors/celmerge.js';
+import { castNear } from '../data/journey-cast.js';
+import { ANCHORS } from '../data/world.js';
 
 const BASE = 'assets/';
+
+// ---- network (docs/api/perf.md "Loading on a bad network") -----------------------------------------------------------
+// Players on slow, lossy links to the page host reported a boot bar that sat still for 20+ minutes and a heroine who was
+// a capsule for a whole story. Before: ~400 bare fetches at once (over HTTP/2 they all share the line, so nothing
+// finished until the end and the bar did not move), no timeout (one dead connection held Promise.all, so the boot,
+// forever), and a failed load was cached as null (every later load(id) gave null: capsule, no change of clothes).
+// Now: at most NET.slots requests at a time (+ NET.small for files under SMALL bytes, which are bound by the round trip,
+// not the line; over HTTP/1.1 — the dev server, some proxies — 6 in all: the browser opens 6 connections per host, and a
+// request waiting for one in the browser's own pool would get no byte and be taken for stalled), the most important first; the body is read as a stream, and NET.stallMs without a byte aborts the
+// request; a stalled or failed request is tried again after a growing wait, NET.tries times (the heroine NET.mustTries);
+// a load that still fails is not kept: the next load(id) starts over (after NET.coolMs).
+const NET = { slots: 8, small: 4, stallMs: 18000, tries: 4, mustTries: 8, waitMs: 1500, waitMax: 20000, coolMs: 5000 };
+const SMALL = 160 * 1024;
+// queue order: on-demand loads, then her own clothes + animations, the people near her, the world, other people, re-tries
+const PRIO = { now: 0, hero: 1, cast: 2, world: 3, people: 4, sweep: 5 };
+// file sizes of this build (build.mjs assetBytes): the boot bar counts megabytes against the real total
+const SIZES = typeof __ASSET_BYTES__ !== 'undefined' && __ASSET_BYTES__ ? __ASSET_BYTES__ : {};
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 /**
  * Perf pass (docs/api/perf.md): SkeletonUtils.clone gives EVERY SkinnedMesh of a clone its own Skeleton, so a character
@@ -167,6 +193,125 @@ export function createAssets(G) {
   let manifestP = null;
   const warn = (id, why = 'missing asset') => { if (!warned.has(id)) { warned.add(id); console.warn('[assets] ' + why, id); } };
 
+  // ---- network queue (see NET above) ----
+  const st = new Map();        // id -> { id, prio, seq, go, got, size, tries, retrying, fails, failedAt }
+  const queue = [];            // states waiting for a slot
+  let active = 0, activeSmall = 0, seqN = 0;
+  const lim = { slots: NET.slots, small: NET.small };   // init() narrows it to 5 + 1 when the page did not come over HTTP/2 or 3
+  const net = { requests: 0, retries: 0, stalls: 0, peak: 0, proto: '' };   // counters (tests, boot report)
+  let bootSet = null, onProgress = null, progT = 0, later = null, planIds = null;
+  function stat(id) {
+    let s = st.get(id);
+    if (!s) st.set(id, (s = { id, prio: PRIO.now, seq: 0, go: null, got: 0, size: SIZES[id] || 0, tries: NET.tries, retrying: false, fails: 0, failedAt: 0, small: false }));
+    return s;
+  }
+  function pump() {
+    while (queue.length) {
+      let b = -1;
+      for (let i = 0; i < queue.length; i++) {
+        const q = queue[i];
+        // a full line still lets a small file through (round-trip bound, it hardly takes bandwidth)
+        if (active >= lim.slots && !(q.size && q.size < SMALL && activeSmall < lim.small)) continue;
+        if (b < 0 || q.prio < queue[b].prio || (q.prio === queue[b].prio && q.seq < queue[b].seq)) b = i;
+      }
+      if (b < 0) return;
+      const s = queue.splice(b, 1)[0];
+      s.small = active >= lim.slots;
+      if (s.small) activeSmall++; else active++;
+      net.peak = Math.max(net.peak, active + activeSmall);
+      const go = s.go; s.go = null; go();
+    }
+  }
+  const acquire = (s) => new Promise((r) => { s.go = r; s.seq = seqN++; queue.push(s); pump(); });
+  const release = (s) => { if (s.small) activeSmall--; else active--; s.small = false; pump(); };
+  function report(force = false) {
+    if (!onProgress) return;
+    const t = performance.now();
+    if (!force && t - progT < 150) return;
+    progT = t;
+    try { onProgress(api.progress()); } catch (e) { /* the bar is optional */ }
+  }
+  function seen(s, n) { if (n > s.got) { s.got = n; report(); } }
+  const depsOf = (id) => { const cf = manifest[id]?.clipsFrom; return !cf ? [] : Array.isArray(cf) ? cf : [cf]; };
+  /**
+   * The order of the boot's loads: [{ id, prio, tries?, later? }]. Her model for this save (the save's outfit, ?outfit=
+   * wins) and the animations it borrows come first, with the most tries — the game should never start with her missing;
+   * then her other outfits, the story cast near the save's position, everything the world builds from, and last the
+   * other people (`later`: the boot does not wait for them; they keep coming after play starts).
+   */
+  function bootOrder(ids) {
+    let save = null;
+    try { save = G.save?.peek?.() || null; } catch (e) { save = null; }
+    const outfit = outfitById(G.params?.outfit) ? G.params.outfit : journeyOutfit(save);
+    const own = outfitById(outfit)?.asset;
+    const plan = new Map();
+    const put = (id, prio, o = {}) => { if (manifest[id] && !plan.has(id)) plan.set(id, { id, prio, ...o }); };
+    if (own) { put(own, PRIO.hero, { tries: NET.mustTries }); for (const c of depsOf(own)) put(c, PRIO.hero, { tries: NET.mustTries }); }
+    for (const id of ids) if (HEROINE_ASSETS.has(id)) put(id, PRIO.hero);
+    const at = save?.player && Number.isFinite(save.player.x) ? save.player : ANCHORS.spawn;
+    for (const id of castNear(at.x, at.z)) put(id, PRIO.cast);
+    for (const id of ids) if (!id.startsWith('char_')) put(id, PRIO.world);
+    for (const id of ids) put(id, PRIO.people, { later: true });
+    return [...plan.values()];
+  }
+  /**
+   * One request, body read as a stream; aborted after NET.stallMs without a byte (connect, headers or body). Time the
+   * visible page itself could not run (a long task: a cold shader cache once took 14.5 s for one frame) does not count:
+   * the bytes may be sitting there unread.
+   */
+  async function fetchOnce(url, s) {
+    const ac = typeof AbortController === 'function' ? new AbortController() : null;
+    let stalled = false, n = 0, last = performance.now(), tick = last;
+    const timer = setInterval(() => {
+      const t = performance.now();
+      if (t - tick > 2500 && typeof document !== 'undefined' && document.visibilityState === 'visible') last += t - tick - 1000;
+      tick = t;
+      if (t - last > NET.stallMs) { stalled = true; ac?.abort(); }
+    }, 1000);
+    const arm = () => { last = performance.now(); };
+    net.requests++;
+    try {
+      const r = await fetch(url, ac ? { signal: ac.signal } : undefined);
+      if (!r.ok) { const e = new Error(r.status + ' ' + url); e.final = r.status === 404 || r.status === 410; throw e; }
+      if (!s.size) s.size = +r.headers.get('content-length') || 0;
+      const rd = r.body?.getReader?.();
+      if (!rd) { const b = await r.arrayBuffer(); seen(s, b.byteLength); return b; }
+      const parts = [];
+      for (;;) {
+        arm();
+        const { done, value } = await rd.read();
+        if (done) break;
+        parts.push(value); n += value.byteLength; seen(s, n);
+      }
+      if (parts.length === 1 && parts[0].byteOffset === 0 && parts[0].byteLength === parts[0].buffer.byteLength) return parts[0].buffer;
+      const out = new Uint8Array(n);
+      let o = 0;
+      for (const p of parts) { out.set(p, o); o += p.byteLength; }
+      return out.buffer;
+    } catch (e) {
+      if (stalled) { net.stalls++; throw new Error('stalled: no data for ' + NET.stallMs / 1000 + ' s ' + url); }
+      throw e;
+    } finally { clearInterval(timer); }
+  }
+  /** The bytes of a file, tried up to s.tries times (growing waits between); throws the last error. */
+  async function fetchBytes(url, s) {
+    let err = null;
+    for (let a = 1; a <= s.tries; a++) {
+      if (a > 1) {
+        s.retrying = true; net.retries++; report(true);
+        await sleep(Math.min(NET.waitMax, NET.waitMs * 2 ** (a - 2)) * (0.8 + 0.4 * ((s.seq * 0.618) % 1)));
+      }
+      await acquire(s);
+      try { const b = await fetchOnce(url, s); s.retrying = false; return b; } catch (e) {
+        err = e;
+        console.warn('[assets] ' + (a < s.tries && !e.final ? 'will retry' : 'giving up on') + ' ' + url + ' (' + a + '/' + s.tries + '): ' + (e?.message || e));
+        if (e.final) break;
+      } finally { release(s); }
+    }
+    s.retrying = false;
+    throw err;
+  }
+
   /**
    * Swap PBR materials for the game's shading, keeping colour maps. Applied automatically to loaded models.
    * Characters (VRoid rigs: a J_Bip_C_Head bone) and creatures (any skinned model) get the anime cel path of
@@ -314,19 +459,20 @@ export function createAssets(G) {
     return root;
   }
 
-  async function loadModel(id) {
+  async function loadModel(id, s) {
     const info = manifest[id];
     // ?costume=v1 loads the pre-costume character files (A/B shots); see tools/install-costumes.mjs
     const v1 = G.params?.costume === 'v1' && info.fileV1;
     // ?propsv=1 loads the unrefined originals of refined props (upgrade-2 A/B shots and timings)
     const orig = G.params?.propsv === '1' && info.orig;
     const url = BASE + (v1 ? info.fileV1 : orig ? info.orig : info.file);
+    if (v1 || orig) s.size = 0;   // another file than the build measured: its own Content-Length
     const grp = id.split('_')[0];
+    // a character is usable only with the animation files it borrows (ready()): ask for them at the same place in line
+    for (const c of depsOf(id)) if (manifest[c] && !gltfs.has(c)) api.load(c, { prio: s.prio, tries: s.tries });
     // fetch and parse timed separately (boot timeline, docs/api/perf.md "Boot and loading")
     let t0 = performance.now();
-    const r = await fetch(url);
-    if (!r.ok) throw new Error(r.status + ' ' + url);
-    const buf = await r.arrayBuffer();
+    const buf = await fetchBytes(url, s);
     assetStat(grp, 'fetchMs', performance.now() - t0); assetStat(grp, 'bytes', buf.byteLength); assetStat(grp, 'n', 1);
     t0 = performance.now();
     const gltf = await loader.parseAsync(buf, url.slice(0, url.lastIndexOf('/') + 1));
@@ -355,8 +501,40 @@ export function createAssets(G) {
     get manifest() { return manifest; },
     info: (id) => manifest[id] || null,
     has: (id) => id in manifest,
-    /** True once a model is parsed and model(id) will work. */
-    ready: (id) => gltfs.has(id),
+    /** True once a model is parsed and model(id) will work (with the animation files it borrows: clipsFrom). */
+    ready(id) {
+      const g = gltfs.get(id);
+      if (!g) return false;
+      if (g._deps) return true;
+      for (const c of depsOf(id)) if (!gltfs.has(c)) return false;
+      return (g._deps = true);
+    },
+    /**
+     * Self-healing actors (rig.js placeholder): true once model(id) is the real model; until then makes sure a load of it
+     * (and of the animation files it borrows) is under way — a failed one starts again after NET.coolMs. Cheap enough
+     * to call every frame.
+     */
+    want(id) {
+      if (api.ready(id)) return true;
+      if (!manifest[id]) return false;
+      if (!gltfs.has(id) && !pending.has(id)) api.load(id);
+      for (const c of depsOf(id)) if (manifest[c] && !gltfs.has(c) && !pending.has(c)) api.load(c);
+      return false;
+    },
+    /** Bytes of the set the boot waits for: { got, total, files, done, failed, retrying } (+ network counters). */
+    progress() {
+      let got = 0, total = 0, done = 0, failed = 0, retrying = false;
+      for (const id of bootSet || []) {
+        const s = st.get(id), size = s?.size || SIZES[id] || 0;
+        total += size;
+        got += size ? Math.min(size, s?.got || 0) : 0;
+        if (gltfs.has(id)) done++; else if (s?.fails && !pending.has(id)) failed++;
+        if (s?.retrying) retrying = true;
+      }
+      return { got, total, files: bootSet ? bootSet.length : 0, done, failed, retrying, ...net };
+    },
+    /** Network counters: requests, retries, stalls, peak (most requests at once). */
+    get net() { return { ...net, active, activeSmall, queued: queue.length }; },
     ids: (prefix = '') => Object.keys(manifest).filter((k) => k.startsWith(prefix)),
     toonify,
     /** Fetch the manifest and every asset marked preload (models default to preload: true). Called once at boot. */
@@ -378,17 +556,63 @@ export function createAssets(G) {
       const ids = Object.keys(manifest).filter((id) => manifest[id].type === 'model' && manifest[id].preload !== false
         && (!G.sculpt.typeOf(id) || G.sculpt.on(G.sculpt.typeOf(id)))
         && !(loTier ? SCULPT_HI.has(id) : SCULPT_LO.has(id)));
-      let done = 0;
-      await Promise.all(ids.map((id) => api.load(id).then(() => progress?.(++done / ids.length))));
-      progress?.(1);
+      // the boot waits for every file of the plan but the `later` ones (other people: actors heal, spawners wait; they come
+      // with stream()), and it never waits on one that keeps failing: each has its tries, then the boot goes on (her own
+      // model has the most)
+      let proto = '';
+      try { proto = performance.getEntriesByType('navigation')[0]?.nextHopProtocol || ''; } catch (e) { proto = ''; }
+      if (!/^h[23]/.test(proto)) { lim.slots = 5; lim.small = 1; }
+      net.proto = proto || '?';
+      const plan = bootOrder(ids);
+      bootSet = plan.filter((e) => !e.later).map((e) => e.id);
+      onProgress = progress || null;
+      report(true);
+      const waits = [];
+      for (const e of plan) if (!e.later) waits.push(api.load(e.id, { prio: e.prio, tries: e.tries }));
+      await Promise.all(waits);
+      report(true);
+      onProgress = null;
+      later = plan.filter((e) => e.later).map((e) => e.id);
+      planIds = plan.map((e) => e.id);
     },
-    /** Load one asset now (idempotent). Models resolve to their gltf; other types resolve to an ArrayBuffer. */
-    load(id) {
+    /**
+     * Once the world is ready (boot.js): the files the boot did not wait for (other people) start coming, behind anything
+     * asked for on demand; they would only have slowed the world's own fetches and building down. A file of the plan that
+     * still failed is asked for again now and then (late builders, creature spawns; actors also ask through want()).
+     */
+    stream() {
+      if (!later) return;
+      for (const id of later) if (!gltfs.has(id) && !pending.has(id)) api.load(id, { prio: PRIO.people });
+      later = null;
+      const sweep = (left, round) => {
+        left = left.filter((id) => !gltfs.has(id));
+        if (!left.length || round > 4) return;
+        setTimeout(() => { for (const id of left) if (!pending.has(id)) api.load(id, { prio: PRIO.sweep }); sweep(left, round + 1); }, 30000 * round);
+      };
+      sweep(planIds || [], 1);
+    },
+    /**
+     * Load one asset now (idempotent while it loads or once loaded). Models resolve to their gltf; other types resolve
+     * to an ArrayBuffer; null when it could not be had (not cached: the next call tries again). o: { prio, tries } —
+     * a call for a file still waiting in the line moves it up to `prio` (default: first); tries default NET.tries.
+     */
+    load(id, o = {}) {
       if (!manifest[id]) { warn(id); return Promise.resolve(null); }
-      if (pending.has(id)) return pending.get(id);
+      const s = stat(id), prio = o.prio ?? PRIO.now;
+      if (pending.has(id)) { if (prio < s.prio) s.prio = prio; if (o.tries > s.tries) s.tries = o.tries; return pending.get(id); }
+      s.prio = prio; s.tries = o.tries || NET.tries;   // each new attempt at a file has its own tries
       const info = manifest[id];
-      const p = (info.type === 'model' ? loadModel(id) : fetch(BASE + info.file).then((r) => { if (!r.ok) throw new Error(r.status + ' ' + info.file); return r.arrayBuffer(); }))
-        .catch((e) => { G.reportError('asset:' + id, e); return null; });
+      const p = (async () => {
+        const wait = s.failedAt ? s.failedAt + NET.coolMs - performance.now() : 0;
+        if (wait > 0) await sleep(wait);
+        return info.type === 'model' ? loadModel(id, s) : fetchBytes(BASE + info.file, s);
+      })().catch((e) => {
+        s.fails++; s.failedAt = performance.now(); s.retrying = false;
+        if (pending.get(id) === p) pending.delete(id);   // never cache a failure
+        if (s.fails === 1) G.reportError('asset:' + id, e); else console.warn('[assets] still failing', id, e?.message || e);
+        report(true);
+        return null;
+      });
       pending.set(id, p);
       return p;
     },
@@ -396,18 +620,27 @@ export function createAssets(G) {
     async arrayBuffer(id) {
       const info = manifest[id];
       if (!info) { warn(id); return null; }
-      if (info.type === 'model') { const r = await fetch(BASE + info.file); return r.ok ? r.arrayBuffer() : null; }
+      if (info.type === 'model') { try { return await fetchBytes(BASE + info.file, { ...stat(id), prio: PRIO.now, go: null, small: false }); } catch (e) { return null; } }
       const buf = await api.load(id);
       return buf ? buf.slice(0) : null;
+    },
+    /**
+     * The bytes of any file of the game (not in the manifest: the terrain cache) through the same queue: aborted after
+     * NET.stallMs without a byte, o.tries tries (default NET.tries). null when it could not be had (the caller's fallback).
+     */
+    async fetchUrl(url, o = {}) {
+      const s = { id: url, prio: o.prio ?? PRIO.now, seq: 0, go: null, got: 0, size: 0, tries: o.tries || NET.tries, retrying: false, fails: 0, failedAt: 0, small: false };
+      try { return await fetchBytes(url, s); } catch (e) { return null; }
     },
     /** AnimationClip[] of a loaded model (possibly empty). Clips of the models named in `clipsFrom` are merged in. */
     clips(id) {
       const g = gltfs.get(id);
       if (!g) return [];
       const info = manifest[id] || {};
-      if (info.clipsFrom && !g._merged) {
+      // merged once every borrowed file is in (merging a partial set used to stick: a rig without walk / idle clips)
+      if (info.clipsFrom && !g._merged && depsOf(id).every((c) => gltfs.has(c))) {
         g._merged = true;
-        for (const src of [].concat(info.clipsFrom)) { const s = gltfs.get(src); if (s) g.animations = g.animations.concat(s.animations); }
+        for (const src of depsOf(id)) { const s = gltfs.get(src); if (s) g.animations = g.animations.concat(s.animations); }
       }
       return g.animations || [];
     },
@@ -437,8 +670,15 @@ export function createAssets(G) {
       if (textures.has(id)) return textures.get(id);
       const info = manifest[id];
       if (!info) { warn(id); return null; }
-      const tex = new THREE.TextureLoader().load(BASE + info.file);
+      // the image loads by itself; a failed one is tried again (NET.tries, growing waits) instead of staying blank
+      const tex = new THREE.Texture();
       tex.colorSpace = THREE.SRGBColorSpace;
+      const img = new THREE.ImageLoader();
+      const get = (a) => img.load(BASE + info.file, (im) => { tex.image = im; tex.needsUpdate = true; }, undefined, () => {
+        if (a < NET.tries) setTimeout(() => get(a + 1), Math.min(NET.waitMax, NET.waitMs * 2 ** (a - 1)));
+        else warn(id, 'texture failed to load');
+      });
+      get(1);
       textures.set(id, tex);
       return tex;
     },

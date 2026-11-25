@@ -4,15 +4,7 @@ import { createActor, makeActorShadowBlob } from '../actors/rig.js';
 import { journeyWand } from '../actors/journey-props.js';
 import { createBroom } from '../player/broom.js';
 import { setJourneyAccessories } from '../actors/journey-accessories.js';
-
-const assets = {
-  father: 'char_elaina_father',
-  mother: 'char_elaina_mother',
-  exam: 'char_exam_witch',
-  fran: 'char_fran',
-  saya: 'char_saya',
-  innkeeper: 'char_innkeeper',
-};
+import { CAST_ASSETS as assets } from '../data/journey-cast.js';   // also read by core/assets.js (load order)
 const vector = new THREE.Vector3();
 export function createCast(story) {
   const list = Object.entries(assets).map(([id, asset]) => ({

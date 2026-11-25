@@ -18,4 +18,6 @@ export default {
   tapWear: '轻触换上',
   hintWear: '{key} 换上',
   changing: '更衣中……',
+  // 这件衣装的模型一直没能载入（连接问题）：卡片上和画面上的小提示；再选一次会重新去取
+  unavailable: '衣装没能取来，连接好些时再试一次',
 };

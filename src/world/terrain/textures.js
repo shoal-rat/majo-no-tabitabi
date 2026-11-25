@@ -10,6 +10,7 @@ import { ATLAS_HALF, ATLAS_SAMPLES } from '../../data/atlas.js';
 import { heightAt, roadDist, riverDist } from '../ground.js';
 import { bakeGet, bakePut } from '../../core/bakecache.js';
 import { slice } from '../../core/boottime.js';
+import { G } from '../../core/game.js';
 
 export const DATA_N = ATLAS_SAMPLES;
 export const DATA_HALF = ATLAS_HALF;               // world half-extent covered by the data / scorch textures
@@ -50,11 +51,13 @@ export async function createDataTextureAsync() {
   const N = DATA_N;
   if (typeof __JOURNEY_FIELD__ !== 'undefined' && __JOURNEY_FIELD__) {
     try {
-      const res = await fetch('assets/_terrain_cache/'+__JOURNEY_FIELD__+'.gz');
-      if (res.ok && res.body) {
-        const buf = await new Response(res.body.pipeThrough(new DecompressionStream('gzip'))).arrayBuffer();
-        if (buf.byteLength === N*N*8) return createDataTexture(new Uint16Array(buf));
-      }
+      // stall-safe (players reported boots stuck for good): a connection that stops sending is dropped after 18 s and the
+      // field is computed below, as after an error; one try, computing it is cheaper than fetching it again
+      const url = 'assets/_terrain_cache/'+__JOURNEY_FIELD__+'.gz';
+      const gz = G.assets?.fetchUrl ? await G.assets.fetchUrl(url, { tries: 1 }) : await fetch(url).then((r) => (r.ok ? r.arrayBuffer() : null));
+      if (!gz) throw new Error('no terrain cache');
+      const buf = await new Response(new Response(gz).body.pipeThrough(new DecompressionStream('gzip'))).arrayBuffer();
+      if (buf.byteLength === N*N*8) return createDataTexture(new Uint16Array(buf));
     } catch (err) { console.warn('Terrain field unavailable; rebuilding from survey', err); }
   }
   const buf = await bakeGet('terrain-data');

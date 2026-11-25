@@ -18,6 +18,19 @@ export const ASSETS = path.join(ROOT, 'assets');
 // the version the title screen shows (G.version): package.json is its only home
 const VERSION = JSON.parse(fs.readFileSync(path.join(ROOT, 'package.json'), 'utf8')).version;
 
+/** Bytes of every model file in assets/manifest.json ({ id: bytes }): the boot bar counts megabytes against this total
+ *  (src/core/assets.js). Read at build time, so it always matches the files shipped with this build. */
+export function assetBytes() {
+  const out = {};
+  let m = {};
+  try { m = JSON.parse(fs.readFileSync(path.join(ASSETS, 'manifest.json'), 'utf8')); } catch (e) { return out; }
+  for (const [id, info] of Object.entries(m)) {
+    if (info.type !== 'model' || !info.file) continue;
+    try { out[id] = fs.statSync(path.join(ASSETS, info.file)).size; } catch (e) { /* missing file: counted as it arrives */ }
+  }
+  return out;
+}
+
 export function loadManifest() {
   return JSON.parse(fs.readFileSync(path.join(ROOT, 'systems.manifest.json'), 'utf8'));
 }
@@ -91,7 +104,7 @@ export async function build({ systems = null, minify = false } = {}) {
   try {
     field = (!systems || systems.includes('terrain')) ? await bakeJourneyField(ROOT) : null;
     result = await esbuild.build({
-      define: { __JOURNEY_FIELD__: JSON.stringify(field), __MV_VERSION__: JSON.stringify(VERSION) },
+      define: { __JOURNEY_FIELD__: JSON.stringify(field), __MV_VERSION__: JSON.stringify(VERSION), __ASSET_BYTES__: JSON.stringify(assetBytes()) },
       ...COMMON,
       stdin: { contents: makeEntry(systems), resolveDir: SRC, sourcefile: 'entry.js', loader: 'js' },
       plugins: [localesPlugin(systems)],

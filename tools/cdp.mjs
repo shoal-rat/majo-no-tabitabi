@@ -21,7 +21,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
  * Launch a private headless Chrome and attach to its first page.
  * Returns { send(method, params), on(event, fn), close(), evaluate(expr, {timeout}), screenshot(file), goto(url) }.
  */
-export async function launch({ width = 1280, height = 720, headless = true, profileDir = null } = {}) {
+export async function launch({ width = 1280, height = 720, headless = true, profileDir = null, backgroundThrottling = false } = {}) {
   const exe = process.env.CHROME_BIN || CANDIDATES.find((p) => fs.existsSync(p));
   if (!exe) throw new Error('No Chrome/Chromium/Edge found. Set CHROME_BIN.');
   fs.mkdirSync(TMP, { recursive: true });
@@ -34,8 +34,9 @@ export async function launch({ width = 1280, height = 720, headless = true, prof
     `--window-size=${width},${height}`, '--force-device-scale-factor=1',
     '--enable-webgl', '--ignore-gpu-blocklist', '--enable-gpu', '--enable-unsafe-swiftshader',
     '--autoplay-policy=no-user-gesture-required',
-    '--disable-background-timer-throttling', '--disable-renderer-backgrounding', '--disable-backgrounding-occluded-windows',
   ];
+  // backgroundThrottling: a tab behind another one is throttled like a player's background tab (play.mjs --hidden)
+  if (!backgroundThrottling) args.push('--disable-background-timer-throttling', '--disable-renderer-backgrounding', '--disable-backgrounding-occluded-windows');
   if (headless) args.push('--headless=new');
   args.push('about:blank');
   for (const stale of ['DevToolsActivePort', 'SingletonLock', 'SingletonCookie', 'SingletonSocket']) { try { fs.rmSync(path.join(profile, stale), { force: true }); } catch (e) { /* ignore */ } }
