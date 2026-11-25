@@ -100,8 +100,11 @@ out.push('', '## 中文字体', '',
   '游戏随附' + (['零', '一', '两', '三', '四', '五', '六', '七', '八', '九'][buckets.fonts.length] || buckets.fonts.length) + '份字体及各自的版权声明、SIL Open Font License 1.1 全文。重新分发字体时请一同保留这些文件。', '',
   '| 字体 | 作者 | 来源与随附许可 |', '| --- | --- | --- |');
 for (const e of buckets.fonts) {
-  const family = path.basename(e.file).replace(/\.(ttf|otf|woff2?)$/, '').replace(/-Regular$/, '');
-  const license = 'assets/' + path.posix.dirname(e.file) + '/OFL-' + family + '.txt';
+  const base = path.basename(e.file).replace(/\.(ttf|otf|woff2?)$/, '').replace(/-Regular$/, '');
+  const family = base.replace(/-UI$/, '');   // a shipped subset (-UI) is credited under its font's name
+  const dir = path.posix.dirname(e.file);
+  const licName = [base, family].map((n) => 'OFL-' + n + '.txt').find((n) => fs.existsSync(path.join(root, 'assets', dir, n))) || 'OFL-' + family + '.txt';
+  const license = 'assets/' + dir + '/' + licName;
   out.push('| ' + family + ' | ' + e.author + ' | ' + link('字体项目', sourceUrls(e.source)[0]) + ' · ' + link('OFL 与版权声明', license) + ' |');
 }
 

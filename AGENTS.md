@@ -53,6 +53,7 @@ F lang: dev-facing text (docs, templates, bot replies, comments, AGENTS.md) = En
 
 ## verify
 V always: $node tools/check-i18n.mjs src · $node tools/dead-code.mjs
+V loc change: $node tools/font-subset.mjs --check → fails = rebuild the faces (header of `tools/font-subset.mjs`)
 V story/map/city change: all acc.
 V other change: acc touching the changed system.
 V probe: play --name X --script f.js [--mobile] (helpers: header of `tools/play.mjs`).
