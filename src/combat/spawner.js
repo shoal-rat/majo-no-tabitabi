@@ -169,7 +169,7 @@ export function createSpawner(C) {
     damageScale(e) {
       const n = e.nest;
       if (n && n.brambles.some((b) => b.alive)) {
-        if (G.time.t - (e._shieldT || -9) > 0.8) { e._shieldT = G.time.t; G.fx?.text?.(e.centerOut(_v).setY(e.pos.y + e.height + 0.6), t('combat.nestShielded'), { color: 0xb48cff, size: 0.9 }); }
+        if (G.time.t - (e._shieldT || -9) > 0.8) { e._shieldT = G.time.t; G.fx?.text?.(e.centerOut(_v).setY(e.pos.y + e.height + 0.6), t('combat.nestShielded'), { kind: 'word', target: e, color: 0xb48cff, size: 0.9 }); }
         return 0;
       }
       return 1;

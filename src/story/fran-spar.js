@@ -212,7 +212,7 @@ export function createFranSpar(S) {
         },
       },
     });
-    if (!story) G.ui?.banner?.(t('story.spar.memory'), t('story.spar.memorySub'));
+    if (!story) G.ui?.banner?.(t('story.spar.memory'), t('story.spar.memorySub'), { foe: true });
     if (lessons.wanted(story)) lessons.begin(d);
   }
   function hitFran(d, el, power, h) {
@@ -251,9 +251,11 @@ export function createFranSpar(S) {
     G.npcs.gesture('fran', open ? 'hit' : 'guard');
     safeSave();
   }
+  // her own moments (the reflect, the won 对波) are callouts over her shoulder; the rest are words over Fran
+  const SAY_CALL = { reflected: true, clashed: true };
   function say(key, color = '#ffe7a4') {
     const at = duel?.n.pos.clone().add(tmp2.set(0, 2.4, 0));
-    if (at) G.fx?.text?.(at, t('combat.spar.' + key), { color, size: 1.0, dur: 1.4 });
+    if (at) G.fx?.text?.(at, t('combat.spar.' + key), SAY_CALL[key] ? { kind: 'call', color, dur: 1.2 } : { kind: 'word', target: duel.n, color, size: 1.0, dur: 1.4 });
   }
   function breakCast(d, key) {
     circle.visible = false;

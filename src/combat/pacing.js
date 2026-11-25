@@ -74,7 +74,7 @@ export function checkRally(e) {
   e.centerOut(_v);
   G.fx?.burst('charge_done', _v, { color: 0xff6a3a, scale: 1 + e.radius * 0.6 });
   _v.y = e.pos.y + e.height + 0.6;
-  G.fx?.text?.(_v, t('combat.rally'), { color: 0xffa070, size: 0.95, dur: 1.3 });
+  G.fx?.text?.(_v, t('combat.rally'), { kind: 'word', target: e, color: 0xffa070, size: 1.0, dur: 1.3 });
   G.audio?.sfx('growl', { pos: e.pos, pitch: e.def.humanoid ? 1.5 : 0.9, vol: 0.7 });
   if (!e.data.rallyAura) {
     const em = G.fx?.emitter?.('aura_fire', { color: 0xff7a3a, scale: 0.35 + e.radius * 0.35 });
@@ -98,7 +98,7 @@ function secondPhase(e) {
   G.fx?.burst('charge_done', _v, { color: 0xfff0c0, scale: 1.4 + e.radius });
   G.fx?.starburst?.(_v, { color: 0xfff0c0, radius: 2 + e.radius, dur: 0.35 });
   _v.y = e.pos.y + e.height + 0.7;
-  G.fx?.text?.(_v, t('combat.phase2'), { color: 0xfff0c0, size: 1.15, dur: 1.6 });
+  G.fx?.text?.(_v, t('combat.phase2'), { kind: 'word', target: e, color: 0xfff0c0, size: 1.15, dur: 1.6 });
   G.audio?.sfx('roar', { pos: e.pos, vol: 0.7 });
   G.fx?.duel?.shake?.('medium', e.pos);
   G.events.emit('enemy:phase', { enemy: e, phase: 2 });
@@ -110,7 +110,7 @@ export function perfectDodge(e) {
   e._readT = G.time.t;
   e.exposedT = Math.max(e.exposedT || 0, 1.8);
   e.centerOut(_v); _v.y = e.pos.y + e.height + 0.55;
-  G.fx?.text?.(_v, t('combat.read'), { color: 0xd8f6ff, size: 1.0, dur: 1.2 });
+  G.fx?.text?.(_v, t('combat.read'), { kind: 'word', target: e, color: 0xd8f6ff, size: 1.0, dur: 1.2 });
   const P = G.player;
   if (P) G.fx?.duel?.beat?.('dodge', _w.set(P.pos.x, P.pos.y + 1, P.pos.z), { dir: _v.set(e.pos.x - P.pos.x, 0, e.pos.z - P.pos.z).normalize() });
   G.events.emit('enemy:read', { enemy: e });
@@ -130,7 +130,7 @@ export function parry(e) {
     e.exposedT = Math.max(e.exposedT || 0, 2.2);
     e.stun(0.6);
     G.fx?.duel?.beat?.('parry', g.center, { normal: g.fwd, center: g.center });
-    G.fx?.text?.(_w.set(P.pos.x, P.pos.y + 2.1, P.pos.z), t('spells.msg.perfect'), { color: 0xffe6a6, size: 1.2, dur: 0.9 });
+    G.fx?.text?.(_w.set(P.pos.x, P.pos.y + 2.1, P.pos.z), t('spells.msg.perfect'), { kind: 'call', color: 0xffe6a6, dur: 0.9 });
     G.audio?.sfx('guard', { pos: P.pos, vol: 0.9, pitch: 1.3 });
     G.events.emit('enemy:read', { enemy: e, parry: true });
     return true;

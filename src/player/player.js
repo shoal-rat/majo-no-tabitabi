@@ -158,12 +158,12 @@ function build() {
       G.events.emit('player:damaged', { amount: a, element: o.element || null, from: o.from || null });
       _v1.copy(P.pos); _v1.y += 1.1;
       if (o.dot) {
-        G.fx?.text?.(_v1.setY(_v1.y + 0.7), String(Math.round(a)), { color: 0xffa060, size: 0.7 });
+        G.fx?.text?.(_v1.setY(_v1.y + 0.7), String(Math.round(a)), { kind: 'dmg', target: P, n: a, el: o.element || 'burn', color: 0xff8a5a });
         if (P.hp <= 0) die(o);
         return a;
       }
       G.fx?.burst(o.element ? 'hit_' + o.element : 'hit_dark', _v1, { scale: 0.7 });
-      G.fx?.text?.(_v2.copy(_v1).setY(_v1.y + 0.7), String(Math.round(a)), { color: 0xff6a5a, size: 0.9 });
+      G.fx?.text?.(_v2.copy(_v1).setY(_v1.y + 0.7), String(Math.round(a)), { kind: 'dmg', target: P, n: a, el: o.element || '', big: a >= 30, color: 0xff6a5a });
       G.fx?.shake?.(clamp(a / 45, 0.12, 0.55), 0.3);
       G.audio?.sfx('player_hurt', { pos: P.pos });
       rig.setExpression('sorrow', 1, 14); rig.setExpression('blink', 0.55, 22); S.expT = 0.7;

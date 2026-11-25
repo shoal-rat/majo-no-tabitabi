@@ -89,7 +89,7 @@ export function makeDummy(pos, o = {}) {
     if (d.hits.length > 64) d.hits.shift();
     const big = (mult || 1) > 1;
     G.fx?.text?.(new THREE.Vector3(d.pos.x + (Math.random() - 0.5) * 0.6, d.pos.y + 2.2 + Math.random() * 0.3, d.pos.z), String(amount),
-      { color: big ? '#ffd24a' : EL_TEXT[el] || '#ffffff', size: big ? 1.35 : 0.9 + Math.min(0.5, amount / 120), dur: 1 });
+      { kind: 'dmg', target: d, n: amount, el: el && el !== 'sun' ? el : '', big: big && amount >= 18 || amount >= 30, color: big ? '#ffcf6a' : EL_TEXT[el] || '#ffc24e' });
     d.wobV += Math.min(4, 0.6 + amount * 0.04);
     if (d.hp <= 0) {
       d.dead = true;

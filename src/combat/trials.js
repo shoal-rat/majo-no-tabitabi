@@ -94,7 +94,7 @@ export function createTrials(C) {
     P.onDamageFloor = () => { if (T.active && run === my) C.after(0.4, () => { if (T.active && run === my) end('fail'); }); };
     P.hp = P.maxHp; P.mana = P.maxMana;
     showRing(true);
-    G.ui?.banner?.(t('combat.trial.name'), t('combat.trial.start'));
+    G.ui?.banner?.(t('combat.trial.name'), t('combat.trial.start'), { foe: true });
     G.audio?.sfx('taiko', { vol: 0.9 });
     G.events.emit('trial:start', {});
     for (let i = 0; i < ROUNDS.length; i++) {

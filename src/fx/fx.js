@@ -21,7 +21,7 @@ import { Ribbons } from './ribbons.js';
 import { Bolts, MAX_BEAMS, BEAM_EL } from './bolts.js';
 import { Decals, RING, SIGIL, DISC } from './decals.js';
 import { FlashLights } from './lights.js';
-import { FloatText } from './text.js';
+import { FloatText, TEXT_K } from './text.js';
 import { Ambient } from './ambient.js';
 import { Shapes } from './shapes.js';
 import { makeKit } from './kit.js';
@@ -78,7 +78,7 @@ function warnOnce(kind, name) {
 
 // ---- the system ---------------------------------------------------------------------------------------------------
 let now = 0;
-let pools, ribbons, bolts, decals, lights, texts, ambient, R, shapes, K, circles;
+let pools, ribbons, bolts, decals, lights, texts, ambient, R, shapes, K, circles, overlay;
 const emitters = [];       // live handles
 const laterQ = [];         // pooled delayed bursts
 const beams = [];          // live beam handles
@@ -441,11 +441,38 @@ const api = {
     s.decay = Math.max(s.trauma / Math.max(dur, 0.05), 0.4);
   },
 
+  /** Floating label (text.js). opts: { color, size, dur, kind: 'dmg'|'word'|'call', target, n, el, big } — see text.js. */
   text(pos, string, opts = NO) {
     if (!pos || string === undefined || string === null) return;
     opts = opts || NO;
     const h = hexOf(opts.color ?? 0xffffff);
-    texts.add(pos.x, pos.y, pos.z, String(string), lin(h < 0 ? 0xffffff : h), (opts.size ?? 1) * 0.9, opts.dur ?? 1.1, now);
+    // one anchor per owner, so its lanes line up: a target's labels sit over its head, her callouts over hers
+    let x = pos.x, y = pos.y, z = pos.z;
+    const tg = opts.target, P = G.player;
+    if (opts.kind === 'call' && P?.pos) { x = P.pos.x; y = P.pos.y + (P.height || 1.6) * 0.85; z = P.pos.z; }
+    else if (tg?.pos && typeof tg.height === 'number' && (opts.kind === 'dmg' || opts.kind === 'word')) y = tg.pos.y + tg.height + 0.2;
+    // exactly one Math.random() per label, as before: the seeded game sequence (and every recorded take) stays the same
+    texts.add(x, y, z, String(string), lin(h < 0 ? 0xffffff : h), opts, now, Math.random());
+  },
+  /** Draw the floating labels over the finished frame (G.renderFrame calls it after the post chain). */
+  drawOverlay(renderer, camera) {
+    if (!overlay || !texts?.mesh.visible || !(texts.live(now) > 0)) return;
+    texts.flush();
+    const ac = renderer.autoClear, tm = renderer.toneMapping;
+    renderer.autoClear = false; renderer.toneMapping = THREE.NoToneMapping;
+    renderer.setRenderTarget(null);
+    renderer.render(overlay, camera);
+    renderer.autoClear = ac; renderer.toneMapping = tm;
+  },
+  /** Room the target's floating labels take above their anchor right now, in text size units (0 = none). */
+  textTop(target) { return texts ? texts.top(target, now) : 0; },
+  /** Screen px of `units` text size units at `depth` metres. focal = the camera's focal length in CSS px (the HUD passes
+   *  its own, so no layout is read mid-frame); without it the canvas height is read. */
+  textPx(units, depth, focal) {
+    const cam = G.camera;
+    if (!cam || !(depth > 0)) return 0;
+    if (!(focal > 0)) focal = ((G.renderer?.domElement?.clientHeight || 1) * 0.5) / Math.tan(((cam.fov || 60) * Math.PI) / 360);
+    return (units * Math.min(9, Math.max(0.3, depth * TEXT_K)) / depth) * focal;
   },
 
   /** A mesh effect shape (shapes.js). opts.pos required; opts.handle = true returns a live handle. Colours sRGB hex. */
@@ -641,7 +668,7 @@ export const fxSystem = {
     bolts = new Bolts(640, 34);
     decals = new Decals(96, sigil.texture, 10);
     lights = new FlashLights(G.scene);
-    texts = new FloatText(60);
+    texts = new FloatText(60, { slots: G.quality?.particles < 0.6 ? 32 : 64, renderer: () => G.renderer });
     ambient = new Ambient(pools);
     shapes = new Shapes(G.quality?.particles < 0.6 ? 96 : 192, 22);
     circles = new Circles(G.quality?.particles < 0.6 ? 24 : 40, makeCircleTexture(512), 24);
@@ -651,7 +678,13 @@ export const fxSystem = {
       quality: () => Math.min(1, G.quality?.particles ?? 1),
     });
     R = makeRecipes(X);
-    G.scene.add(decals.mesh, shapes.mesh, circles.mesh, pools[SOFT].mesh, ribbons.mesh, pools[GLOW].mesh, bolts.mesh, texts.mesh);
+    G.scene.add(decals.mesh, shapes.mesh, circles.mesh, pools[SOFT].mesh, ribbons.mesh, pools[GLOW].mesh, bolts.mesh);
+    // floating labels are drawn over the finished picture (drawOverlay), not in the scene: no tone curve, grade, haze
+    // or depth-of-field touches them, and they stay crisp at full canvas resolution while the scene renders scaled
+    overlay = new THREE.Scene();
+    overlay.matrixWorldAutoUpdate = false;
+    overlay.add(texts.mesh);
+    api.textMesh = texts.mesh;
     api.ambient = ambient;
     api._atlas = atlas; api._sigil = sigil;
     G.fx = api;

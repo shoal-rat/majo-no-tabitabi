@@ -121,7 +121,7 @@ export function createWitchTrial(d) {
           color2: COLORS[d.cfg.el],
           scale: 0.8
         });
-        G.fx?.text?.(spot, t('combat.duel.broken'), { color: '#ffe7a4', dur: 1.2 });
+        G.fx?.text?.(spot, t('combat.duel.broken'), { kind: 'word', target: e, color: '#ffe7a4', dur: 1.2 });
         G.events.emit('duel:disrupt', { id: d.id, element: info.element });
         return amount;
       }

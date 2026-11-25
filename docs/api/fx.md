@@ -71,9 +71,10 @@ Common opts for burst() and emitter(): { color, color2, scale, count, dir, norma
 - Respects G.settings.shake (false = off; a number = multiplier).
 - Bursts call shake themselves, attenuated by distance from the camera.
 
-★ text(pos, string, { color = white, size = 1, dur = 1.1 })
+★ text(pos, string, { color = white, size = 1, dur = 1.1, kind, target, n, el, big })
 - The caller passes an already translated string.
-- Roughly constant on-screen size, drawn on top of everything (depthTest off). Font is t('core.meta.fontBody').
+- Roughly constant on-screen size, drawn over the finished picture (see "Combat type round" at the end).
+- kind 'dmg' | 'word' | 'call' (or none for the older motion); target = the foe (or her) the label belongs to. See below.
 
 Extras:
 - sigil(pos, { color, radius = 2, dur = 1.5, intensity, spin, y }): a spinning magic circle on the ground.
@@ -95,7 +96,6 @@ Behaviour notes:
 - Aura emitters are subtle at camera distances of 8 m or more (by design, but worth reviewing once they are on real characters). At dusk the ambient leaves blend into the olive fallback ground; they are only clearly visible against the sky.
 - The fps figures come from headless Chrome capped at 60 fps by vsync, not from a real GPU timing at 1440×900.
 - Flash lights: four PointLights sit in the scene permanently at intensity 0, which adds 4 point lights to every lit material. That fits the §8 budget of ≤ 6 dynamic lights only if other systems add at most 2.
-- A string drawn into a text slot can be overwritten while an earlier copy is still on screen, but only when more than 32 different strings are on screen at once.
 - If another system later replaces scene.onBeforeRender without chaining it, buffers written after fx.lateUpdate show up one frame late. fx also uploads in its own lateUpdate, so in practice only effects spawned in other systems' lateUpdate are affected.
 
 
@@ -320,3 +320,40 @@ Miller 2026; notice in `world/flora/wake-field.js`). Ground/meadow side: docs/ap
 - `player/broom.js` — the gold lantern trail and the day glow of the broom light (`player.js`, `L.intensity`) exist
   only while boosting: `B.glow` rises over 0.15 s when the boost starts and falls over 0.4 s after it ends; the lantern
   sparkle drops to a faint twinkle outside a boost. The night lantern light is unchanged.
+
+## Combat type round: floating labels (2026-11-25, as built)
+
+The director found the in-fight lettering prototype-like (piles of 「12」「失衡」 on one foe, low-res brush text with a thick
+black outline, the heroine's callouts mid-frame). `src/fx/text.js` keeps its design (one instanced draw over a canvas atlas,
+strings reused) and changes the rest:
+
+- **Atlas.** 512×128 slots (twice the old resolution), 32 slots on low / mobile, 64 above. Each new label is drawn on a
+  one-slot stage canvas and copied into its slot with `renderer.copyTextureToTexture` (texSubImage2D, 256 KB), with
+  mipmaps, instead of re-uploading the whole atlas. A slot is free when no live label shows it (no more overwritten
+  strings). The stage is drawn in WHITE: fill, a thin dark stroke INSIDE the letters (stroked with `source-atop`), a close
+  dense shadow and a wide faint glow. The shader colours it per label: a vertical gradient from near-white to the label
+  colour, a dark ink tinted to match — "12" in gold and "12" in thunder violet share one slot.
+- **Faces.** Words: the brush face (`core.meta.fontTitle`) with an 8° forward slant. Numbers: the display serif
+  (`core.meta.fontDisplay`, MV Serif) at 800, condensed to 85 %. Big hits carry their element's pictogram
+  (`iconPaths()` from `ui/icons.js`) or the four-point star. The ×N of a repeated word is the serif, smaller (loc `fx.repeat`).
+- **Overlay.** The labels are no longer in the scene: `G.fx.drawOverlay(renderer, camera)` draws them after the post chain
+  (sky.js render, and the default `G.renderFrame`), so no tone curve, grade, haze, bloom or depth of field touches them and
+  they stay crisp at full canvas resolution when the scene renders scaled. `G.fx.textMesh` is the mesh (shots hide it).
+- **Kinds.**
+  - `dmg` (`combat.js` damage, `player.js`, the dummy): `n` the amount, `el` the element ('' = plain: white → gold),
+    `big` (combat: ≥ 30, a shatter, a ward broken by the blow, or a reaction / crit of ≥ 18; never a DoT). Big hits pop
+    elastically (1.6× → 1×), carry the glyph and take two lanes. Every other hit of the same element on the same target
+    rolls into ONE number while ticks keep coming within 0.55 s (a fire tornado ticks every 0.5 s, so a strict 0.4 s window
+    would split every tick again), for at most 3 s; it bumps on each tick and grows from a chip (sum < 12: 60 % size,
+    70 % opacity, a small sideways arc, gone 0.62 s after the last tick) to a full number.
+  - `word` (staggers, ward texts, rally, phase 2, 看破, knock-offs …): the same word on the same target within 1 s updates
+    one label to 「失衡 ×3」.
+  - `call` (her perfect guard, a reflect, the won 对波): small, beside her shoulder to the LEFT (kept on screen); the guard ring and the
+    starburst carry the moment.
+  - none: the older rise-and-fade motion in the new look (races, pickups, heals, tips).
+- **Lanes.** A target's labels stack in lanes over its head (anchor `pos.y + height + 0.2`, pitch 0.5 size units, six
+  lanes); `G.fx.textTop(target)` is the room they take and `G.fx.textPx(units, depth)` converts it to px. The foe plate
+  (`ui/foes.js liftOver`) and the status marks under it (`ui/reactions.js`) rise over the lanes in use and settle after.
+  Reaction pills now sit beside the foe's upper body (left; right near the left screen edge), clear of the lanes.
+- **Determinism.** `fx.text` still draws exactly one `Math.random()` per call, so seeded takes replay as before.
+

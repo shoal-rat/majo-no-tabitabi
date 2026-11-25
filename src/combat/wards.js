@@ -118,7 +118,7 @@ export function wardHit(e, n, info) {
   }
   if (k < 1 && !info.dot && G.time.t - w.tipT > 1.6 && info.source === G.player) {
     w.tipT = G.time.t;
-    G.fx?.text?.(_v, t('combat.ward.resist', { el: t('core.element.' + c[0]) }), { color: WARD_COLOR[w.el], size: 0.72, dur: 1.2 });
+    G.fx?.text?.(_v, t('combat.ward.resist', { el: t('core.element.' + c[0]) }), { kind: 'word', target: e, color: WARD_COLOR[c[0]] ?? WARD_COLOR[w.el], size: 0.92, dur: 1.2 });   // in the answer's colour
     G.audio?.sfx('guard', { pos: e.pos, vol: 0.45, pitch: 1.4 });
   } else if (k >= 1 && before > 0) G.fx?.burst('hit_' + w.el, _v, { scale: 0.7 });
   return Math.round(n * 0.15);
@@ -133,7 +133,7 @@ export function breakWard(e) {
   G.fx?.burst('clash_big', _v, { color: WARD_COLOR[w.el], color2: 0xffffff, scale: 0.6 });
   G.fx?.flash?.(_v, WARD_COLOR[w.el], 60, 0.25, 14);
   _v.y = e.pos.y + e.height + 0.7;
-  G.fx?.text?.(_v, t('combat.ward.broken'), { color: 0xfff0c0, size: 1.25, dur: 1.4 });
+  G.fx?.text?.(_v, t('combat.ward.broken'), { kind: 'word', target: e, color: 0xfff0c0, size: 1.2, dur: 1.4 });
   G.audio?.sfx('shatter_crystal', { pos: e.pos });
   e.centerOut(_w);
   G.fx?.starburst?.(_w, { color: WARD_COLOR[w.el], radius: 2.2 });
@@ -210,7 +210,7 @@ export function poiseHit(e, n, info, countered) {
       if (src) { _n.set(e.pos.x - src.x, 0, e.pos.z - src.z); if (_n.lengthSq() > 1e-4) { _n.normalize(); e.vel.x += _n.x * 5; e.vel.z += _n.z * 5; if (!e.fly) e.vel.y = Math.max(e.vel.y, 3); } }
     }
     e.centerOut(_v); _v.y = e.pos.y + e.height + 0.55;
-    G.fx?.text?.(_v, t(interrupted ? 'combat.interrupt' : 'combat.stagger'), { color: interrupted ? 0xfff0a0 : 0xffe7a4, size: interrupted ? 1.2 : 1.05, dur: 1.2 });
+    G.fx?.text?.(_v, t(interrupted ? 'combat.interrupt' : 'combat.stagger'), { kind: 'word', target: e, color: interrupted ? 0xffe27a : 0xffd98a, size: interrupted ? 1.15 : 1.05, dur: 1.2 });
     G.fx?.burst('spark', _v, { scale: interrupted ? 1.3 : 0.9, color: 0xffe7a4 });
     G.fx?.starburst?.(e.centerOut(_w), { color: 0xffe7a4, radius: interrupted ? 1.8 : 1.3, dur: 0.28 });
     G.audio?.sfx('hit_heavy', { pos: e.pos, vol: 0.8, pitch: interrupted ? 1.05 : 1.2 });

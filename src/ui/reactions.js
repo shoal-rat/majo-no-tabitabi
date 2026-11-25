@@ -17,7 +17,8 @@ addCss(`
 .rx-call { position: absolute; left: 0; top: 0; will-change: transform; display: none; }
 .rx-call.on { display: block; }
 .rx-call .in { position: absolute; left: 0; top: 0; display: flex; align-items: center; gap: 6u; white-space: nowrap; padding: 5u 16u 6u 10u;
-  font: 600 21u/1.1 var(--fd); letter-spacing: .1em; color: #fffaf0; transform: translate(-50%, -100%); text-shadow: var(--halo); }
+  font: 600 21u/1.1 var(--fd); letter-spacing: .1em; color: #fffaf0; --tx: calc(-100% - 30u); transform: translate(var(--tx), -50%); transform-origin: 100% 50%; text-shadow: var(--halo); }
+.rx-call.r .in { --tx: 30u; transform-origin: 0 50%; }
 .rx-call .in::before { content: ''; position: absolute; inset: 0 -4u; z-index: -1; border-radius: 18u; opacity: .92;
   background: linear-gradient(90deg, color-mix(in srgb, var(--a) 46%, rgba(14,20,40,.9)), color-mix(in srgb, var(--b) 46%, rgba(14,20,40,.9)));
   box-shadow: inset 0 0 0 1u rgba(255,247,232,.4), 0 4u 12u rgba(0,0,0,.3); }
@@ -32,11 +33,11 @@ addCss(`
 .rx-call.pop .in { animation: rx-pop 1.6s cubic-bezier(.2,.8,.2,1) both; }
 .rx-call.big.pop .in { animation-duration: 2.3s; }
 @keyframes rx-pop {
-  0% { opacity: 0; transform: translate(-50%, -100%) scale(.55); }
-  10% { opacity: 1; transform: translate(-50%, -100%) scale(1.14); }
-  20% { transform: translate(-50%, -100%) scale(1); }
+  0% { opacity: 0; transform: translate(var(--tx), -50%) scale(.55); }
+  10% { opacity: 1; transform: translate(var(--tx), -50%) scale(1.14); }
+  20% { transform: translate(var(--tx), -50%) scale(1); }
   72% { opacity: 1; }
-  100% { opacity: 0; transform: translate(-50%, -150%) scale(.96); } }
+  100% { opacity: 0; transform: translate(var(--tx), -90%) scale(.96); } }
 
 .rx-pips { position: absolute; left: 0; top: 0; display: none; gap: 3u; transform-origin: 50% 0; will-change: transform; }
 .rx-pips.on { display: flex; }
@@ -70,7 +71,8 @@ const STATUS_COLOR = { burning: '#ff7b47', wet: '#5cb9ff', frozen: '#b9eeff', sh
 const STATUS_ICON = { burning: 'fire', wet: 'water', frozen: 'ice', shocked: 'thunder', muddy: 'earth', chilled: 'ice' };
 const STATUS_FULL = { burning: 6, wet: 12, frozen: 6, shocked: 1.4, muddy: 5, chilled: 4 };
 const MAX_CALLS = 7, MAX_PIPS = 10, PIP_SLOTS = 4;
-const _v = new THREE.Vector3(), _p = { x: 0, y: 0, d: 0 };
+const _v = new THREE.Vector3(), _v2 = new THREE.Vector3(), _p = { x: 0, y: 0, d: 0 };
+const CALL_DROP = 2.5;   // combo point (2 m over the head) → the upper body
 
 const name = (id) => (has('elements.combo.' + id + '.name') ? t('elements.combo.' + id + '.name') : id);
 const elCol = (e) => EL_COLOR[e] || '#ffffff';
@@ -115,7 +117,6 @@ export function createReactions(root) {
     if (!k) k = calls.find((q) => !q.live) || calls.reduce((a, b) => (a.t0 < b.t0 ? a : b));
     k.id = e.id; k.live = true; k.t0 = now; k.life = c.big || e.big ? 2.3 : 1.6;
     k.pos.copy(e.pos);
-    if (fresh) k.pos.y += 0.4;
     const els = c.els;
     k.node.style.setProperty('--a', elCol(els[0]));
     k.node.style.setProperty('--b', elCol(els[1] || els[0]));
@@ -135,8 +136,12 @@ export function createReactions(root) {
     for (const k of calls) {
       if (!k.live) continue;
       if (now - k.t0 > k.life) { k.live = false; k.node.classList.remove('on', 'pop'); continue; }
-      if (!project(k.pos, _p)) { if (k.node.classList.contains('on')) k.node.classList.remove('on'); continue; }
+      // beside the foe's upper body (combo points sit 2 m over its head): the lanes of numbers and words above its head
+      // and the foe plate over them stay clear; near the left edge of the screen the pill goes to the right side
+      if (!project(_v2.set(k.pos.x, k.pos.y - CALL_DROP, k.pos.z), _p)) { if (k.node.classList.contains('on')) k.node.classList.remove('on'); continue; }
       k.node.classList.add('on');
+      const right = _p.x < UI.w * 0.32;
+      if (k.right !== right) { k.right = right; k.node.classList.toggle('r', right); }
       const sx = Math.round(_p.x), sy = Math.round(_p.y);
       if (sx !== k.sx || sy !== k.sy) { k.sx = sx; k.sy = sy; k.node.style.transform = `translate3d(${sx}px,${sy}px,0)`; }
     }
@@ -189,7 +194,8 @@ export function createReactions(root) {
             const k = Math.round(clamp(st.t / STATUS_FULL[st.id]) * 24) / 24;
             if (k !== q.k) { q.k = k; q.s.style.setProperty('--k', k); }
           }
-          const sx = Math.round(_p.x), sy = Math.round(_p.y), sc = Math.round(clamp(18 / Math.max(6, _p.d), 0.62, 1.15) * 20) / 20;
+          const o = r.owner || r, lift = G.time.real - (o._uiLiftT ?? -9) < 0.25 ? o._uiLift || 0 : 0;   // the plate rose over floating labels (ui/foes.js)
+          const sx = Math.round(_p.x), sy = Math.round(_p.y - lift), sc = Math.round(clamp(18 / Math.max(6, _p.d), 0.62, 1.15) * 20) / 20;
           if (sx !== p.sx || sy !== p.sy || sc !== p.sc) { p.sx = sx; p.sy = sy; p.sc = sc; p.node.style.transform = `translate3d(${sx}px,${sy}px,0) translate(-50%,3px) scale(${sc})`; }
         }
       }

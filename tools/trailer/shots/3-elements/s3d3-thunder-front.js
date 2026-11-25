@@ -17,7 +17,7 @@ export default {
   },
   start(G, T, R) {
     R.place(X, Z, FACE); R.select('water'); R.gameCam({ yaw: FACE + Math.PI + 0.25, pitch: -0.12, dist: 5.6 });
-    const ft = G.scene.getObjectByName('fxText'); if (ft) ft.visible = false;   // floating damage numbers off (a HUD-like layer)
+    const ft = G.fx?.textMesh; if (ft) ft.visible = false;   // floating damage numbers off (a HUD-like layer)
     PACK.forEach(([x, z], i) => R.spawn('blob', x, z, { aggro: false, hp: 900, yaw: FACE + Math.PI + i }));
   },
   camera: (f, G, R) => {   // close front three-quarter on her casting

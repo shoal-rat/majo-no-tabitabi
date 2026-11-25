@@ -117,7 +117,10 @@ export function createArts(S, V) {
     G.fx?.burst('clash', p.pos, { color: COLORS.guard, color2: p.color, scale: 1.2 });
     G.fx?.ring(p.pos, { color: COLORS.guard, radius: 2.4, dur: 0.35, y: p.pos.y });
     G.fx?.flash(p.pos, COLORS.guard, 120, 0.2, 14);
-    G.fx?.text?.(_w.copy(p.pos).setY(p.pos.y + 0.8), t('spells.msg.perfect'), { color: '#ffe6a6', size: 1.2, dur: 0.9 });
+    // her perfect guard is her moment: a small callout over her shoulder (the guard ring and the star carry it); a rival's
+    // reflect is a word over the rival
+    if (g.caster === G.player) G.fx?.text?.(p.pos, t('spells.msg.perfect'), { kind: 'call', color: '#ffe6a6', dur: 0.9 });
+    else G.fx?.text?.(_w.copy(p.pos).setY(p.pos.y + 0.8), t('spells.msg.perfect'), { kind: 'word', target: g.caster || null, color: '#ffe6a6', dur: 0.9 });
     G.audio?.sfx('bell_small', { pos: p.pos, pitch: 1.4 });
     G.audio?.sfx('hit_sun', { pos: p.pos });
     G.hitstop(0.09);

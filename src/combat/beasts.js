@@ -76,7 +76,7 @@ function scare(e, sec = 2.2) {
   e.fearT = sec;
   e._braveT = G.time.t + sec + 6;   // it comes back angrier: no new scare for 6 s (fire buys time, it does not end the fight)
   e.stopAttack();
-  if (G.time.t - (e._fearTxt || -9) > 5) { e._fearTxt = G.time.t; G.fx?.text?.(_v.set(e.pos.x, e.pos.y + e.height + 0.5, e.pos.z), t('combat.fear'), { color: 0xffb070, size: 0.85 }); }
+  if (G.time.t - (e._fearTxt || -9) > 5) { e._fearTxt = G.time.t; G.fx?.text?.(_v.set(e.pos.x, e.pos.y + e.height + 0.5, e.pos.z), t('combat.fear'), { kind: 'word', target: e, color: 0xffb070, size: 0.9 }); }
   G.audio?.sfx('growl', { pos: e.pos, pitch: 1.6, vol: 0.6 });
 }
 function hasteDt(e, dt) { return dt * (e.haste || 1); }
@@ -252,7 +252,7 @@ export function installBeasts(TYPES) {
         D.bakedT = 8;
         const c = e.cr?.model?.userData.crust; if (c) c.visible = true;
         G.fx?.burst('steam', e.centerOut(_v), { scale: 1 });
-        G.fx?.text?.(_v.set(e.pos.x, e.pos.y + e.height + 0.4, e.pos.z), t('combat.baked'), { color: 0xf0c890, size: 0.85 });
+        G.fx?.text?.(_v.set(e.pos.x, e.pos.y + e.height + 0.4, e.pos.z), t('combat.baked'), { kind: 'word', target: e, color: 0xf0c890, size: 0.9 });
         return;
       }
       if (info.element === 'water' && !(D.bakedT > 0)) { e.hp = Math.min(e.maxHp, e.hp + 8); return; }

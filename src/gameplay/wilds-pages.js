@@ -535,7 +535,7 @@ export function createWildPages({ wstate, tt }) {
     G.fx?.duel?.slowmo?.(0.35, 0.25, 0.4);
     G.fx?.duel?.angle?.(at, { dur: 1.1 });
     sfx('roar', { vol: 0.6 }); sfx('taiko', { vol: 0.7 });
-    G.ui?.banner?.(guardianName(s), tt('pages.' + s.def.id + '.guardian'));
+    G.ui?.banner?.(t('combat.enemy.' + s.def.id), tt('pages.' + s.def.id + '.guardian'), { foe: true, epithet: t('combat.elite.' + s.def.id) });
     setTimeout(() => { if (s.guardian === e && !e.dead) toast(tt('pages.' + s.def.id + '.trick'), { icon: s.def.el, dur: 7 }); }, 2600);
     s.ringMat.userData.setGlow(1.3);
     s.phase = 'fight';

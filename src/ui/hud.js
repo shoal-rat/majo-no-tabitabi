@@ -48,7 +48,7 @@ addCss(`
 .hud-vit .bars { display: flex; flex-direction: column; gap: 2u; transition: opacity .6s, transform .6s; }
 .hud-vit .row { display: flex; align-items: baseline; gap: 5u; }
 .hud-vit .life .num { font: 700 22u/1 var(--fd); color: #fff4ef; letter-spacing: .01em; }
-.hud-vit .life .of { font: 600 11.5u/1 var(--fd); color: rgba(255,247,232,.7); }
+.hud-vit .life .of { font: 600 9u/1 var(--fd); letter-spacing: .06em; color: rgba(236,217,164,.62); }
 .hud-vit .mana .num { font: 600 13u/1 var(--fd); color: #cfe3ff; }
 .hud-vit .mana::before { content: ''; width: 7u; height: 7u; margin-right: 2u; align-self: center; background: var(--mana); -webkit-mask: var(--mk-star) center / contain no-repeat; mask: var(--mk-star) center / contain no-repeat; }
 .hud-vit.low .arcs .life.fill { animation: mv-pulse .7s infinite; }
@@ -87,14 +87,24 @@ addCss(`
 .hud-boss .nm { display: inline-block; min-width: 220u; padding: 0 8u; font: 700 20u/1.3 var(--fd); letter-spacing: .2em; color: var(--star);
   border: solid transparent; border-width: 12u 46u; border-image: var(--fr-ribbon) 12 46 fill / 12u 46u stretch; margin: -8u 0 -4u; }
 .hud-boss .sub { font: 600 11.5u/1.5 var(--fd); letter-spacing: .3em; margin-right: -.3em; color: var(--brass2); opacity: .92; }
-.hud-boss .wrap { position: relative; margin-top: 6u; padding: 0 24u; }
-.hud-boss .wrap::before, .hud-boss .wrap::after { content: ''; position: absolute; top: 50%; width: 14u; height: 14u; margin-top: -7u; background: var(--brass2);
-  filter: drop-shadow(0 1u 2u rgba(0,0,0,.7)); -webkit-mask: var(--mk-star) center / contain no-repeat; mask: var(--mk-star) center / contain no-repeat; }
-.hud-boss .wrap::before { left: 2u; } .hud-boss .wrap::after { right: 2u; }
-.hud-boss .hud-bar { height: 10u; }
-.hud-boss .fill { background: linear-gradient(180deg, #ffb3a2, #e05848 50%, #9c2a26); box-shadow: inset 0 1u 0 rgba(255,255,255,.3); }
+.hud-boss .wrap { position: relative; margin-top: 8u; padding: 0 24u; }
+/* combat type round: a slim rod between two diamond caps, ticks every tenth above and below, a gleam at the leading edge */
+.hud-boss .wrap::before, .hud-boss .wrap::after { content: ''; position: absolute; top: 50%; width: 12u; height: 12u; margin-top: -6u; transform: rotate(45deg);
+  background: linear-gradient(135deg, #fff3d0, var(--brass) 55%, var(--brass3)); box-shadow: 0 0 0 1u rgba(8,10,22,.75), 0 1u 4u rgba(0,0,0,.5); }
+.hud-boss .wrap::before { left: 7u; } .hud-boss .wrap::after { right: 7u; }
+.hud-boss .hud-bar { position: relative; height: 6u; background: rgba(6,10,24,.8); box-shadow: 0 0 0 1u rgba(236,217,164,.72), 0 2u 6u rgba(0,0,0,.45); }
+.hud-boss .hud-bar i { position: absolute; inset: 0; transform-origin: 0 50%; will-change: transform; }
+.hud-boss .hud-bar .ghost { background: rgba(255,240,214,.78); }
+.hud-boss .hud-bar::after { content: ''; position: absolute; left: 0; right: 0; top: -5u; bottom: -5u; pointer-events: none;
+  background: repeating-linear-gradient(90deg, rgba(236,217,164,.7) 0 1u, transparent 1u 10%) top / 100% 3u no-repeat,
+    repeating-linear-gradient(90deg, rgba(236,217,164,.7) 0 1u, transparent 1u 10%) bottom / 100% 3u no-repeat; }
+.hud-boss .gl { position: absolute; left: 24u; top: 50%; width: 0; height: 0; will-change: transform; pointer-events: none; }
+.hud-boss .gl::before { content: ''; position: absolute; left: -1u; top: -11u; width: 2u; height: 22u; background: linear-gradient(180deg, rgba(255,255,255,0), #fff 50%, rgba(255,255,255,0));
+  box-shadow: 0 0 7u 1u rgba(255,236,200,.75); }
+.hud-boss .fill { background: linear-gradient(180deg, #ffc2b2, #e05848 50%, #9c2a26); box-shadow: inset 0 1u 0 rgba(255,255,255,.35); }
 .hud-boss.duel .fill { background: linear-gradient(180deg, #fff2cc, var(--bc, #d8a646) 55%, #8c6a22); }
 .hud-boss.shade .fill { background: linear-gradient(180deg, #ddc8ff, #8a5fd8 50%, #4b2c93); }
+.hud-boss.low .hud-bar { animation: hud-shiver .12s steps(2) infinite; }
 
 /* ---- top right: the purse coin, then the objective as an inked card (it folds to its title when nothing changes) ---- */
 .hud-tr { position: absolute; right: 22u; top: 18u; display: flex; flex-direction: column; align-items: flex-end; }
@@ -169,22 +179,47 @@ addCss(`
 .hud-pin.near { opacity: .4; }
 .hud-pin.tuck .lb { display: none; }
 
-/* ---- beam struggle ---- */
-.hud-struggle { position: absolute; left: 50%; top: 61%; width: 460u; margin-left: -230u; text-align: center; opacity: 0; transform: scale(.92); transition: opacity .2s, transform .25s cubic-bezier(.2,.8,.2,1.5); }
+/* ---- beam struggle (combat type round): a slim rod between two diamond caps, clock ticks above and below, her gold
+   pushing from the left against the violet, a gleam where the two beams meet, a crack flickering there when either side is
+   about to break; the title small and widely spaced in brass, the mash key a brass-rimmed night key ---- */
+.hud-struggle { position: absolute; left: 50%; top: 61%; width: 500u; margin-left: -250u; text-align: center; opacity: 0; transform: scale(.94); transition: opacity .2s, transform .25s cubic-bezier(.2,.8,.2,1.5); }
 .hud-struggle.on { opacity: 1; transform: none; }
-.hud-struggle .ttl { font: 600 22u/1.2 var(--fd); letter-spacing: .3em; margin-right: -.3em; color: var(--star); }
-.hud-struggle .track { position: relative; height: 14u; margin: 9u 0; border-radius: 8u; overflow: hidden; background: linear-gradient(180deg, #b49cff, #5a37b8 60%, #2c1766);
-  box-shadow: inset 0 0 0 1u rgba(236,217,164,.45), 0 2u 8u rgba(0,0,0,.4); }
-.hud-struggle .mine { position: absolute; inset: 0; background: linear-gradient(180deg, #fffbe6, #ffd98a 55%, #e9a24a); transform-origin: 0 50%; will-change: transform; }
-.hud-struggle .wrap { position: relative; }
-.hud-struggle .spark { position: absolute; left: 0; top: 50%; width: 0; height: 0; will-change: transform; }
-.hud-struggle .spark::before { content: ''; position: absolute; left: -17u; top: -17u; width: 34u; height: 34u; background: radial-gradient(circle, #fff 0%, #fff3c4 28%, rgba(255,214,120,.55) 48%, rgba(255,214,120,0) 70%); animation: hud-spark .12s infinite alternate; }
-.hud-struggle .spark::after { content: ''; position: absolute; left: -10u; top: -10u; width: 20u; height: 20u; background: #fff; filter: drop-shadow(0 0 6u #ffe6a8);
-  -webkit-mask: var(--mk-star) center / contain no-repeat; mask: var(--mk-star) center / contain no-repeat; }
-@keyframes hud-spark { to { transform: scale(1.35) rotate(40deg); } }
-.hud-struggle .hint { display: inline-flex; align-items: center; gap: 8u; font: 400 15u/22u var(--fb); letter-spacing: .1em; color: var(--star); }
-.hud-struggle .hint .keycap { animation: hud-mash .18s infinite alternate; }
-@keyframes hud-mash { to { transform: translateY(2u) scale(.94); } }
+.hud-struggle .ttl { display: flex; align-items: center; justify-content: center; gap: 12u; font: 700 15u/1.2 var(--fd); letter-spacing: .6em; margin-right: -.6em; color: var(--brass2); }
+.hud-struggle .ttl::before, .hud-struggle .ttl::after { content: ''; width: 46u; height: 1u; background: linear-gradient(90deg, rgba(236,217,164,0), rgba(236,217,164,.8)); }
+.hud-struggle .ttl::after { transform: scaleX(-1); margin-right: .6em; }
+.hud-struggle .wrap { position: relative; margin: 11u 0 12u; padding: 0 18u; }
+.hud-struggle .track { position: relative; height: 5u; background: linear-gradient(180deg, #c3adff, #7650e0 45%, #3b2089);
+  box-shadow: 0 0 0 1u rgba(236,217,164,.75), 0 0 12u rgba(130,90,240,.45), 0 2u 6u rgba(0,0,0,.45); }
+.hud-struggle .mine { position: absolute; inset: 0; background: linear-gradient(180deg, #fffdf0, #ffd98a 45%, #d8922e); box-shadow: 0 0 9u rgba(255,206,110,.6);
+  transform-origin: 0 50%; will-change: transform; }
+.hud-struggle .tk { position: absolute; left: 18u; right: 18u; top: -6u; bottom: -6u; pointer-events: none;
+  background: linear-gradient(90deg, transparent calc(50% - .75u), rgba(255,247,232,.95) calc(50% - .75u) calc(50% + .75u), transparent calc(50% + .75u)) center / 100% 100% no-repeat,
+    repeating-linear-gradient(90deg, rgba(236,217,164,.75) 0 1u, transparent 1u 12.5%) top / 100% 3u no-repeat,
+    repeating-linear-gradient(90deg, rgba(236,217,164,.75) 0 1u, transparent 1u 12.5%) bottom / 100% 3u no-repeat; }
+.hud-struggle .cap { position: absolute; top: 50%; width: 13u; height: 13u; margin-top: -6.5u; transform: rotate(45deg);
+  background: linear-gradient(135deg, #fff3d0, var(--brass) 55%, var(--brass3)); box-shadow: 0 0 0 1u rgba(8,10,22,.75), 0 1u 4u rgba(0,0,0,.5); }
+.hud-struggle .cap::after { content: ''; position: absolute; inset: 3.5u; background: #ffd98a; box-shadow: 0 0 5u #ffd98a; }
+.hud-struggle .cap.l { left: 2u; } .hud-struggle .cap.r { right: 2u; }
+.hud-struggle .cap.r::after { background: #9b73ff; box-shadow: 0 0 5u #9b73ff; }
+.hud-struggle .spark { position: absolute; left: 18u; top: 50%; width: 0; height: 0; will-change: transform; }
+.hud-struggle .spark::before { content: ''; position: absolute; left: -1u; top: -16u; width: 2u; height: 32u;
+  background: linear-gradient(180deg, rgba(255,255,255,0), #fff 50%, rgba(255,255,255,0)); box-shadow: 0 0 8u 2u rgba(255,236,190,.8); animation: hud-gleam .14s infinite alternate; }
+.hud-struggle .spark::after { content: ''; position: absolute; left: -9u; top: -9u; width: 18u; height: 18u; background: #fff; filter: drop-shadow(0 0 6u #ffe6a8) drop-shadow(0 0 3u #fff);
+  -webkit-mask: var(--mk-star) center / contain no-repeat; mask: var(--mk-star) center / contain no-repeat; animation: hud-spark .9s linear infinite; }
+@keyframes hud-gleam { to { transform: scaleY(1.25); opacity: .8; } }
+@keyframes hud-spark { to { transform: rotate(90deg); } }
+.hud-struggle .crk { position: absolute; left: -9u; top: -11u; width: 18u; height: 22u; opacity: 0; pointer-events: none;
+  background: linear-gradient(180deg, #fff, #ffe3b0); clip-path: polygon(46% 0, 58% 0, 50% 30%, 70% 44%, 46% 70%, 56% 100%, 44% 100%, 34% 66%, 54% 46%, 34% 30%); }
+.hud-struggle.edge .crk { animation: hud-crack .13s steps(2) infinite; }
+.hud-struggle.edge.lose .crk { background: linear-gradient(180deg, #ffd2c4, #ff7a5a); }
+.hud-struggle.edge.lose .track { animation: hud-shiver .1s steps(2) infinite; }
+@keyframes hud-crack { 0% { opacity: .95; transform: scale(1, 1); } 100% { opacity: .2; transform: scale(-1, 1.15); } }
+@keyframes hud-shiver { 50% { transform: translateX(1u); box-shadow: 0 0 0 1u rgba(255,170,140,.9), 0 0 12u rgba(255,90,70,.55), 0 2u 6u rgba(0,0,0,.45); } }
+.hud-struggle .hint { display: inline-flex; align-items: center; gap: 9u; font: 600 13u/24u var(--fd); letter-spacing: .3em; color: var(--brass2); }
+.hud-struggle .hint .keycap { min-width: 40u; height: 24u; padding: 0 10u; border-radius: 12u; font: 700 12u/24u var(--fd); letter-spacing: .08em; color: var(--brass2);
+  background: radial-gradient(circle at 50% 30%, #34477c, #121a33 78%); box-shadow: 0 0 0 1.2u var(--brass), 0 0 10u rgba(236,217,164,.35), 0 2u 4u rgba(0,0,0,.4);
+  animation: hud-mash .18s infinite alternate; }
+@keyframes hud-mash { to { transform: translateY(1.5u) scale(.93); box-shadow: 0 0 0 1.2u var(--brass2), 0 0 16u rgba(255,226,160,.6), 0 1u 2u rgba(0,0,0,.4); } }
 
 /* ---- interact prompt: a parchment pill with the key in a night medallion ---- */
 .hud-prompt { position: absolute; left: 50%; bottom: 150u; transform: translate(-50%, 8u); display: flex; align-items: center; gap: 10u; padding: 5u 22u 5u 5u; opacity: 0;
@@ -365,7 +400,8 @@ export function createHud(root) {
   // ---------------- boss / duel ----------------
   const boss = el('div', 'hud-boss tsh', R);
   const bossName = el('div', 'nm', boss), bossSub = el('div', 'sub', boss);
-  const bossBar = makeBar(el('div', 'wrap', boss));
+  const bossWrap = el('div', 'wrap', boss);
+  const bossBar = makeBar(bossWrap), bossGl = el('i', 'gl', bossWrap);
   let bossData = null, bossFrac = 1;
 
   // ---------------- top right ----------------
@@ -403,7 +439,9 @@ export function createHud(root) {
   tel('div', 'ttl', strg, 'ui.hud.struggle');
   const strgWrap = el('div', 'wrap', strg);
   const strgMine = el('i', 'mine', el('div', 'track', strgWrap));
+  el('i', 'tk', strgWrap); el('i', 'cap l', strgWrap); el('i', 'cap r', strgWrap);
   const strgSpark = el('i', 'spark', strgWrap);
+  el('i', 'crk', strgSpark);
   const strgHint = el('div', 'hint', strg);
   let strgTarget = null, strgV = 0.5, strgHintKey = '';
 
@@ -802,8 +840,14 @@ export function createHud(root) {
       const hot = !!(G.player && G.player.aim && G.player.aim.target);
       if (cross._hot !== hot) { cross._hot = hot; cross.classList.toggle('hot', hot); }
 
-      // boss
-      if (bossData) setBar(bossBar, bossFrac, rdt);
+      // boss: the gleam rides the leading edge; the rod shivers in the last tenth
+      if (bossData) {
+        setBar(bossBar, bossFrac, rdt);
+        const gx = Math.round(bossBar.f * 452 * UI.u);
+        if (bossGl._x !== gx) { bossGl._x = gx; bossGl.style.transform = `translate3d(${gx}px,0,0)`; }
+        const low = bossFrac > 0 && bossFrac < 0.1;
+        if (boss._low !== low) { boss._low = low; boss.classList.toggle('low', low); }
+      }
       // struggle
       if (strgTarget !== null) {
         strgV = damp(strgV, strgTarget, 14, rdt);
@@ -811,7 +855,10 @@ export function createHud(root) {
         if (strg._f !== f || strg._u !== UI.u) {
           strg._f = f; strg._u = UI.u;
           strgMine.style.transform = `scaleX(${f})`;
-          strgSpark.style.transform = `translate3d(${(f * 460 * UI.u).toFixed(1)}px,0,0)`;
+          strgSpark.style.transform = `translate3d(${(f * 464 * UI.u).toFixed(1)}px,0,0)`;
+          // a crack flickers where the beams meet when either side is about to break (hers: reddened, and the rod shivers)
+          const edge = f < 0.2 || f > 0.82, lose = f < 0.2;
+          if (strg._e !== edge || strg._l !== lose) { strg._e = edge; strg._l = lose; strg.classList.toggle('edge', edge); strg.classList.toggle('lose', lose); }
         }
         const hk = key('attack');
         if (strgHintKey !== hk) {

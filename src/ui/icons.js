@@ -110,6 +110,29 @@ export function iconSvg(name) {
   const body = ICONS[name] || ICONS[ALIAS[name]] || ICONS.quest;
   return `<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">${body}</svg>`;
 }
+/** An icon as canvas paths on its 24×24 grid, for systems that draw it into a canvas (src/fx/text.js): [{ d, w }] with w = 0
+ *  for a filled path and w > 0 for a stroke of that width; circles come as { c: [cx, cy, r] }. The pale highlight and dark
+ *  shading layers are left out (a canvas tints the shape as one piece). Unknown names give null. */
+export function iconPaths(name) {
+  const body = ICONS[name] || ICONS[ALIAS[name]];
+  if (!body) return null;
+  const out = [];
+  for (const m of body.matchAll(/<(path|circle)\s([^>]*?)\/>/g)) {
+    const a = m[2];
+    if (/fill-opacity|stroke-opacity|stroke="#|fill="#/.test(a)) continue;
+    if (m[1] === 'circle') {
+      const n = (k) => Number((new RegExp(`\\b${k}="([^"]+)"`).exec(a) || [])[1]);
+      if (/fill="none"/.test(a)) continue;
+      out.push({ c: [n('cx'), n('cy'), n('r')] });
+    } else {
+      const d = (/\bd="([^"]+)"/.exec(a) || [])[1];
+      if (!d) continue;
+      const w = /fill="none"/.test(a) ? Number((/stroke-width="([^"]+)"/.exec(a) || [])[1]) || 1.8 : 0;
+      out.push({ d, w });
+    }
+  }
+  return out;
+}
 /** <i class="ic"> holding an icon. A name that is not an icon but is short (a glyph) is shown as text. */
 export function icon(name, cls, parent) {
   const e = document.createElement('i');

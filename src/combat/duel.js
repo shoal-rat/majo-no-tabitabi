@@ -193,7 +193,7 @@ export function createDuels(C) {
       marks.push(G.fx?.sigil?.(en.pos, { color: elColor(el), radius: 2.6, dur: windup, intensity: 1.8, tracked: true }));
       G.fx?.burst('charge_done', en.centerOut(_v), { color: elColor(el), scale: 1.4 });
       _v.y += 1.6;
-      G.fx?.text?.(_v, name, { color: elColor(el), size: 1.3, dur: windup });
+      G.fx?.text?.(_v, name, { kind: 'word', target: en, color: elColor(el), size: 1.25, dur: windup });
       G.audio?.sfx('charge', { pos: en.pos });
       if (el !== 'thunder' && el !== 'moon') warnAt(target, el === 'earth' ? 9 : el === 'fire' ? 7 : 6, windup + 0.6, elColor(el), marks);
     }, cancel: () => { for (const stop of marks) stop?.(); }, during: (en) => { en.face(P.pos.x, P.pos.z, 0.016, 6); } });
@@ -278,7 +278,7 @@ export function createDuels(C) {
     const name = t('combat.rival.' + id);
     if (isBoss) G.events.emit('boss:start', { id, name });
     else G.events.emit('duel:start', { id });
-    G.ui?.banner?.(name, t(isBoss ? 'combat.boss.sub.' + id : 'combat.duel.sub'));
+    G.ui?.banner?.(name, t(isBoss ? 'combat.boss.sub.' + id : 'combat.duel.sub'), { foe: true });
     d.offDied = G.events.on('player:died', () => { if (D.active === d && !d.over) finish(false); });
     return promise;
   }

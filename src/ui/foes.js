@@ -8,7 +8,7 @@
 import * as THREE from 'three';
 import { G } from '../core/game.js';
 import { t } from '../core/i18n.js';
-import { clamp } from '../core/util.js';
+import { clamp, damp } from '../core/util.js';
 import { UI, el, setText, setOn, replay } from './dom.js';
 import { icon, EL_COLOR, hasIcon } from './icons.js';
 import { addCss } from './style.js';
@@ -73,10 +73,23 @@ addCss(`
 .foe-plate .hp .fill { background: linear-gradient(180deg, #ffb7a6 0%, var(--life) 50%, var(--life2) 100%); }
 .foe-plate.elite .hp .fill { background: linear-gradient(180deg, #ffe0a0 0%, #e8a23a 50%, #b8701e 100%); }
 .foe-plate.elite .hp { box-shadow: inset 0 0 0 1u rgba(236,217,164,.6), 0 0 6u rgba(236,217,164,.25); }
-.foe-plate .wd { display: none; align-items: center; gap: 3u; margin: 3u 8u 0; }
+.foe-plate .wd { display: none; align-items: center; gap: 4u; margin: 4u 8u 0; }
 .foe-plate .wd.on { display: flex; }
-.foe-plate .wd .bar { flex: 1; height: 4u; border-radius: 2u; background: rgba(6,10,24,.72); overflow: hidden; position: relative; }
-.foe-plate .wd .bar i { position: absolute; inset: 0; transform-origin: 0 50%; background: var(--wc); box-shadow: 0 0 4u var(--wc); }
+/* the ward (shield) bar, combat type round: a slim rod in the ward's colour between two small diamond caps, quarter ticks,
+   and a crack flicker once it is nearly broken */
+.foe-plate .wd .bar { flex: 1; height: 3u; margin: 0 4u; border-radius: 0; background: rgba(6,10,24,.78); position: relative; overflow: visible;
+  box-shadow: 0 0 0 1u rgba(236,217,164,.42); }
+.foe-plate .wd .bar i { position: absolute; inset: 0; transform-origin: 0 50%; box-shadow: 0 0 5u var(--wc);
+  background: linear-gradient(180deg, #fff, var(--wc) 55%, color-mix(in srgb, var(--wc) 55%, #10142a)); }
+.foe-plate .wd .bar::before, .foe-plate .wd .bar::after { content: ''; position: absolute; top: 50%; width: 5u; height: 5u; margin-top: -2.5u; pointer-events: none;
+  background: var(--brass2); transform: rotate(45deg); box-shadow: 0 0 0 1u rgba(8,10,22,.7); }
+.foe-plate .wd .bar::before { left: -4u; } .foe-plate .wd .bar::after { right: -4u; }
+.foe-plate .wd .bar .tk { position: absolute; left: 0; right: 0; top: -2u; bottom: -2u; pointer-events: none;
+  background: linear-gradient(90deg, transparent calc(25% - .5u), rgba(236,217,164,.75) calc(25% - .5u) calc(25% + .5u), transparent calc(25% + .5u) calc(50% - .5u),
+    rgba(236,217,164,.75) calc(50% - .5u) calc(50% + .5u), transparent calc(50% + .5u) calc(75% - .5u), rgba(236,217,164,.75) calc(75% - .5u) calc(75% + .5u), transparent calc(75% + .5u)); }
+.foe-plate .wd.low .bar i { animation: foe-crack .13s steps(2) infinite; }
+@keyframes foe-crack { 50% { opacity: .45; filter: brightness(1.8); } }
+.foe-plate .ps.hot i { animation: mv-pulse .3s infinite; }
 .foe-plate .wd .ic { font-size: 10u; color: var(--wc); filter: drop-shadow(0 0 2u rgba(0,0,0,.9)); }
 .foe-plate .wd .ans { font: 600 9.5u/1 var(--fd); color: var(--ac); text-shadow: 0 1u 2u rgba(0,0,0,.9); white-space: nowrap; }
 .foe-plate .wd.down .bar i { opacity: .25; }
@@ -101,6 +114,16 @@ addCss(`
 const _v = new THREE.Vector3();
 const MAX = 6;
 const AFFIX_SHOW = 2;
+const PLATE_UP = 1.05, TEXT_UP = 0.2;   // the plate's anchor and the floating labels' anchor above the head (m)
+
+/** px the foe plate must rise so the target's floating labels clear it (0 when it has none). */
+function liftOver(e, depth, sc, cam) {
+  const top = G.fx?.textTop?.(e) || 0;
+  if (!(top > 0) || !(depth > 0) || !cam) return 0;
+  const focal = UI.h * 0.5 / Math.tan(((cam.fov || 60) * Math.PI) / 360);
+  const gap = ((PLATE_UP - TEXT_UP) * focal) / depth;
+  return Math.max(0, (G.fx.textPx(top, depth, focal) || 0) - gap + 26 * UI.u * sc);   // + the status marks' row under the plate
+}
 
 export function createFoes(root) {
   const layer = el('div', 'foe-layer', root);
@@ -113,13 +136,14 @@ export function createFoes(root) {
     const ps = el('div', 'ps', p), pfill = el('i', '', ps);
     const wd = el('div', 'wd', p);
     const wic = icon('fire', 'ic', wd);
-    const wbar = el('i', '', el('div', 'bar', wd));
+    const wbox = el('div', 'bar', wd), wbar = el('i', '', wbox);
+    el('b', 'tk', wbox);
     const ans = el('span', 'ans', wd);
     const ch = el('div', 'ch', p);
     const ex = el('span', 'ex', ch);
     const af = [];
     for (let k = 0; k < AFFIX_SHOW; k++) af.push(el('span', 'af', ch));
-    plates.push({ p, nm, ghost, fill, ps, pfill, wd, wic, wbar, ans, ex, af, e: null, f: -1, g: 1, gw: -1, wf: -1, pf: -1, rl: null, br: null, key: '', x: -1, y: -1, s: -1, wel: '' });
+    plates.push({ p, nm, ghost, fill, ps, pfill, wd, wic, wbar, ans, ex, af, e: null, f: -1, g: 1, gw: -1, wf: -1, pf: -1, rl: null, br: null, key: '', x: -1, y: -1, s: -1, wel: '', lift: 0 });
   }
   const combo = el('div', 'foe-combo', root);
   const cN = el('div', 'n', combo), cL = el('div', 'lb', combo), cR = el('div', 'rk', combo);
@@ -180,9 +204,13 @@ export function createFoes(root) {
         _v.applyMatrix4(cam.projectionMatrix);
         if (Math.abs(_v.x) > 1.1 || Math.abs(_v.y) > 1.1) { setOn(pl.p, false); continue; }
         setOn(pl.p, true);
-        if (pl.e !== e) { pl.e = e; pl.key = ''; pl.f = -1; pl.g = clamp(e.hp / e.maxHp); pl.gw = -1; pl.wf = -1; pl.pf = -1; pl.rl = null; pl.br = null; pl.wel = ''; }
-        const sx = Math.round((_v.x * 0.5 + 0.5) * UI.w), sy = Math.round((-_v.y * 0.5 + 0.5) * UI.h);
+        if (pl.e !== e) { pl.e = e; pl.key = ''; pl.f = -1; pl.g = clamp(e.hp / e.maxHp); pl.gw = -1; pl.wf = -1; pl.pf = -1; pl.rl = null; pl.br = null; pl.wel = ''; pl.lift = e._uiLift || 0; }
         const sc = Math.round(clamp(1.25 - depth / 60, 0.72, 1.1) * 20) / 20;
+        // the floating labels over this foe take lanes above its head (src/fx/text.js): the plate (and the status marks
+        // under it, ui/reactions.js) rise over them instead of covering them, and settle once they are gone
+        pl.lift = damp(pl.lift, liftOver(e, depth, sc, cam), 12, rdt);
+        e._uiLift = pl.lift; e._uiLiftT = G.time.real;
+        const sx = Math.round((_v.x * 0.5 + 0.5) * UI.w), sy = Math.round((-_v.y * 0.5 + 0.5) * UI.h - pl.lift);
         if (sx !== pl.x || sy !== pl.y || sc !== pl.s) { pl.x = sx; pl.y = sy; pl.s = sc; pl.p.style.transform = `translate3d(${sx}px,${sy}px,0) translateY(-100%) scale(${sc})`; }
         const key = e.id + '|' + (e.data?.el || '') + '|' + (G.combat?.lockTarget === e ? 1 : 0);
         if (key !== pl.key) {
@@ -202,7 +230,7 @@ export function createFoes(root) {
         // posture: grows from the middle as the stance is worn down; full and pulsing while staggered
         const broke = e._poiseLockT > 0 && e.stunT > 0;
         const pf = broke ? 1 : e.poiseMax > 0 ? Math.round(clamp(1 - e.poise / e.poiseMax) * 50) / 50 : 0;
-        if (pf !== pl.pf) { pl.pf = pf; pl.pfill.style.transform = `scaleX(${Math.max(0.001, pf)})`; setOn(pl.ps, pf > 0.02); }
+        if (pf !== pl.pf) { pl.pf = pf; pl.pfill.style.transform = `scaleX(${Math.max(0.001, pf)})`; setOn(pl.ps, pf > 0.02); pl.ps.classList.toggle('hot', pf > 0.8 && pf < 1); }
         if (pl.br !== broke) { pl.br = broke; pl.ps.classList.toggle('broke', broke); }
         // ward
         const w = e.ward;
@@ -219,6 +247,7 @@ export function createFoes(root) {
           const wf = Math.round(clamp(w.hp / w.max) * 100) / 100;
           if (wf !== pl.wf) { pl.wf = wf; pl.wbar.style.transform = `scaleX(${Math.max(0.001, w.hp > 0 ? wf : clamp(1 - w.downT / w.regen))})`; }
           pl.wd.classList.toggle('down', w.hp <= 0);
+          pl.wd.classList.toggle('low', w.hp > 0 && wf < 0.25);
           if (w.hp <= 0) pl.wbar.style.transform = `scaleX(${Math.max(0.001, clamp(1 - w.downT / w.regen)).toFixed(2)})`;
         }
         setOn(pl.ex, e.exposedT > 0);

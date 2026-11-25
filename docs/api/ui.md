@@ -337,3 +337,24 @@ pill bottom centre (a phone: between the stick and the buttons). The caller fill
 `src/story/dialogue.js` `fill()`, so a computer shows keys and a phone its button names. `G.ui.coach({ done: true })` ticks
 the task off (a green check, then it fades); `G.ui.coach(null)` hides it. Hidden under menus and dialogue, back when play
 resumes; never takes pointer events. Used by Fran's spar lessons (`src/story/spar-lessons.js`).
+
+### Combat type round (2026-11-25)
+The director found the in-fight HUD prototype-like in the gameplay trailer. What changed (the floating labels themselves
+are in `docs/api/fx.md` "Combat type round"):
+- **Foe banner** (`stage.js`, `G.ui.banner(title, sub, { foe: true, epithet })`): a guardian, a boss, a duel rival, the
+  stardust trial and Fran's recollection open with their own banner instead of the place-name card: a dark band fading out
+  at both sides, pale-gold hairlines above (four-point star) and below (diamond), the name large in the display serif with
+  its epithet (「烛林」) smaller in brass before it, the line under it in brass with wide letter-spacing. Entrance: the band
+  opens from the middle, the rules draw outward, the ornaments spin in, the name un-blurs as its letter-spacing settles.
+  It sits at 17 % (12 % on touch), below the boss bar. A foe banner takes down a place card and the other way round.
+- **对波 bar** (`hud.js` struggle): a slim rod between two diamond caps (gold gem on her side, violet on theirs), clock ticks
+  above and below every eighth with a long one at the middle, gradient fills, a vertical gleam and a turning star where
+  the beams meet; a crack flickers there when either side is under 20 % (hers reddened, and the rod shivers). The title
+  is small brass with hairlines; the mash key is a brass-rimmed night key that pulses as it is pressed.
+- **Boss / duel bar**: the same rod (it had lost its base styles: the fill had no size), diamond caps instead of stars,
+  ticks every tenth, a gleam on the leading edge, a shiver in the last tenth. No numbers.
+- **Foe plates**: the ward (shield) bar is a slim rod in the ward's colour between small diamond caps with quarter ticks,
+  flickering once under a quarter; the posture line flickers once it is past 80 %. The plate and the status marks rise
+  over the lanes of floating labels (`liftOver`) and settle after. Reaction pills (`reactions.js`) sit beside the foe's
+  upper body instead of over its head.
+- **Vitals**: the `/ 100` after her life is a small brass tag.

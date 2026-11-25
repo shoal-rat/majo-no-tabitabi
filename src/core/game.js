@@ -43,7 +43,7 @@ export const G = {
   quests: null, dialogue: null, npcs: null, story: null,
 
   /** Draws the frame. The sky/post-processing system replaces this with its composer. */
-  renderFrame() { this.renderer.render(this.scene, this.camera); },
+  renderFrame() { this.renderer.render(this.scene, this.camera); this.fx?.drawOverlay?.(this.renderer, this.camera); },
 
   /** Switch mode; emits 'mode:changed' { mode, prev }. */
   setMode(mode) {

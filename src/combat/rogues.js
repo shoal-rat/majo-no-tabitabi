@@ -298,7 +298,7 @@ function knockOff(e) {
   e.actor?.play('fall', { fade: 0.1 });
   e.centerOut(_v);
   G.fx?.burst('hit_wind', _v, { scale: 1.3 });
-  G.fx?.text?.(_v.setY(e.pos.y + 2.2), t('combat.knocked'), { color: 0xffe7a4, size: 1.05, dur: 1.4 });
+  G.fx?.text?.(_v.setY(e.pos.y + 2.2), t('combat.knocked'), { kind: 'word', target: e, color: 0xffe7a4, size: 1.05, dur: 1.4 });
   G.fx?.starburst?.(e.centerOut(_v), { color: 0xffe7a4, radius: 1.8 });
   G.audio?.sfx('broom_dismiss', { pos: e.pos });
   G.events.emit('enemy:knocked', { enemy: e });
@@ -379,7 +379,7 @@ function thiefHit(e, amount, info) {
     const n = Math.max(1, Math.ceil(D.loot * 0.3));
     D.loot -= n;
     addItem(G, 'stardust', n);
-    G.fx?.text?.(_v.set(e.pos.x, e.pos.y + 2.3, e.pos.z), t('combat.thief.dropped', { n }), { color: 0xffd76a, size: 0.85 });
+    G.fx?.text?.(_v.set(e.pos.x, e.pos.y + 2.3, e.pos.z), t('combat.thief.dropped', { n }), { kind: 'word', target: e, color: 0xffd76a, size: 0.85 });
     G.audio?.sfx('coin', { pos: e.pos });
   }
   if (D.mounted && (info.element === 'wind' || info.element === 'thunder' || e.hp < e.maxHp * 0.45)) {
@@ -387,7 +387,7 @@ function thiefHit(e, amount, info) {
     D.state = 'down';
     e.stun(2.5);
     e.vel.y = 1;
-    G.fx?.text?.(_v.set(e.pos.x, e.pos.y + 2.2, e.pos.z), t('combat.knocked'), { color: 0xffe7a4, size: 1.0 });
+    G.fx?.text?.(_v.set(e.pos.x, e.pos.y + 2.2, e.pos.z), t('combat.knocked'), { kind: 'word', target: e, color: 0xffe7a4, size: 1.0 });
   }
 }
 

@@ -25,6 +25,8 @@ import { createTrials } from './trials.js';
 import { warnAt, shockwave } from './attacks.js';
 import { installPacing, committed, hitFeedback, checkRally, fling, updateFling, mine } from './pacing.js';
 
+/** plain damage numbers (the charm stream, unaligned blows): white to gold */
+const DMG_GOLD = 0xffc24e, DMG_CRIT = 0xffae3a;
 const _v = new THREE.Vector3(), _w = new THREE.Vector3(), _f = new THREE.Vector3();
 const SLEEP_R = 62;
 
@@ -80,7 +82,7 @@ const C = {
     if (!e || e.dead || !(amount > 0)) return 0;
     if (e.iframes > 0 && !info.dot) return 0;
     let n = amount;
-    let countered = false, exposed = false;
+    let countered = false, exposed = false, brokeWard = false;
     if (!info.force) {
       if (e.def.damageScale) n *= e.def.damageScale(e, info);
       if (e.material === 'shade') n *= 1 + 0.3 * clamp(e.light);
@@ -89,7 +91,7 @@ const C = {
         const c = COUNTER[e.ward.el];
         countered = !!(info.element && c && c.includes(info.element));
         n = Math.max(n > 0 ? 1 : 0, wardHit(e, n, info));
-        if (!e.ward || e.ward.hp <= 0) countered = true;
+        if (!e.ward || e.ward.hp <= 0) { countered = true; brokeWard = true; }
       }
     }
     if (e.onDamage) n = e.onDamage(n, info);
@@ -104,8 +106,13 @@ const C = {
     at.y = e.pos.y + e.height + 0.25;
     const big = n >= 30 || info.shatter;
     if (!info.silentText) {
-      const gold = (info.mult || 1) > 1.01;
-      G.fx?.text?.(at, String(n), { color: gold ? 0xffd27a : (EL_TEXT[info.element] ?? 0xffffff), size: big ? 1.35 : info.dot ? 0.7 : 0.95, dur: big ? 1.3 : 1 });
+      // a big hit pops on its own: the hit-stop tier (≥30), a shatter, a ward broken by this blow, or a reaction / crit
+      // (exposed, a multiplier) that lands for real; the rest roll into one number per element (src/fx/text.js)
+      const crit = exposed || (info.mult || 1) > 1.01;
+      const pop = !info.dot && (big || brokeWard || ((crit || !!info.reaction) && n >= 18));
+      const el = info.element && info.element !== 'sun' ? info.element : '';
+      // tint: the element's colour (white → violet for thunder …); plain blows white → gold, a plain crit a deeper gold
+      G.fx?.text?.(at, String(n), { kind: 'dmg', target: e, n, el, big: pop, color: el ? EL_TEXT[el] : crit ? DMG_CRIT : DMG_GOLD });
     }
     if (!info.dot) {
       e.hitFlash();

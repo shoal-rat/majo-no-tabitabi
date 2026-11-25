@@ -290,7 +290,7 @@ export const TYPES = {
         G.fx?.burst('shatter_rock', _v, { scale: 1.6 });
         G.fx?.burst('shatter_ice', _v, { scale: 1.2, color: 0x9fd8ff });
         G.audio?.sfx('shatter_crystal', { pos: _v });
-        G.fx?.text?.(_v, t('combat.armorBreak'), { color: 0x9fd8ff, size: 1.2 });
+        G.fx?.text?.(_v, t('combat.armorBreak'), { kind: 'word', target: e, color: 0x9fd8ff, size: 1.2 });
         if (e.data.shards) e.data.shards.visible = false;
         e.stun(1.6);
         G.hitstop(0.08);

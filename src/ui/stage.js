@@ -71,6 +71,40 @@ addCss(`
 .mv-banner.on .sub { animation: ban-sub 4.6s both; }
 @keyframes ban-sub { 0%, 14% { opacity: 0; transform: translateY(6u); } 28%, 100% { opacity: 1; transform: none; } }
 
+/* ---- foe banner (a guardian, a boss, a duel rival; banner(…, { foe: true })): a dark band that fades out at both sides,
+   pale-gold hairlines above and below with a four-point star and a diamond, the name large in the display serif (its
+   epithet, opts.epithet, smaller in brass before it), the line under it in brass, widely spaced. The rules draw outward,
+   the name un-blurs ---- */
+.mv-foe { display: flex; flex-direction: column; align-items: center; top: 17%; bottom: auto; opacity: 0; visibility: hidden; }
+.mv-foe.on { visibility: visible; animation: foe-in 4.4s both; }
+@keyframes foe-in { 0% { opacity: 0; } 5% { opacity: 1; } 84% { opacity: 1; } 100% { opacity: 0; } }
+.mv-foe .band { position: relative; display: flex; flex-direction: column; align-items: center; width: min(780u, 100vw); padding: 12u 0 11u;
+  background: linear-gradient(90deg, rgba(7,9,22,0), rgba(7,9,22,.64) 23%, rgba(7,9,22,.64) 77%, rgba(7,9,22,0)); }
+.mv-foe.on .band { animation: foe-band 4.4s both cubic-bezier(.3,.7,.2,1); }
+@keyframes foe-band { 0% { clip-path: inset(0 30% 0 30%); } 18%, 100% { clip-path: inset(0 0 0 0); } }
+.mv-foe .rule { position: relative; width: min(460u, 74vw); height: 13u; }
+.mv-foe .rule::before { content: ''; position: absolute; left: 0; right: 0; top: 50%; height: 1u; margin-top: -.5u;
+  background: linear-gradient(90deg, rgba(236,217,164,0), rgba(236,217,164,.92) 24%, rgba(236,217,164,.92) 76%, rgba(236,217,164,0)); }
+.mv-foe .rule::after { content: ''; position: absolute; left: 50%; top: 50%; width: 13u; height: 13u; margin: -6.5u 0 0 -6.5u; background: var(--brass2);
+  filter: drop-shadow(0 0 4u rgba(255,226,160,.7)) drop-shadow(0 1u 2u rgba(0,0,0,.7)); -webkit-mask: var(--mk-star) center / contain no-repeat; mask: var(--mk-star) center / contain no-repeat; }
+.mv-foe .rule.bot::after { width: 7u; height: 7u; margin: -3.5u 0 0 -3.5u; -webkit-mask: none; mask: none; transform: rotate(45deg); box-shadow: 0 0 0 2u rgba(7,9,22,.9), 0 0 0 3u rgba(236,217,164,.55); filter: none; }
+.mv-foe.on .rule::before { animation: foe-rule 4.4s both cubic-bezier(.3,.7,.2,1); }
+@keyframes foe-rule { 0%, 4% { clip-path: inset(0 50% 0 50%); } 26%, 100% { clip-path: inset(0 0 0 0); } }
+.mv-foe.on .rule::after { animation: foe-orn 4.4s both; }
+.mv-foe.on .rule.bot::after { animation-name: foe-orn2; }
+@keyframes foe-orn { 0%, 6% { opacity: 0; transform: scale(.2) rotate(-90deg); } 16% { opacity: 1; transform: scale(1.3) rotate(0); } 22%, 100% { opacity: 1; transform: none; } }
+@keyframes foe-orn2 { 0%, 8% { opacity: 0; transform: rotate(45deg) scale(.2); } 18% { opacity: 1; transform: rotate(45deg) scale(1.4); } 24%, 100% { opacity: 1; transform: rotate(45deg); } }
+.mv-foe .tt { margin: 4u 0 0; padding: 0 24u; max-width: 100vw; font: 700 44u/1.2 var(--fd); letter-spacing: .12em; margin-right: -.12em; color: #fff8ea; white-space: nowrap;
+  text-shadow: 0 2u 4u rgba(4,6,14,.85), 0 0 22u rgba(4,6,14,.55); }
+.mv-foe .tt .ep { font-size: .56em; font-weight: 600; letter-spacing: .06em; margin-right: .3em; color: var(--brass2); vertical-align: .2em; }
+.mv-foe.on .tt { animation: foe-tt 4.4s both cubic-bezier(.2,.7,.2,1); }
+@keyframes foe-tt { 0%, 6% { opacity: 0; filter: blur(14u); letter-spacing: .34em; margin-right: -.34em; } 32%, 100% { opacity: 1; filter: blur(0); letter-spacing: .12em; margin-right: -.12em; } }
+.mv-foe .sub { margin: 2u 0 3u; padding: 0 24u; font: 600 13u/1.5 var(--fd); letter-spacing: .42em; margin-right: -.42em; color: var(--brass2); text-shadow: var(--halo); }
+.mv-foe.on .sub { animation: foe-sub 4.4s both; }
+@keyframes foe-sub { 0%, 24% { opacity: 0; transform: translateY(5u); } 40%, 100% { opacity: .96; transform: none; } }
+.mv-ui.touch .mv-foe { top: 12%; }
+.mv-ui.touch .mv-foe .band { width: min(600u, 68vw); }
+
 /* ---- toasts: parchment slips; the icon is an ink stamp pressed onto the slip as it arrives ---- */
 .mv-toasts { z-index: 8; pointer-events: none; left: 22u; top: 132u; right: auto; bottom: auto; display: flex; flex-direction: column; align-items: flex-start; gap: 8u; }
 .mv-toast { position: relative; display: flex; align-items: center; gap: 10u; min-height: 38u; padding: 6u 20u 6u 8u; color: var(--ink); font: 400 14.5u/1.45 var(--fb); letter-spacing: .03em;
@@ -112,6 +146,12 @@ export function createStage(root, hudRoot) {
   const bSeal = el('div', 'stamp', bLine);   // the country's passport stamp (opts.country) or the major name (opts.seal)
   const bSealNm = el('span', 'nm', bSeal);
   const bSub = el('div', 'sub', banner);
+  const foe = el('div', 'layer mv-foe', root);
+  const foeBand = el('div', 'band', foe);
+  el('div', 'rule top', foeBand);
+  const fTitle = el('div', 'tt', foeBand), fEp = el('span', 'ep', fTitle), fName = el('span', 'nm', fTitle);
+  const fSub = el('div', 'sub', foeBand);
+  el('div', 'rule bot', foeBand);
   const toasts = el('div', 'layer mv-toasts', root);
   const saved = el('div', 'mv-saved', root);
   icon('brush', '', saved);
@@ -138,9 +178,20 @@ export function createStage(root, hudRoot) {
       if (live.length >= MAX_TOASTS) { if (queue.length < 12) queue.push([String(text), o]); return; }
       pushToast(String(text), o);
     },
-    /** Big place-name card. banner(null) takes it down at once. opts.seal: the region's major name, pressed as an entry stamp. */
+    /** Big place-name card. banner(null) takes it down at once. opts.seal: the region's major name, pressed as an entry stamp.
+     *  opts.foe: the foe banner instead (a guardian, a boss, a duel rival waking up); opts.epithet: its title, set smaller. */
     banner(title, subtitle, opts = {}) {
-      if (!title) { banner.classList.remove('on'); return; }
+      if (!title) { banner.classList.remove('on'); foe.classList.remove('on'); return; }
+      if (opts && opts.foe) {
+        const ep = opts.epithet ? String(opts.epithet) : '';
+        setText(fEp, ep); fEp.style.display = ep ? '' : 'none';
+        setText(fName, String(title));
+        setText(fSub, subtitle ? String(subtitle) : ''); fSub.style.display = subtitle ? '' : 'none';
+        banner.classList.remove('on');
+        replay(foe, 'on');
+        return;
+      }
+      foe.classList.remove('on');
       setText(bTitle, String(title));
       setText(bSub, subtitle ? String(subtitle) : '');
       bSub.style.display = subtitle ? '' : 'none';

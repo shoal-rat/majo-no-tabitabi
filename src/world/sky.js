@@ -513,6 +513,7 @@ export const skySystem = {
       r.setRenderTarget(null);
       r.render(G.scene, cam);
       post.sceneCalls = r.info.render.calls;
+      G.fx?.drawOverlay?.(r, cam);
       return;
     }
     const pipe = st.pipe, sp = pipe.scenePass;
@@ -549,5 +550,6 @@ export const skySystem = {
     r.toneMapping = THREE.NoToneMapping;
     pipe.render();
     post.sceneCalls = sp.sceneCalls;
+    G.fx?.drawOverlay?.(r, cam);   // floating labels over the finished picture
   },
 };

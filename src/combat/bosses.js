@@ -23,7 +23,7 @@ export function createBosses(C) {
     B.active = b;
     const name = t('combat.boss.' + id);
     G.events.emit('boss:start', { id, name });
-    G.ui?.banner?.(name, t('combat.boss.sub.' + id));
+    G.ui?.banner?.(name, t('combat.boss.sub.' + id), { foe: true });
     b.offDied = G.events.on('player:died', () => { if (B.active === b && !b.over) end(false); });
     return { b, promise };
   }
@@ -82,7 +82,7 @@ export function createBosses(C) {
         const lit = e.burning || e.light > 0.45;
         if (lit && (info.element === 'fire' || info.element === 'sun') && G.time.t - (e.data.staggerT || -99) > 9 && info.mult > 1) {
           e.data.staggerT = G.time.t; e.stopAttack(); e.stun(1.6);
-          G.fx?.text?.(e.centerOut(_v).setY(e.pos.y + e.height + 0.8), t('combat.boss.stagger'), { color: 0xffd27a, size: 1.3 });
+          G.fx?.text?.(e.centerOut(_v).setY(e.pos.y + e.height + 0.8), t('combat.boss.stagger'), { kind: 'word', target: e, color: 0xffd27a, size: 1.3 });
         }
         return lit ? 1.6 : 1;
       },
@@ -209,7 +209,7 @@ export function createBosses(C) {
   function ground(e) {
     e._grounded = true; e.data.wing = 0; e.data.groundT = 6; e.stopAttack(); e.data.eating = null;
     e.data.beam?.remove?.(); e.data.beam = null;
-    G.fx?.text?.(e.centerOut(_v).setY(e.pos.y + 4), t('combat.boss.grounded'), { color: 0xbfefff, size: 1.4 });
+    G.fx?.text?.(e.centerOut(_v).setY(e.pos.y + 4), t('combat.boss.grounded'), { kind: 'word', target: e, color: 0xbfefff, size: 1.35 });
     G.audio?.sfx('wing_flap', { pos: e.pos, pitch: 0.5 });
     e.cr?.play('hit', { once: true });
   }
