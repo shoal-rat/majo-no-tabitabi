@@ -55,7 +55,7 @@
 | LXGWWenKaiLite | LXGW (LXGW WenKai Lite; based on Klee by Fontworks) | [字体项目](https://github.com/lxgw/LxgwWenKai-Lite) · [OFL 与版权声明](assets/fonts/zh-CN/OFL-LXGWWenKaiLite.txt) |
 | MaShanZheng | The Ma Shan Zheng Project Authors | [字体项目](https://github.com/googlefonts/mashanzheng) · [OFL 与版权声明](assets/fonts/zh-CN/OFL-MaShanZheng.txt) |
 | ZhiMangXing | The Zhi Mang Xing Project Authors | [字体项目](https://github.com/googlefonts/zhimangxing) · [OFL 与版权声明](assets/fonts/zh-CN/OFL-ZhiMangXing.txt) |
-| NotoSerifSC-UI | Google (Noto Serif SC; based on Source Han Serif by Adobe) | [字体项目](https://github.com/google/fonts/tree/main/ofl/notoserifsc) · [OFL 与版权声明](assets/fonts/zh-CN/OFL-NotoSerifSC-UI.txt) |
+| NotoSerifSC | Google (Noto Serif SC; based on Source Han Serif by Adobe) | [字体项目](https://github.com/google/fonts/tree/main/ofl/notoserifsc) · [OFL 与版权声明](assets/fonts/zh-CN/OFL-NotoSerifSC-UI.txt) |
 
 ## CC0 素材来源
 

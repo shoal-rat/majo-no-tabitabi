@@ -170,6 +170,8 @@ Three roles, all from the locale (`core.meta`), never hard-coded:
 - `--fd` display: **MV Serif** (Noto Serif SC, variable 200–900, a 0.5 MB subset of the locale characters, see
   `tools/font-subset.mjs`) — headings, tabs, names, place names, labels, buttons, every numeral (`tabular-nums`).
 - `--fb` body: MV WenKai (hand-written kai) — dialogue, descriptions, objectives, hints: the diary voice.
+- All four faces (MV Brush and MV Running too) ship as WOFF2 subsets of the locale characters (docs/api/perf.md
+  "Font subsets"); run `node tools/font-subset.mjs --check` after adding text.
 - `--ft` brush and `--fs` running script stay for the world's signs and canvas lettering only; the interface no longer
   uses them.
 

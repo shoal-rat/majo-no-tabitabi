@@ -613,3 +613,27 @@ would need a cheaper path through the lighting hook to reach 30.
 triangles a frame, the heart alone 76 k) → set `InstancedMesh.count` to the live high-water mark; `src/gameplay/wilds-puzzles.js`
 puzzle chests are never culled (9 draws each, drawn 3–4 km away: ~80–100 draws at the hometown) → wrap in a holder and
 `G.structures.cull(holder, pos, 220)` like `collect.js`.
+
+## Font subsets (2026-11-25)
+
+The boot downloaded three full TTFs through `src/core/fonts.js` (LXGW WenKai Lite 13.9 MB, Ma Shan Zheng 5.9 MB, Zhi Mang
+Xing 4.1 MB; GitHub Pages gzips them to about 14.8 MB on the wire). All four zh-CN faces now ship as WOFF2 subsets of the
+characters the game shows in them (`tools/font-subset.mjs`: every string in `src/locales`, the credit rows of
+`assets/manifest.json`, printable ASCII and the typographic marks in its EXTRA list; the HTML shell uses system faces).
+
+| | before | after |
+| --- | --- | --- |
+| fonts fetched at boot (`play`, `performance` resource entries) | 24,398,776 B (3 TTF + the serif subset) | 1,956,568 B (4 WOFF2) |
+| whole boot on the dev server (unminified `game.js`, 251 requests) | 100,127,495 B | 77,685,430 B |
+| fonts on the wire from Pages (TTFs gzipped) | ≈ 15.3 MB | ≈ 1.96 MB (WOFF2 is already compressed) |
+
+Per face: MV WenKai 331 KB, MV Brush 616 KB, MV Running 448 KB, MV Serif 516 KB (unchanged).
+- `node tools/font-subset.mjs --check` reads each shipped WOFF2's own character map (pure JS: the table directory, the
+  brotli stream, cmap format 12 / 4), so it needs no Python and also catches a character the source never had. It exits 1
+  when a locale character is missing from a face. Characters a face's SOURCE lacks are recorded by the rebuild in
+  `tools/font-subset.gaps.json` and fall back to the next face in the stack (the brush and running hands have no arrows,
+  stars or 「糬」「納」; the kai and the serif have no ✦✧): the check lists them and does not fail on them.
+- Rebuild: `node tools/font-subset.mjs [serif|wenkai|brush|running …]` with fontTools + brotli (`FONTTOOLS_PY`). The three
+  hand-lettered faces rebuild from the full TTFs kept in `assets/fonts/zh-CN` (not loaded by the game; the trailer editor
+  renders captions from them); the serif needs `--src serif=NotoSerifSC[wght].ttf` (not in the repo).
+- The release copy still ships the full TTFs with the rest of `assets/` (hosted, never fetched by the game).

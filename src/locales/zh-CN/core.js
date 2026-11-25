@@ -3,13 +3,14 @@ export default {
   meta: {
     name: '简体中文',
     // Faces shipped with this locale (assets/fonts/zh-CN, SIL OFL 1.1), loaded by src/core/fonts.js under these names.
-    // Every face declares the whole weight range so the browser never fakes a bold over a brush stroke (a faked bold
-    // fills the kai modulation in and reads as plain print type at label sizes).
+    // Each is a WOFF2 subset of the characters the locale uses (tools/font-subset.mjs; `--check` after adding text); the
+    // full TTFs beside them are only the rebuild sources. Every face declares the whole weight range so the browser never
+    // fakes a bold over a brush stroke (a faked bold fills the kai modulation in and reads as plain print type at label sizes).
     fonts: [
-      { family: 'MV WenKai', file: 'fonts/zh-CN/LXGWWenKaiLite-Regular.ttf', weight: '100 900' },
-      { family: 'MV Brush', file: 'fonts/zh-CN/MaShanZheng-Regular.ttf', weight: '100 900' },
-      { family: 'MV Running', file: 'fonts/zh-CN/ZhiMangXing-Regular.ttf', weight: '100 900' },
-      // the interface's display serif: a variable subset of Noto Serif SC (tools/font-subset.mjs), real weights 200-900
+      { family: 'MV WenKai', file: 'fonts/zh-CN/LXGWWenKaiLite-UI.woff2', weight: '100 900' },
+      { family: 'MV Brush', file: 'fonts/zh-CN/MaShanZheng-UI.woff2', weight: '100 900' },
+      { family: 'MV Running', file: 'fonts/zh-CN/ZhiMangXing-UI.woff2', weight: '100 900' },
+      // the interface's display serif: a variable subset of Noto Serif SC, real weights 200-900
       { family: 'MV Serif', file: 'fonts/zh-CN/NotoSerifSC-UI.woff2', weight: '200 900' },
     ],
     // Hero inscriptions painted as images for this locale (assets/lettering/zh-CN, generated, see the manifest). A sign

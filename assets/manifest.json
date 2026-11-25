@@ -16250,34 +16250,34 @@
   "tris": 672
  },
  "font_zh_wenkai": {
-  "file": "fonts/zh-CN/LXGWWenKaiLite-Regular.ttf",
+  "file": "fonts/zh-CN/LXGWWenKaiLite-UI.woff2",
   "type": "font",
   "preload": false,
   "locale": "zh-CN",
   "family": "MV WenKai",
   "license": "OFL-1.1",
   "author": "LXGW (LXGW WenKai Lite; based on Klee by Fontworks)",
-  "source": "LXGW WenKai Lite https://github.com/lxgw/LxgwWenKai-Lite — shipped unmodified; licence text fonts/zh-CN/OFL-LXGWWenKaiLite.txt; loaded by src/core/fonts.js (interface, dialogue)"
+  "source": "LXGW WenKai Lite https://github.com/lxgw/LxgwWenKai-Lite — subset to the locale characters with tools/font-subset.mjs (WOFF2, for web delivery as its OFL ADDITIONAL PERMISSION allows) from the unmodified fonts/zh-CN/LXGWWenKaiLite-Regular.ttf kept beside it as the source; licence text fonts/zh-CN/OFL-LXGWWenKaiLite.txt; loaded by src/core/fonts.js (interface, dialogue)"
  },
  "font_zh_mashanzheng": {
-  "file": "fonts/zh-CN/MaShanZheng-Regular.ttf",
+  "file": "fonts/zh-CN/MaShanZheng-UI.woff2",
   "type": "font",
   "preload": false,
   "locale": "zh-CN",
   "family": "MV Brush",
   "license": "OFL-1.1",
   "author": "The Ma Shan Zheng Project Authors",
-  "source": "Ma Shan Zheng https://github.com/googlefonts/mashanzheng — shipped unmodified; licence text fonts/zh-CN/OFL-MaShanZheng.txt; loaded by src/core/fonts.js (titles, place names, banners)"
+  "source": "Ma Shan Zheng https://github.com/googlefonts/mashanzheng — subset to the locale characters with tools/font-subset.mjs (WOFF2) from the unmodified fonts/zh-CN/MaShanZheng-Regular.ttf kept beside it as the source; licence text fonts/zh-CN/OFL-MaShanZheng.txt; loaded by src/core/fonts.js (titles, place names, banners, floating words)"
  },
  "font_zh_zhimangxing": {
-  "file": "fonts/zh-CN/ZhiMangXing-Regular.ttf",
+  "file": "fonts/zh-CN/ZhiMangXing-UI.woff2",
   "type": "font",
   "preload": false,
   "locale": "zh-CN",
   "family": "MV Running",
   "license": "OFL-1.1",
   "author": "The Zhi Mang Xing Project Authors",
-  "source": "Zhi Mang Xing https://github.com/googlefonts/zhimangxing — shipped unmodified; licence text fonts/zh-CN/OFL-ZhiMangXing.txt; loaded by src/core/fonts.js (signboards, inscriptions)"
+  "source": "Zhi Mang Xing https://github.com/googlefonts/zhimangxing — subset to the locale characters with tools/font-subset.mjs (WOFF2) from the unmodified fonts/zh-CN/ZhiMangXing-Regular.ttf kept beside it as the source; licence text fonts/zh-CN/OFL-ZhiMangXing.txt; loaded by src/core/fonts.js (signboards, inscriptions)"
  },
  "lettering_zh_title": {
   "file": "lettering/zh-CN/title.png",
