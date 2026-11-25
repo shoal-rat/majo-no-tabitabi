@@ -6,7 +6,9 @@ const modeOf = name => {
   if (name === 'Idle_Loop') return 'idle';
   if (/^Walk_(Loop|Formal_Loop)$/.test(name)) return 'walk';
   if (name === 'Jog_Fwd_Loop' || name === 'Sprint_Loop') return 'run';
-  if (/^(Jump|NinjaJump)_(Start|Loop|Idle_Loop|Land)$/.test(name)) return 'jump';
+  // landings keep their authored legs: the hips drop into the crouch and the soles have to stay on the ground
+  if (/^(Jump|NinjaJump)_Land$/.test(name)) return 'land';
+  if (/^(Jump|NinjaJump)_(Start|Loop|Idle_Loop)$/.test(name)) return 'jump';
   if (/^(Cast_|Charm_Throw|Spell_Simple_Shoot)/.test(name)) return 'cast';
   if (name === 'Broom_Ride_Loop' || name === 'Broom_Boost_Loop') return 'ride';
   return null;
@@ -20,12 +22,21 @@ const lerp = (a,b,t) => a+(b-a)*t;
 // swing axis is ambiguous, so large spins smoothly pass through unmodified.
 function pose(mode,joint,side,x,y,z) {
   if (mode === 'jump') {
-    if (joint === 'UpperLeg') return [beyond(x,33,.69), y*.77, beyond(z,7,.48)];
-    if (joint === 'LowerLeg') return [beyond(x,35,.53), y*.63, z*.58];
+    // Airborne: a light, compact tuck. Knees close together and a little
+    // forward under the hem, shins in line with the thighs, arms relaxed
+    // near the body instead of spreading level with the shoulders.
+    if (joint === 'UpperLeg') return [beyond(x-16,34,.3), y*.5, beyond(z,5,.22)];
+    if (joint === 'LowerLeg') return [beyond(x,35,.53), y*.3, z*.3];
     if (joint === 'Foot') return [x*.9, y*.72, z*.70];
-    if (joint === 'UpperArm') return [x*.90, y*.88, lerp(z,-side*65,.32)];
+    if (joint === 'UpperArm') return [x*.90, y*.88, lerp(z,-side*74,.82)];
     if (joint === 'Hand') return [x*.75,y*.70,z*.73];
     if (joint === 'Chest' || joint === 'UpperChest') return [x*.76,y*.88,z*.9];
+  }
+  if (mode === 'land') {
+    // The knees take the drop; the chest bows less so her head stays up.
+    if (joint === 'Chest' || joint === 'UpperChest') return [x*.65,y*.85,z*.85];
+    if (joint === 'UpperArm') return [x*.90, y*.88, lerp(z,-side*70,.5)];
+    if (joint === 'Hand') return [x*.75,y*.70,z*.73];
   }
   if (mode === 'ride') {
     // The two knees hang at different heights. The left foot trails slightly

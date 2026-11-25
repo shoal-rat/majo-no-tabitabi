@@ -5,6 +5,7 @@
 //
 // Entry fields
 //   clip    library clip name                       blend  true = the locomotion blend (no clip; rig.move())
+//           'Name@tag' = the same clip as a separate action (a state that cross-fades from another one playing Name)
 //   multi   [state, ...] time-locked layered blend; the first part fills what rig.blendW[state] leaves
 //   loop    true = repeat, false = play once and hold / return (the rig decides with `once`)
 //   speed   default playback rate                   fade   default cross-fade in seconds
@@ -32,15 +33,18 @@ export const CLIPS = {
   fidget_b:     { clip: 'Idle_Fidget_B', loop: false, fade: 0.45, gohei: 'hide' },
   // air
   jump:         { clip: 'Jump_Start', loop: false, fade: 0.08, speed: 1.6, from: 0.22 },
-  air_jump:     { clip: 'NinjaJump_Start', loop: false, fade: 0.08, speed: 1.5, from: 0.12 },
+  // the second leap pushes off the air like the first one (NinjaJump_Start sat her in a wide frog squat, hem up)
+  air_jump:     { clip: 'Jump_Start@air', loop: false, fade: 0.1, speed: 1.5, from: 0.2 },
   fall:         { clip: 'Jump_Loop', loop: true, fade: 0.3 },
   glide:        { multi: ['glide_c', 'glide_l', 'glide_r'], loop: true, fade: 0.35 },   // bank weights: rig.blendW
   glide_c:      { clip: 'Glide_Loop', loop: true, fade: 0.35 },
   glide_l:      { clip: 'Glide_Bank_L', loop: true, fade: 0.35 },
   glide_r:      { clip: 'Glide_Bank_R', loop: true, fade: 0.35 },
   tuck:         { clip: 'NinjaJump_Idle_Loop', loop: true, fade: 0.3 },
-  land:         { clip: 'Jump_Land', loop: false, fade: 0.06, speed: 1.5, to: 0.75 },
-  land_soft:    { clip: 'NinjaJump_Land', loop: false, fade: 0.06, speed: 1.6, to: 0.6 },
+  // a longer drop: she meets the ground already bent and rises (the clip's first 0.3 s is a full squat)
+  land:         { clip: 'Jump_Land', loop: false, fade: 0.08, speed: 1.5, from: 0.3, to: 0.75 },
+  // an ordinary hop: only the last knee dip of the landing (its start is a full squat, sized for a long drop)
+  land_soft:    { clip: 'NinjaJump_Land', loop: false, fade: 0.1, speed: 1.25, from: 0.5, to: 0.85 },
   land_hard:    { clip: 'Land_Hard', loop: false, fade: 0.05, impact: 0.05, recover: 0.6, gohei: 'hold' },
   climb:        { clip: 'ClimbUp_1m', loop: false, fade: 0.1 },
   // on a wall: a held airborne pose; hands and feet are put on the face by IK (player/climb.js poseClimb)

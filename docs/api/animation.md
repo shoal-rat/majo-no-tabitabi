@@ -68,6 +68,17 @@ from the shared phase plus its `sync` offset, so walk/run/sprint never fight. Ba
 The player adds lean into acceleration / braking and turns, turn-in-place steps, start / stop easing and
 `land` / `land_soft` / `land_hard` chosen by fall speed.
 
+### Air
+
+The jump is light and composed, not athletic. Every take-off plays `jump` (Jump_Start from its push-off) and settles
+into its end pose, which Jump_Loop (`fall`) continues; the player leans her slightly forward while airborne (more at a
+run). `air_jump` is a second Jump_Start push on its own action (`Jump_Start@air`, a separate copy of the clip so it can
+cross-fade from `jump`). `land_soft` (an ordinary hop) is only the last knee dip of NinjaJump_Land, `land` (a drop of
+about 3.5–6 m) starts past the bottom of Jump_Land's squat, and the landing squash is kept small. For the heroine
+`heroine-motion.js` makes the airborne pose a compact tuck: knees close and a little forward, shins in line, arms
+relaxed near the body (`jump` mode). Landing clips (`land` mode) keep their authored legs so the soles stay on the
+ground through the crouch; only the arms and the chest bow are eased.
+
 ### Layers
 
 `upper` states use the `UPPER_BONE` mask (spine and up) over whatever the legs do: casts, guard, charm throws, every dialogue
