@@ -138,6 +138,29 @@ void main() {
   gl_FragColor=vec4(min(.85,energy*.014*phase),min(depth,820.),0.,1.);
 }`;
 
+// The march above runs at a fraction of the screen with a per-texel offset along the ray (interleaved gradient noise).
+// Upscaled as it is, that offset reads as a coarse checkerboard over sunlit land and sky, so the low-resolution result
+// is resolved first: a separable depth-aware binomial blur (7 taps per axis), run horizontally then vertically at the
+// low resolution. Weights fall off with depth difference, so a shaft never bleeds across a silhouette.
+const RESOLVE_FRAG = /* glsl */ `
+uniform sampler2D tBeam;
+uniform ivec2 uAxis;
+varying vec2 vUv;
+void main() {
+  ivec2 last=textureSize(tBeam,0)-1, p=clamp(ivec2(vUv*vec2(last+1)),ivec2(0),last);
+  vec2 c=texelFetch(tBeam,p,0).rg;
+  float tol=max(2.,.055*c.g), sum=c.r*20., weight=20.;
+  for(int i=1;i<=3;i++){
+    float k=i==1?15.:i==2?6.:1.;
+    for(int s=-1;s<=1;s+=2){
+      vec2 q=texelFetch(tBeam,clamp(p+uAxis*(i*s),ivec2(0),last),0).rg;
+      float d=(q.g-c.g)/tol, w=k/(1.+d*d);
+      sum+=q.r*w; weight+=w;
+    }
+  }
+  gl_FragColor=vec4(sum/weight,c.g,0.,1.);
+}`;
+
 // Four depth-weighted low-resolution samples preserve fine branches, reins and
 // faces in front of a shaft. Each pixel's scattering vanishes at the near plane.
 export const BEAM_UPSAMPLE_GLSL = /* glsl */ `
@@ -183,6 +206,8 @@ export function createCloudShafts(camera, depth, dome, quality, sunShadow) {
   column.texture.name = 'Solar transmittance through the cloud layer';
   const target = new THREE.WebGLRenderTarget(1, 1, { type: THREE.HalfFloatType, depthBuffer: false });
   target.texture.name = 'Depth-limited atmospheric light shafts';
+  const across = target.clone();
+  across.texture.name = 'Light shafts, resolved across';
   const shared = { ...dome, mvCloudSunMap: cloudSunMap.texture, mvCloudSunBox: cloudSunMap.box };
   const survey = material(
     COLUMN_FRAG,
@@ -202,6 +227,8 @@ export function createCloudShafts(camera, depth, dome, quality, sunShadow) {
     },
     { BEAM_STEPS: low ? 15 : high ? 29 : 21 }
   );
+  const resolveX = material(RESOLVE_FRAG, { tBeam: { value: target.texture }, uAxis: { value: new THREE.Vector2(1, 0) } });
+  const resolveY = material(RESOLVE_FRAG, { tBeam: { value: across.texture }, uAxis: { value: new THREE.Vector2(0, 1) } });
   const quad = new FullScreenQuad(null);
   let lastTime = -Infinity,
     lastCover = NaN,
@@ -254,10 +281,18 @@ export function createCloudShafts(camera, depth, dome, quality, sunShadow) {
       renderer.setRenderTarget(target);
       quad.material = beam;
       quad.render(renderer);
+      renderer.setRenderTarget(across);
+      quad.material = resolveX;
+      quad.render(renderer);
+      renderer.setRenderTarget(target);
+      quad.material = resolveY;
+      quad.render(renderer);
     },
     setSize(w, h) {
       const divisor = low ? 8 : high ? 4 : 5;
-      target.setSize(Math.max(1, Math.round(w / divisor)), Math.max(1, Math.round(h / divisor)));
+      const tw = Math.max(1, Math.round(w / divisor)), th = Math.max(1, Math.round(h / divisor));
+      target.setSize(tw, th);
+      across.setSize(tw, th);
     },
     dispose() {
       if (cloudSunMap.texture.value === column.texture) {
@@ -266,8 +301,11 @@ export function createCloudShafts(camera, depth, dome, quality, sunShadow) {
       }
       column.dispose();
       target.dispose();
+      across.dispose();
       survey.dispose();
       beam.dispose();
+      resolveX.dispose();
+      resolveY.dispose();
       quad.dispose();
     }
   };
