@@ -46,6 +46,7 @@ N refs: bare @path in agent-read docs (Claude Code imports the file into context
 ## fixed
 F look: default soft; vivid = setting; grass material saturation 100%.
 F credits `src/locales/zh-CN/ui.js` credits: "Director: Shoal_Rat" · "github.com/shoal-rat" · "Claude Opus 5.5" · "Claude Fable 5.2" · "ChatGPT 5.2 Astra" verbatim.
+M credits/contributors: merging an outside PR (author ≠ maintainer|bot) whose login is not yet listed → append it to `ui.credits.contributorLines` (merge order) in the same merge.
 F wardrobe: swimsuits unlock only after finished (heroine 14–15 in ep1); designs modest; during an active quest the story picks the outfit.
 F city: City of Magic = vertical city (tall houses, tall gate, dim street canyons, life on balconies/broom). N shrink|lower|brighten canyons.
 F readme: README.md = Chinese (default) · README.en.md = English · keep in sync.

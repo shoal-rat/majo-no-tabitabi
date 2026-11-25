@@ -2,6 +2,8 @@
 
 Welcome. This is a non-profit fan project maintained by [shoal-rat](https://github.com/shoal-rat). So that nobody edits the same spot as someone else, and every change has a stated purpose before work starts, all changes follow one path: **open an issue, claim it, then open a pull request**.
 
+Everyone whose pull request is merged is named, by GitHub login, in the game's end credits under 「同行者」.
+
 Just want to report a small problem? Leave a comment in the pinned [feedback thread #7](https://github.com/shoal-rat/majo-no-tabitabi/issues/7). No claim needed.
 
 ## Flow

@@ -242,6 +242,8 @@ export function createCeremony(host, stage) {
         el('div', 'ln', staff, t('ui.credits.home'));
         tel('div', 'sub', staff, 'ui.credits.ai');
         for (const l of raw('ui.credits.aiLines') || []) el('div', 'ln', staff, l);
+        const helpers = raw('ui.credits.contributorLines') || [];
+        if (helpers.length) { tel('div', 'sub', staff, 'ui.credits.contributors'); for (const l of helpers) el('div', 'ln', staff, l); }
         // record of the journey
         if (data.stats !== false && G.state) {
           const s = G.state;
