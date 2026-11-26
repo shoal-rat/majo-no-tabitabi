@@ -17,6 +17,12 @@ import { createDirector } from './director.js';
 
 const MAX_VOICES = 40;        // global one-shot cap
 const LRU = { music: 4, amb: 8 };   // music: a fight's track and its intensity layer count as two
+// phones (docs/api/perf.md "Phone memory"): a decoded track is 35–75 MB of PCM (float, stereo, 48 kHz); four of them
+// plus eight ambience beds were ~230 MB of an iPhone tab's memory. Only what plays stays decoded (a fight: its track and
+// its layer; a crossfade: both tracks until the old one is silent, then it goes at once — updateMusic); a track that
+// comes back later is decoded again (its place in the track is remembered: A.resume)
+const LRU_MOBILE = { music: 1, amb: 2 };
+const lru = (kind) => (G.quality?.mobile ? LRU_MOBILE : LRU)[kind];
 const PEND_MAX = 0.25;        // a one-shot whose file is still decoding starts late only within this window (s)
 const REF_DIST = 4;           // full volume within this distance (m)
 const EXPLORE = new Set(['sun', 'dusk', 'night', 'home', 'pages', 'town', 'flight']);
@@ -102,11 +108,12 @@ function ensure(id) {
 function evict(kind) {
   const list = [];
   for (const [id, c] of A.cache) if (c.kind === kind && c.state === 'ok') list.push([id, c]);
-  if (list.length <= LRU[kind]) return;
+  if (list.length <= lru(kind)) return;
   list.sort((a, b) => a[1].used - b[1].used);
-  for (const [id, c] of list) {
-    if (list.length <= LRU[kind]) break;
+  for (const [id, c] of list.slice()) {   // a copy: removing from `list` while walking it skipped the next entry
+    if (list.length <= lru(kind)) break;
     if (c.inUse > 0) continue;
+    if (G.quality?.mobile && !c.played && now() - c.used < 10) continue;   // phones: just decoded, its deck may still wait for its layer
     A.cache.delete(id);
     list.splice(list.findIndex((x) => x[0] === id), 1);
   }
@@ -453,10 +460,10 @@ function attachDeck(d) {
       lg.gain.value = 0; d.lLevel = 0; d.lSent = 0;
       ls.connect(lg); lg.connect(g); ls.start(at, d.offset);
       d.lsrc = ls; d.lg = lg;
-      const lc = A.cache.get(d.layerId); if (lc) { d.lcache = lc; lc.inUse++; }
+      const lc = A.cache.get(d.layerId); if (lc) { d.lcache = lc; lc.inUse++; lc.played = true; }
     }
     d.startAt = at; d.src = src; d.g = g;
-    const c = A.cache.get(d.id); if (c) { d.cache = c; c.inUse++; }
+    const c = A.cache.get(d.id); if (c) { d.cache = c; c.inUse++; c.played = true; }
   });
 }
 
@@ -477,6 +484,7 @@ function updateMusic(rdt) {
       if (d.lcache) d.lcache.inUse = Math.max(0, d.lcache.inUse - 1);
       d.dead = true;
       A.decks.splice(i, 1);
+      if (G.quality?.mobile) evict('music');   // phones: a silent track's PCM goes now, not at the next decode
       continue;
     }
     if (!d.src && !d.waiting && d.target > 0 && !A.muted) attachDeck(d);

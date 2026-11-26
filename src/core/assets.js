@@ -44,6 +44,21 @@ const PRIO = { now: 0, hero: 1, cast: 2, world: 3, people: 4, sweep: 5 };
 const SIZES = typeof __ASSET_BYTES__ !== 'undefined' && __ASSET_BYTES__ ? __ASSET_BYTES__ : {};
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
+// ---- phones (docs/api/perf.md "Phone memory") ------------------------------------------------------------------------
+// iPhone Safari threw the page away twice ("A problem repeatedly occurred") about 30 s into loading: the tab went over
+// iOS's memory limit. The mobile tier booted the same 396 models as a desktop (headless Chrome, mobile tier: renderer
+// ~2.0 GB footprint, GPU process ~1.2 GB; 22 character models alone ~280 MB of texture arrays + ~150 MB of geometry).
+// On G.quality.mobile only:
+//   · the other people's models (char_*) are not streamed after the boot: an actor asks for its model when it is created
+//     (rig.js createActor → want(), healed in place), and a person's model no actor has used for MOB.releaseMs is let go
+//     (letGo(); rig.js holds / drops it). The story cast is still loaded at boot when it stands near the save;
+//   · only the outfit she wears is loaded at boot (the wardrobe loads another one when she changes);
+//   · model images wider or taller than MOB.tex px (hers: MOB.texHero) are scaled down once at load, and a picture the
+//     world's models embed several times is decoded once (shareImages());
+//   · models are parsed and cooked MOB.parse at a time, so the decode / cel-merge peaks of several files never stack;
+//   · the compressed bytes of an audio file are not kept once arrayBuffer() handed them to the decoder.
+const MOB = { tex: 512, texHero: 1024, releaseMs: 60000, sweepMs: 10000, parse: 1 };
+
 /**
  * Perf pass (docs/api/perf.md): SkeletonUtils.clone gives EVERY SkinnedMesh of a clone its own Skeleton, so a character
  * (≈ 19 material meshes + outlines + shadow proxy, all on the same bones) recomputed and uploaded the same bone
@@ -200,6 +215,14 @@ export function createAssets(G) {
   const lim = { slots: NET.slots, small: NET.small };   // init() narrows it to 5 + 1 when the page did not come over HTTP/2 or 3
   const net = { requests: 0, retries: 0, stalls: 0, peak: 0, proto: '' };   // counters (tests, boot report)
   let bootSet = null, onProgress = null, progT = 0, later = null, planIds = null;
+  // phones (MOB above): parse gate, people's models held by actors (id -> count) and let go when idle (id -> since)
+  const mob = () => !!G.quality?.mobile;
+  const gate = { n: 0, q: [] };
+  const enterParse = () => (gate.n < MOB.parse ? (gate.n++, null) : new Promise((r) => gate.q.push(r)));
+  const leaveParse = () => { const nx = gate.q.shift(); if (nx) nx(); else gate.n--; };
+  const holds = new Map(), idleSince = new Map();
+  let sweeper = 0;
+  const releasable = (id) => id.startsWith('char_') && !!manifest[id]?.clipsFrom;   // people (the animation files stay)
   function stat(id) {
     let s = st.get(id);
     if (!s) st.set(id, (s = { id, prio: PRIO.now, seq: 0, go: null, got: 0, size: SIZES[id] || 0, tries: NET.tries, retrying: false, fails: 0, failedAt: 0, small: false }));
@@ -247,11 +270,13 @@ export function createAssets(G) {
     const plan = new Map();
     const put = (id, prio, o = {}) => { if (manifest[id] && !plan.has(id)) plan.set(id, { id, prio, ...o }); };
     if (own) { put(own, PRIO.hero, { tries: NET.mustTries }); for (const c of depsOf(own)) put(c, PRIO.hero, { tries: NET.mustTries }); }
-    for (const id of ids) if (HEROINE_ASSETS.has(id)) put(id, PRIO.hero);
+    // phones: her other outfits come when she changes into one (player/wardrobe.js loads it on demand)
+    if (!mob()) for (const id of ids) if (HEROINE_ASSETS.has(id)) put(id, PRIO.hero);
     const at = save?.player && Number.isFinite(save.player.x) ? save.player : ANCHORS.spawn;
     for (const id of castNear(at.x, at.z)) put(id, PRIO.cast);
     for (const id of ids) if (!id.startsWith('char_')) put(id, PRIO.world);
-    for (const id of ids) put(id, PRIO.people, { later: true });
+    // phones: the other people only when an actor of theirs is created (createActor → want(); MOB above)
+    if (!mob()) for (const id of ids) put(id, PRIO.people, { later: true });
     return [...plan.values()];
   }
   /**
@@ -459,6 +484,118 @@ export function createAssets(G) {
     return root;
   }
 
+  /**
+   * Phones: every image of a freshly parsed model wider or taller than `cap` px is scaled down once (aspect kept), before
+   * the cel pass packs the character maps into texture arrays (celmerge.js groups them by size). Most model images are
+   * 512 px already; this takes her 1536 px atlases to 1024 and the sculpted hero objects' 1024 px maps to 512.
+   */
+  async function capImages(root, cap) {
+    if (typeof createImageBitmap !== 'function') return;
+    const list = new Set();
+    root.traverse((o) => { for (const m of [].concat(o.material || [])) if (m) for (const k in m) { const t = m[k]; if (t && t.isTexture && t.image) list.add(t); } });
+    for (const t of list) {
+      const im = t.image, w = im.width || 0, h = im.height || 0;
+      if (!w || !h || Math.max(w, h) <= cap) continue;
+      const k = cap / Math.max(w, h), nw = Math.max(1, Math.round(w * k)), nh = Math.max(1, Math.round(h * k));
+      const opts = { premultiplyAlpha: 'none', colorSpaceConversion: 'none' };
+      let out = null;
+      try { out = await createImageBitmap(im, { ...opts, resizeWidth: nw, resizeHeight: nh, resizeQuality: 'high' }); } catch (e) { out = null; }
+      if (out && (out.width !== nw || out.height !== nh)) { out.close?.(); out = null; }   // resize options ignored
+      if (!out) {
+        try {
+          const cv = document.createElement('canvas'); cv.width = nw; cv.height = nh;
+          const cx = cv.getContext('2d'); cx.imageSmoothingQuality = 'high'; cx.drawImage(im, 0, 0, nw, nh);
+          try { out = await createImageBitmap(cv, opts); cv.width = cv.height = 0; } catch (e) { out = cv; }
+        } catch (e) { out = null; }
+      }
+      if (!out) continue;
+      if (typeof im.close === 'function') im.close();
+      t.image = out; t.needsUpdate = true;
+    }
+  }
+
+  /**
+   * Phones: the world's models embed the same pictures many times (one palette image in 11 props, another in 8 …:
+   * 407 images, 275 different). A picture already decoded for another model is shared (its three.js Source: one decoded
+   * image, one upload per sampler setting) and the new copy closed — 118 → 52 MB of decoded images. People's models keep
+   * their own (letGo() closes them).
+   */
+  const imgByHash = new Map();
+  async function shareImages(gltf) {
+    const parser = gltf.parser, json = parser?.json, body = parser?.extensions?.KHR_binary_glTF?.body;
+    if (!json || !body || !globalThis.crypto?.subtle) return;
+    const bySource = new Map();   // three Source -> [textures]
+    gltf.scene.traverse((o) => { for (const m of [].concat(o.material || [])) if (m) for (const k in m) { const t = m[k]; if (t && t.isTexture && t.source) { if (!bySource.has(t.source)) bySource.set(t.source, new Set()); bySource.get(t.source).add(t); } } });
+    for (const [src, list] of bySource) {
+      let ti;
+      for (const t of list) { ti = parser.associations?.get(t)?.textures; if (ti !== undefined) break; }   // clones carry none
+      const tj = ti !== undefined ? json.textures?.[ti] : null;
+      const ii = tj ? (tj.source ?? tj.extensions?.EXT_texture_webp?.source) : undefined;
+      const bv = ii !== undefined ? json.bufferViews?.[json.images?.[ii]?.bufferView] : null;
+      if (!bv || bv.buffer !== 0) continue;
+      let key;
+      try { key = bv.byteLength + ':' + new Uint8Array(await crypto.subtle.digest('SHA-1', new Uint8Array(body, bv.byteOffset || 0, bv.byteLength))).join(','); } catch (e) { continue; }
+      const canon = imgByHash.get(key);
+      if (!canon) { imgByHash.set(key, src); continue; }
+      if (canon === src) continue;
+      for (const t of list) t.source = canon;
+      if (typeof src.data?.close === 'function') src.data.close();
+      src.data = null;
+    }
+  }
+
+  /** Phones: an actor (rig.js) shows this model; true when it should call drop(id) when it goes. */
+  function hold(id) {
+    if (!mob() || !releasable(id) || !gltfs.has(id)) return false;
+    holds.set(id, (holds.get(id) || 0) + 1);
+    idleSince.delete(id);
+    return true;
+  }
+  function drop(id) {
+    const n = Math.max(0, (holds.get(id) || 0) - 1);
+    holds.set(id, n);
+    if (n === 0) idleSince.set(id, performance.now());
+  }
+  /**
+   * Phones: a person's model that no actor has shown for MOB.releaseMs is let go — its GPU textures, buffers and decoded
+   * images freed, the parsed copy forgotten; the next actor of theirs loads it again (only models that were held once
+   * and dropped by every actor: one the wardrobe or a spawner is still waiting for is never let go).
+   */
+  function letGo(id) {
+    const g = gltfs.get(id);
+    idleSince.delete(id); holds.delete(id);
+    if (!g) return;
+    gltfs.delete(id); pending.delete(id); castPre.delete(id);
+    const s = st.get(id); if (s) { s.got = 0; s.fails = 0; s.failedAt = 0; }
+    const geos = new Set(), mats = new Set(), texs = new Set();
+    const texOf = (v) => { if (v && v.isTexture) texs.add(v); else if (Array.isArray(v)) for (const x of v) if (x && x.isTexture) texs.add(x); };
+    g.scene.traverse((o) => {
+      if (o.geometry) geos.add(o.geometry);
+      if (o.celSrcGeo) geos.add(o.celSrcGeo);
+      for (const m of [].concat(o.material || [])) if (m) mats.add(m);
+    });
+    // materials are not disposed: some are shared by every character (celmat.js OUTLINE_MAT) and their programs are
+    // cached by key anyway; only what they point at that belongs to this model goes
+    for (const m of mats) {
+      for (const k in m) texOf(m[k]);
+      for (const U of [m.uniforms, m.celU]) if (U) for (const u of Object.values(U)) texOf(u?.value);
+    }
+    // only this model's own pictures: decoded images (its GLB's) and its cel texture arrays; shared ramps / noise stay
+    for (const t of texs) {
+      const im = t.image;
+      const own = t.name === 'celArray' || (typeof ImageBitmap !== 'undefined' && im instanceof ImageBitmap) || (typeof HTMLImageElement !== 'undefined' && im instanceof HTMLImageElement);
+      if (!own) continue;
+      t.dispose();
+      if (typeof im?.close === 'function') im.close();
+    }
+    for (const geo of geos) geo.dispose();
+    api.released = (api.released || 0) + 1;
+  }
+  function sweepIdle() {
+    const now = performance.now();
+    for (const [id, t] of idleSince) if ((holds.get(id) || 0) === 0 && now - t > MOB.releaseMs) letGo(id);
+  }
+
   async function loadModel(id, s) {
     const info = manifest[id];
     // ?costume=v1 loads the pre-costume character files (A/B shots); see tools/install-costumes.mjs
@@ -474,9 +611,20 @@ export function createAssets(G) {
     let t0 = performance.now();
     const buf = await fetchBytes(url, s);
     assetStat(grp, 'fetchMs', performance.now() - t0); assetStat(grp, 'bytes', buf.byteLength); assetStat(grp, 'n', 1);
-    t0 = performance.now();
+    // phones: one model parsed + cooked at a time (MOB.parse)
+    const gated = mob();
+    if (gated) await enterParse();
+    try { return await parseModel(id, info, buf, url, grp, v1, orig); } finally { if (gated) leaveParse(); }
+  }
+
+  async function parseModel(id, info, buf, url, grp, v1, orig) {
+    let t0 = performance.now();
     const gltf = await loader.parseAsync(buf, url.slice(0, url.lastIndexOf('/') + 1));
     assetStat(grp, 'parseMs', performance.now() - t0);
+    if (mob()) {
+      if (!releasable(id)) await shareImages(gltf);
+      await capImages(gltf.scene, HEROINE_ASSETS.has(id) ? MOB.texHero : MOB.tex);
+    }
     if (v1) gltf.userData.costumeV1 = true;
     // sculpt GLBs (tools/sculpt): COLOR_0 comes out of the kit's writer converted to linear one time too many (measured
     // in game: the boulder's mean is lin(lin(#9b9b9b)) instead of lin(#9b9b9b), the LOD1 of every hero object read about
@@ -584,6 +732,7 @@ export function createAssets(G) {
       if (!later) return;
       for (const id of later) if (!gltfs.has(id) && !pending.has(id)) api.load(id, { prio: PRIO.people });
       later = null;
+      if (mob() && !sweeper) sweeper = setInterval(sweepIdle, MOB.sweepMs);   // phones: idle people's models go again
       const sweep = (left, round) => {
         left = left.filter((id) => !gltfs.has(id));
         if (!left.length || round > 4) return;
@@ -621,8 +770,12 @@ export function createAssets(G) {
       const info = manifest[id];
       if (!info) { warn(id); return null; }
       if (info.type === 'model') { try { return await fetchBytes(BASE + info.file, { ...stat(id), prio: PRIO.now, go: null, small: false }); } catch (e) { return null; } }
-      const buf = await api.load(id);
-      return buf ? buf.slice(0) : null;
+      const p = api.load(id);
+      const buf = await p;
+      // phones: the bytes are not kept once handed out (decoded audio is its own copy; a track decoded again after the
+      // audio cache let it go is fetched again, from the HTTP cache)
+      if (buf && mob() && pending.get(id) === p) { pending.delete(id); return buf; }
+      return buf && buf.byteLength ? buf.slice(0) : null;
     },
     /**
      * The bytes of any file of the game (not in the manifest: the terrain cache) through the same queue: aborted after
@@ -666,6 +819,13 @@ export function createAssets(G) {
     },
     /** The parsed, shared original (never add it to the scene — clone with model()). */
     raw(id) { return gltfs.get(id) || null; },
+    /** Phones (MOB): an actor shows model `id` (rig.js); true = it must call drop(id) once when it is disposed. */
+    hold,
+    drop,
+    /** Phones: people's models held by actors right now, and the ones waiting to be let go (tests). */
+    held: () => ({ held: [...holds].filter(([, n]) => n > 0).map(([id]) => id), idle: [...idleSince.keys()], released: api.released || 0 }),
+    /** Tests: let go every idle person's model now (as if MOB.releaseMs had passed). */
+    releaseIdle() { for (const id of [...idleSince.keys()]) if ((holds.get(id) || 0) === 0) letGo(id); },
     texture(id) {
       if (textures.has(id)) return textures.get(id);
       const info = manifest[id];
