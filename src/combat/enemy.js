@@ -15,10 +15,10 @@ const GRAV = 22;
 let nextId = 1;
 const actorPool = new Map();
 // phones (core/assets.js MOB): a pooled humanoid foe holds its person's model; one not reused for POOL_IDLE s is freed
-// so the asset store can let that model go (checked on any foe's build / dispose, at most every 5 s)
+// so the asset store can let that model go (checked on any foe's build and by combat.js every frame, at most every 5 s)
 const POOL_IDLE = 60;
 let poolCheck = 0;
-function drainPool() {
+export function drainPool() {
   const now = G.time.real;
   if (!G.quality?.mobile || now - poolCheck < 5) return;
   poolCheck = now;

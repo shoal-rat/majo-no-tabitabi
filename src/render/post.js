@@ -444,7 +444,9 @@ class ScenePass extends Pass {
  * Returns { composer, scenePass, bloom, grade, smaa, fxaa, setSize(w,h), render() }.
  */
 export function createPipeline(renderer, scene, camera, opt) {
-  const composer = new EffectComposer(renderer);
+  // phones: the composer's ping-pong targets carry no depth buffer (every pass after the scene pass is a full-screen
+  // quad; the scene pass has its own depth): one full-resolution depth renderbuffer less (~10 MB at 1080 lines)
+  const composer = opt.mobile ? new EffectComposer(renderer, new THREE.WebGLRenderTarget(1, 1, { type: THREE.HalfFloatType, depthBuffer: false })) : new EffectComposer(renderer);
   const scenePass = new ScenePass(renderer, scene, camera, opt);
   composer.addPass(scenePass);
   const size = renderer.getDrawingBufferSize(new THREE.Vector2());

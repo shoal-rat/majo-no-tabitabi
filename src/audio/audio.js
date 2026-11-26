@@ -438,7 +438,9 @@ function attachDeck(d) {
   if (!A.ctx || d.src || d.waiting) return;
   d.waiting = true;
   // the track and its layer start together, on the same clock tick and offset, or the layer is left out
-  Promise.all([ensure(d.id), d.layerId && G.assets?.has?.(d.layerId) ? ensure(d.layerId) : null]).then(([buf, lbuf]) => {
+  // phones: no intensity layer (a second 35–40 MB track decoded for every fight; docs/api/perf.md "Phone memory, round 2")
+  const layer = d.layerId && !G.quality?.mobile && G.assets?.has?.(d.layerId);
+  Promise.all([ensure(d.id), layer ? ensure(d.layerId) : null]).then(([buf, lbuf]) => {
     d.waiting = false;
     if (!buf || d.src || d.dead || d.target === 0) return;
     const ctx = A.ctx;
@@ -645,6 +647,16 @@ export const audioSystem = {
     A.director = createDirector({ G, A, sfx, setMusic, makeLoop, T });
     G.audio = {
       sfx, loop, music, unlock, setVolumes, debug,
+      /** Bytes of decoded audio held (PCM float32; the phones' memory budget, core/membudget.js). */
+      decodedBytes() { let n = 0; for (const c of A.cache.values()) if (c.state === 'ok' && c.buf) n += c.buf.length * c.buf.numberOfChannels * 4; return n; },
+      /** Let every decoded buffer that is not playing go (memory pressure); the next use decodes it again. */
+      trim() {
+        for (const [id, c] of A.cache) {
+          if (c.state !== 'ok' || c.inUse > 0) continue;
+          if (c.kind === 'sfx' && now() - c.used < 30) continue;   // a sound heard in the last 30 s stays
+          A.cache.delete(id);
+        }
+      },
       /** Tests: hold the fight intensity (0..1) that fades in a track's layer; null hands it back to the director. */
       setIntensity: (x) => { A.intensityOverride = x == null ? null : clamp(+x || 0, 0, 1); },
       /** Resolved name table (read-only use). */

@@ -49,6 +49,20 @@ export function createCityLife(G, root, tier) {
   const _cd = new THREE.Vector3(), cam = new THREE.Vector3(), _fr = new THREE.Frustum(), _pm = new THREE.Matrix4(), _sp = new THREE.Sphere(new THREE.Vector3(), 2.2);
   const scratch = []; // control points (flat xyz), reused
 
+  // phones (docs/api/perf.md "Phone memory, round 2"): a minute beyond FAR_GO m from the city, the baked bodies, their
+  // pools, the trails and the crowds go (~40 MB of geometry + its GPU buffers and the bone textures); back within
+  // 1500 m they are baked again. st.gen counts it (builders/mage-folk.js drops its own pool of these bodies too).
+  const FAR_GO = 2000, FAR_GO_S = 60;
+  let farT = 0;
+  st.gen = 0;
+  function unload() {
+    group.traverse((o) => { if (o.geometry) o.geometry.dispose(); });
+    for (const b of st.bodies || []) b?.tex?.dispose?.();
+    group.clear();
+    Object.assign(st, { phase: 'wait', plan: null, bodies: null, pool: null, flyers: [], crowds: null, trails: null, keep: [], hasLast: false });
+    st.gen++;
+  }
+
   async function load() {
     st.phase = 'loading';
     try {
@@ -649,7 +663,12 @@ export function createCityLife(G, root, tier) {
     if (st.phase === 'wait') { if (dc < 1500 && G.assets?.clips) load(); return; }
     if (st.phase !== 'live') return;
     st.time += dt;
-    if (dc > 1500) { st.pool.hide(); st.trails.commit(0); st.crowds?.hide?.(); return; }
+    if (dc > 1500) {
+      st.pool.hide(); st.trails.commit(0); st.crowds?.hide?.();
+      if (G.quality?.mobile) { farT = dc > FAR_GO ? farT + dt : 0; if (farT > FAR_GO_S) { farT = 0; unload(); } }
+      return;
+    }
+    farT = 0;
     // heroine
     const pl = G.player;
     H.x = PL.x; H.y = PL.y; H.z = PL.z; H.broom = !!PL.broom; H.mode = G.mode;

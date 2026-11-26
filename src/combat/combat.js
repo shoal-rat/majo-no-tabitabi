@@ -6,7 +6,7 @@ import { G } from '../core/game.js';
 import { t } from '../core/i18n.js';
 import { PAL } from '../core/mats.js';
 import { clamp } from '../core/util.js';
-import { Enemy, EL_TEXT } from './enemy.js';
+import { Enemy, EL_TEXT, drainPool } from './enemy.js';
 import { TYPES } from './types.js';
 import { after, cancelTimers, updateTimers, timerCount } from './attacks.js';
 import { createSpawner, MAX_ACTIVE } from './spawner.js';
@@ -409,6 +409,7 @@ export const combatSystem = {
 
       encounters.update(dt);
       updateEnemies(dt);
+      drainPool();   // phones: pooled foes nobody reused for a minute go (enemy.js; at most every 5 s, cheap otherwise)
       updatePatterns(dt);
       combo.update(dt);
       trials.update(dt);

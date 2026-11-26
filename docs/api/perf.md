@@ -554,7 +554,7 @@ Systems see `name: 'low'` and inherit every low cut; `G.quality.mobile` adds:
 
 | knob | where | mobile | low |
 |---|---|---|---|
-| rendered lines (short side) | `core/boot.js` `minLines` | 1080 by default (pixel ratio 2.77 at 844×390 @3×, 2.52 at 932×430; the device ratio when the screen has fewer lines), 900 / 720 only as the last dynamic-resolution steps. Every tier on a handheld gets this default. | 390 |
+| rendered lines (short side) | `core/boot.js` `minLines` | 1080 by default (pixel ratio 2.77 at 844×390 @3×, 2.52 at 932×430; the device ratio when the screen has fewer lines), 900 / 720 only as the last dynamic-resolution steps. Every tier on a handheld gets this default. Since phone memory round 2 the mobile tier renders at most 2.0 MP (`maxMP`; ~960 lines on a 19.5:9 phone) unless 「保持 1080」 is on. | 390 |
 | AA / sharpen / shafts | `world/sky.js` `PRESETS.mobile` | none / 0 / off (two full-screen passes fewer; judged on 1:1 crops) | FXAA / 0 / on |
 | sun shadow | `render/shadows.js` `TIERS.mobile` | 1 cascade, ±40 m, 1024 | 2 cascades (±24, ±110 m) |
 | shadow taps | `world/sky.js` `setGpuHook({ tap })` | early-out on (`?gputap=0` off) | off |
@@ -786,3 +786,76 @@ boot), the terrain data texture 2560² RGBA16F 52 MB CPU + 52 MB GPU (craters re
 Rapier's wasm ~66 MB, the raw sculpt models' geometry ~28 MB, the post targets at 1080 lines ~50 MB GPU, the flora
 impostor bake targets ~55 MB GPU (their depth buffers stay after the bake), four people (her + the cast at home) ~40 MB
 of geometry + ~25 MB of cel arrays. iOS itself was not measured here; the director's iPhone is the real test.
+
+## Phone memory, round 2: long play (2026-11-26)
+
+After round 1 the director's iPhone (17 Pro Max) booted fine, but "after playing for a few minutes it goes back to the
+loading page": iOS threw the tab away once during play and Safari reloaded it.
+
+### What grew (main beb7a3c, 9 minutes)
+Same harness as round 1, landscape at the iPhone's size (956×440 CSS px, DPR 3: canvas 2351×1082, pixel ratio 2.46), a
+scripted journey: hometown walk → broom flight towards the City of Magic → market walk → a fight with several foes → the
+fire page trial → flight over the open country → idle. JS heap + ArrayBuffers + GPU estimate went from ~1050 MB at home
+to ~1390 MB after the city and the fight and never came down:
+- **GPU geometry**: three keeps every buffer it ever uploaded. Uploaded geometries 517 → 964, GPU buffers 83 → 207 MB.
+- **The City of Magic's life**: the flyers' / crowds' baked bodies (+41 MB of geometry) and the residents' pool of them
+  (+39 MB), built when she nears the city, hidden but kept after she leaves; their GPU buffers on top.
+- **Foes**: pooled foe actors keep their people's models (round 1's pool drain only ran when a foe was built or
+  disposed): +27 MB of cel arrays after the fight.
+- **Audio**: a fight decodes its track and its intensity layer (~77 MB).
+- Flat, but big: render targets ~167 MB at 1080 lines (two full-size half-float targets, depth texture + a depth
+  renderbuffer nobody reads, the impostor atlases with their bake-only depth buffers 2 × 11.8 MB, shadow map, detail
+  layers), the terrain data texture (52 MB CPU + 52 MB GPU), the scorch layer (26 MB GPU), the City's static geometry
+  (81 MB CPU), Rapier's wasm memory (~74 MB).
+
+### What changed (phones; desktop tiers unchanged)
+- **GPU residency** (`render/residency.js`): every draw stamps its geometry (`renderBufferDirect` wrapped: main pass,
+  shadow maps, mirror); geometry not drawn for 60 s is disposed — GPU side only, three uploads it again from the CPU
+  arrays (every geometry keeps them) the next time it is drawn. `G.residency.stats()`; `?residency=0` off.
+- **Memory budget** (`core/membudget.js`, `G.mem`): every 5 s, resident geometry + decoded audio + people's models
+  against 320 MB; over it, the least recently used goes sooner: idle people's models at once, every decoded buffer that is
+  not playing (`G.audio.trim()`), geometry not drawn for 15 s. `G.mem.stats()`; `?membudget=0` off.
+- **The City's life**: let go a minute after she is beyond 2 km, baked again within 1500 m (life.md "Phones");
+  the residents' pool follows.
+- **Foes**: `combat.js` drains the foe actor pool every frame (at most every 5 s): pooled foes nobody reused for 60 s go.
+- **Render targets**: the mobile tier renders at most 2.0 MP (`QUALITY.mobile.maxMP`; 「保持 1080」 lifts it), the
+  composer's targets have no depth buffer, the impostor bake's depth buffers are deleted after the bake.
+- **Audio**: no intensity layer on phones.
+- **Robustness**: a lost WebGL context (`webglcontextlost`: prevented, the journey written down; `webglcontextrestored`
+  or 4 s without it) reloads into the game where she was (the cel arrays, impostor atlases and detail layers live only on
+  the GPU); at most twice in three minutes. Autosave every 20 s on phones and when the page is hidden; a tab reloaded
+  mid-play (sessionStorage flag, `G.save.resume`) skips the title, shows 「接着刚才的旅程……」 on the boot screen and
+  continues the save. The menu's quit clears the flag. Old saves load unchanged (nothing new in the save).
+
+### Measured
+Same journey on main beb7a3c and on this round, run side by side (one run each; a forced GC before every phase
+checkpoint; journey time from the first frame of play). JS heap + ArrayBuffers + GPU estimate, MB:
+
+| phase | before: peak / at the end (GPU buffers) | after: peak / at the end (GPU buffers) |
+|---|---|---|
+| home | 1064 / 1062 (100) | 1026 / 1026 (105) |
+| flyToCity | 1192 / 1190 (140) | 1177 / 1109 (104) |
+| market | 1217 / 1202 (159) | 1131 / 1112 (121) |
+| fight | 1426 / 1401 (172) | 1263 / 1163 (59) |
+| page | 1374 / 1363 (173) | 1107 / 1101 (59) |
+| country | 1350 / 1342 (174) | 1082 / 1049 (52) |
+| idle | 1341 / 1341 (174) | 1050 / 1025 (50) |
+| done | 1336 / 1336 (174) | 1019 / 1019 (50) |
+
+| | main | round 2 |
+|---|---|---|
+| peak | 1426 | 1263 |
+| mean over the last 2 minutes | 1342 | 1058 |
+| GPU buffers at the end | 174 MB | 50 MB |
+| geometries on the GPU at the end | 900 | 169 |
+| render targets | 167 MB | 116 MB |
+| canvas | 2351×1082 | 2084×959 |
+| Chrome renderer / GPU process footprint, peak | 1296 / 844 MB | 1167 / 776 MB |
+
+No upward trend any more: after the city and the fight the total comes back to where it started (~1.0 GB). What is left
+is mostly the world built for the whole map at boot (JS heap ~150 MB; ArrayBuffers ~480 MB at home: the City's static
+geometry 81 MB, the terrain data field 52 MB, Rapier ~74 MB, the raw world models ~57 MB, decoded audio 60–110 MB;
+GPU ~300 MB: render targets 116, terrain data 52, scorch 26). Getting the steady state well under 800 MB needs the world
+builders to stream regions instead of building the whole map at boot — not done here. Left levers, smaller: the
+impostor atlases at a 64 px cell (−17 MB GPU), the scorch layer at 4 m texels (−39 MB; burn marks would blur), music
+decoded at 32 kHz (−15 MB a track).

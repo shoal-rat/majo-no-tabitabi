@@ -31,6 +31,8 @@ export default {
     bytes: '正在取出行囊…… {got} / {total} MB',
     retry: '连接不稳，正在重新取…… {got} / {total} MB',
     failed: '启动失败：',
+    // 手机：iOS 把页面挤掉后 Safari 重新载入，跳过标题直接接着存档走（core/boot.js resume）
+    resume: '接着刚才的旅程……',
     sky: '点亮天空……', terrain: '铺开山川……', flora: '种下草木……', landforms: '勾勒群山……', life: '唤来鸟雀与游鱼……', structures: '搭起街巷与屋顶……',
     physics: '唤醒万物之理……', elements: '调和水火风雷……', props: '摆放器物……', destruction: '记下大地的伤痕……', fx: '点起萤火……', audio: '调试弦音……',
     ui: '展开卷轴……', gameplay: '装好旅行行囊……', craft: '备好手艺……', player: '唤醒伊蕾娜……', spells: '整理魔法笔记……', combat: '布置练习场……', story: '写下故事……',

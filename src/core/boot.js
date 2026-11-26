@@ -14,6 +14,8 @@ import { createDynRes, createPacer } from '../render/dynres.js';
 import { pickQuality, mobileDevice } from '../render/gpubench.js';
 import { mark, addSpan, sliceDone, slice } from './boottime.js';
 import { compileWorld, warmDraw } from '../render/warmup.js';
+import { installResidency } from '../render/residency.js';
+import { installMemBudget } from './membudget.js';
 
 /** Quality presets (G.quality). Systems read these in init(); a change takes effect after reload. */
 export const QUALITY = {
@@ -29,7 +31,9 @@ export const QUALITY = {
   // minLines rendered lines on the short side (1080: pixel ratio ~2.77 on a 390-px-tall phone; the device's own ratio
   // when its screen has fewer lines). Dynamic resolution never goes below it: it sheds scene cost instead ('perf:lite').
   // The loop is paced at 30 fps unless the device clearly holds 60 (render/dynres.js createPacer). Settings key 'mobile'.
-  mobile: { name: 'low', key: 'mobile', mobile: true, minLines: 1080, pixelRatio: 1, shadowSize: 1024, bloom: false, density: 0.35, particles: 0.4, viewDist: 800 },
+  // maxMP (phone memory, round 2): the rendered picture is at most 2.0 MP (~960 lines on a 19.5:9 phone instead of 1080):
+  // the canvas, the scene and post targets are ~36 bytes a pixel together; 「保持 1080」 (settings.keep1080) lifts it
+  mobile: { name: 'low', key: 'mobile', mobile: true, minLines: 1080, maxMP: 2.0, pixelRatio: 1, shadowSize: 1024, bloom: false, density: 0.35, particles: 0.4, viewDist: 800 },
 };
 
 /** Dynamic-resolution steps as fractions of each tier's own pixel ratio (render/dynres.js). Light r3: finer and relative,
@@ -40,6 +44,34 @@ const DYNRES_STEPS = { high: [0.92, 0.85, 0.77], med: [0.9, 0.8], low: [0.88, 0.
  *  Recovery climbs back one step per quiet spell (8 s+, doubling if it pumps): lines first, then the lite levels. */
 const MOB_LINES = [0, 0, 0, 900, 720]; // 0 = the tier's own lines (>= 1080)
 const MOB_LITE = [0, 1, 2, 2, 2];
+
+/**
+ * Phones: a lost WebGL context (iOS drops it under memory pressure) is not a dead canvas. The journey is written down at
+ * once; when the context comes back (or after 4 s without it) the page reloads and continues where she was (resume):
+ * the cel texture arrays, impostor atlases and baked detail layers live only on the GPU and would come back blank.
+ * At most two such reloads in three minutes (a context that keeps dying is left as it is).
+ */
+function watchContext(canvas) {
+  let timer = 0, gone = false;
+  const comeBack = () => {
+    if (gone) return;
+    gone = true; clearTimeout(timer);
+    let list = [];
+    try { list = JSON.parse(sessionStorage.getItem('majo_no_tabitabi_ctxlost') || '[]').filter((t) => Date.now() - t < 180000); } catch (e) { list = []; }
+    if (list.length >= 2) { console.warn('[boot] WebGL context lost again; not reloading'); return; }
+    try { sessionStorage.setItem('majo_no_tabitabi_ctxlost', JSON.stringify(list.concat(Date.now()))); } catch (e) { /* ignore */ }
+    if (G.started && !G.save.disabled) G.save.resume.set();
+    location.reload();
+  };
+  canvas.addEventListener('webglcontextlost', (e) => {
+    e.preventDefault();   // ask for it back
+    G.contextLost = true;
+    G.reportError('webgl', new Error('context lost'));
+    try { if (G.started && (G.mode === 'play' || G.mode === 'menu')) G.save.write(true); } catch (err) { /* keep going */ }
+    timer = setTimeout(comeBack, 4000);
+  }, false);
+  canvas.addEventListener('webglcontextrestored', comeBack, false);
+}
 
 function showFatal(msg) {
   const el = document.getElementById('fatal');
@@ -101,6 +133,15 @@ async function bootInner(systems) {
   // a phone / tablet renders at least 1080 lines on any tier the player picks (the mobile tier already does)
   if (mobile && !G.quality.minLines) G.quality = { ...G.quality, minLines: 1080 };
   if (G.params.autostart || G.params.nosave) G.save.disabled = true;
+  // phones (docs/api/perf.md "Phone memory, round 2"): iOS throws a tab away when it runs short of memory and Safari
+  // reloads it. A page that comes back while she was on her journey (core/save.js resume) skips the title and continues
+  // the save where she was (autosaved every 20 s and when the page is hidden), with a line on the boot screen.
+  const phone = mobile || !!G.quality.mobile;
+  const resume = phone && !G.save.disabled && !G.params.continue && G.save.resume.pending() && G.save.exists();
+  if (resume) {
+    const t0 = document.querySelector('#boot .t');
+    if (t0) { const r = document.createElement('div'); r.className = 's'; r.textContent = t('core.boot.resume'); t0.after(r); }
+  }
 
   mark('settings');
   const renderer = (G.renderer = new THREE.WebGLRenderer({ canvas, antialias: G.params.perf === '0', powerPreference: 'high-performance' }));
@@ -111,7 +152,8 @@ async function bootInner(systems) {
   // phones / tablets: at least minLines lines on the short side (rounded up; the device ratio caps it, a tier's own
   // higher ratio wins)
   const short = Math.max(1, Math.min(window.innerWidth, window.innerHeight));
-  const linesPr = G.quality.minLines ? Math.max(G.quality.pixelRatio, Math.ceil(G.quality.minLines / short * 100) / 100) : G.quality.pixelRatio;
+  let linesPr = G.quality.minLines ? Math.max(G.quality.pixelRatio, Math.ceil(G.quality.minLines / short * 100) / 100) : G.quality.pixelRatio;
+  if (G.quality.maxMP && !G.settings.keep1080) linesPr = Math.max(1, Math.min(linesPr, Math.floor(Math.sqrt(G.quality.maxMP * 1e6 / Math.max(1, window.innerWidth * window.innerHeight)) * 100) / 100));
   const prCap = Number(G.params.pr) > 0 ? Number(G.params.pr) : linesPr;
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, prCap));
   renderer.setSize(window.innerWidth, window.innerHeight, false);
@@ -119,6 +161,13 @@ async function bootInner(systems) {
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 1;
   renderer.shadowMap.enabled = true;
+  if (phone) {
+    watchContext(canvas);
+    // phones: geometry nobody has drawn for a minute gives its GPU buffers back; a memory budget over what can be given
+    // back (geometry, decoded audio, people's models) lets the least recently used go sooner (docs/api/perf.md)
+    if (G.params.residency !== '0') G.residency = installResidency(G, renderer);
+    if (G.params.membudget !== '0') G.mem = installMemBudget(G);
+  }
   // dynamic resolution safety net (docs/api/perf.md): ?dynres=0 or settings.dynRes === false turns it off
   {
     const start = renderer.getPixelRatio();
@@ -268,7 +317,7 @@ async function bootInner(systems) {
     // (the canvas stays clear, the boot backdrop shows through under the title)
     G.setMode('title');
     startLoop(early);
-    const showTitle = !G.params.autostart && !G.params.continue && !!G.ui?.showTitle;
+    const showTitle = !G.params.autostart && !G.params.continue && !resume && !!G.ui?.showTitle;
     const bootEl = document.getElementById('boot');
     if (showTitle && bootEl) bootEl.classList.add('under');
     G.worldReady = loadWorld().then(() => {
@@ -284,7 +333,7 @@ async function bootInner(systems) {
 
   // ---- title -> start ----
   let choice = 'new';
-  if (G.params.continue && G.save.exists()) choice = 'continue';
+  if ((G.params.continue || resume) && G.save.exists()) choice = 'continue';
   else if (G.params.autostart) choice = 'new';
   else if (G.ui?.showTitle) {
     requestAnimationFrame(() => requestAnimationFrame(() => mark('titleShown')));
@@ -305,6 +354,13 @@ async function bootInner(systems) {
     if (Number.isFinite(p[0]) && Number.isFinite(p[1])) G.debug.teleport(p[0], p[1], Number.isFinite(p[2]) ? p[2] : undefined);
   }
   G.started = true;
+  if (phone && !G.save.disabled) {
+    // phones: she is on her journey now; a reload of this tab comes straight back here, the journey written down on hide
+    G.save.resume.set();
+    const keep = () => { if (G.started && (G.mode === 'play' || G.mode === 'menu')) G.save.write(true); };
+    document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') keep(); });
+    window.addEventListener('pagehide', keep);
+  }
   G.env.region = ''; // so the first 'region:enter' (and its banner) fires right after the game starts
   G.setMode('play');
   G.events.emit('game:start', { loaded });
