@@ -81,7 +81,8 @@ export function createWardrobe(P, S, o) {
         W.failed = w.id; want = null; for (const r of w.resolve) r(false); return;
       }
       if (heroineOwned()) return;
-      if (!G.assets?.ready?.(w.asset)) {
+      // want(): keeps a load going (phones let an outfit she took off go after a while: core/assets.js MOB)
+      if (!G.assets?.want?.(w.asset)) {
         // still the stand-in while the wanted outfit keeps her waiting: the one she wears first, if that is in
         if (S.rig?.placeholder && G.assets?.want?.(assetOf(worn))) swap({ id: worn, quiet: true, resolve: [], asset: assetOf(worn), heal: true });
         return;

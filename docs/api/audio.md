@@ -72,7 +72,7 @@ G.audio (system 'audio', pausable:false):
 - The ids for the final boss and the boss music are guesses. The final-boss pattern is /oboroyo|mumy|mumei|final|tsukuyomi/; any other boss id gets bgm_boss. The combat and story ids do not exist yet.
 - There is no music track of its own for 霜见岳 or the palace; they use sun or night music by land, and 霜见岳 gets the mountain wind bed.
 - The battle heuristic counts any 'enemy:hit', so attacking a harmless 纸魅 (paper wraith) in the sunlit meadow also starts battle music for about 7 s.
-- Memory: up to 3 decoded music tracks (about 45 MB each at 48 kHz stereo float) plus 8 ambience loops (about 10 MB each), roughly 220 MB at most. Lower LRU.music in audio.js if that is too much.
+- Memory: up to 3 decoded music tracks (about 45 MB each at 48 kHz stereo float) plus 8 ambience loops (about 10 MB each), roughly 220 MB at most. Lower LRU.music in audio.js if that is too much. Phones (`G.quality.mobile`) use `LRU_MOBILE` (1 track, 2 beds): only what plays stays decoded, a track that fell silent is let go at once, and the asset store does not keep the compressed bytes (docs/api/perf.md "Phone memory").
 - The fire bed samples isBurningAt on a 5×5 grid with 4 m spacing (only when fireCount > 0) and asks G.elements.nearest for a burning object within 14 m. Fires further away are not heard.
 - Positional one-shots get their pan and volume once, when they start; they do not follow a moving source. Use loop() with setPos for anything that moves.
 
@@ -102,5 +102,6 @@ the cue list, the two themes and how to render). Engine changes in `src/audio/`:
 - **Loudness**: every track and layer sum is mastered to −18 LUFS (−1 dBTP ceiling), so `MUSIC_TRIM` is empty.
   `tools/music/probe-volume.js` measures every mood after the master bus in game.
 - **Memory**: `LRU.music` is 4 (a fight's track and its layer are two entries). Decoded music is ~0.38 MB per second
-  of track, so 100–200 s files are 38–75 MB each.
+  of track, so 100–200 s files are 38–75 MB each. Phones: `LRU_MOBILE` (music 1, ambience 2; a fight's track and its
+  layer are both in use, so both stay), and `updateMusic` lets a deck's track go as soon as it has faded out.
 

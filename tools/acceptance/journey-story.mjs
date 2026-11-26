@@ -1,5 +1,6 @@
 // Walk both episodes in a private browser, reload a real save, and check both outcomes
 // of Fran's field trial. Use MV_JOURNEY_QA to choose the screenshot/report directory.
+// --mobile: the phones' tier (quality=mobile: people's models on demand and let go again, smaller caches).
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -23,7 +24,7 @@ try {
     const line = message.args.map((a) => a.value ?? a.description).join(' ');
     if (message.type === 'error' || line.startsWith('[episode]')) console.log(line.slice(0, 680));
   });
-  const base = url + '?quality=medium&pr=1&mute=1&dynres=0';
+  const base = url + '?quality=' + (process.argv.includes('--mobile') ? 'mobile' : 'medium') + '&pr=1&mute=1&dynres=0';
   async function waitFor(expression) {
     const deadline = Date.now() + 150000;
     while (!(await page.evaluate(expression))) {

@@ -702,3 +702,87 @@ before / after pairs that are compared ran side by side.
 | boot set (normal boot, high tier) | ≈ 146 MB, ≈ 400 files | 108.4 MB, 378 files; the other people's 46 MB after |
 
 On the dev server (HTTP/1.1) `G.assets.net.peak` = 6; a normal boot makes no retries.
+
+## Phone memory (2026-11-26)
+
+The director opened the live site in iPhone Safari (4G): boot screen, at ~13 s the 「把手机横过来吧」 card, at ~30 s Safari
+replaced the page with "A problem repeatedly occurred". That is iOS killing the tab's web content process twice, for
+memory. Nobody had tried a real iPhone before; dad7567 (before that day's merges) and ae1a808 (before #51) measure the
+same as main (table below), so it is not a regression of #46 / #47 / #51 / #52 / #58.
+
+### Cause
+The mobile tier loaded what a desktop loads: every preloaded model (396 GLBs, 153 MB), including the 18 other people's
+character models the boot streams in after the world is ready (`G.assets.stream()`) although almost none of them stand
+anywhere near. Each character is ~12 MB of cel texture arrays on the GPU (`actors/celmerge.js`) + ~7 MB of geometry
+(outlines, merged parts, shadow proxy) + its decoded images. On top: four decoded music tracks and eight ambience beds
+(PCM, 35–75 MB a track: ~230 MB), every audio file's compressed bytes kept, and the same palette images decoded again
+for every prop that embeds them (407 embedded images, 275 different).
+
+### What changed (phones only: `G.quality.mobile`; desktop tiers unchanged)
+- **People on demand** (`core/assets.js` `bootOrder` / `stream`): no other people's models at boot or after it; an actor
+  asks for its model when it is created (`rig.js createActor` → `want()`, `healActor` swaps it in; foes in
+  `combat/enemy.js render()`, the cast / errand folk wait for `load()`). The story cast standing near the save still
+  loads at boot. Only the outfit she wears is loaded; the wardrobe loads another when she changes (its wait now keeps a
+  load going: `want()`).
+- **Let go when nobody shows it** (`hold` / `drop` / `letGo`): `createActor` holds a person's model, `dispose()` drops it;
+  a model dropped by every actor for 60 s (`MOB.releaseMs`, swept every 10 s) is let go: its geometry, cel texture
+  arrays and decoded images are freed and the parsed copy forgotten; the next actor of theirs loads it again (the cast
+  erases its actors beyond 165 m; `combat/enemy.js` frees a pooled foe actor nobody reused for 60 s, checked on any
+  foe's build / dispose). Materials are not disposed (some, like the outline material, are shared by every character).
+  `G.assets.held()` / `releaseIdle()` for tests.
+- **Images**: model images over 512 px (hers: 1024) are scaled down once at load, before the cel merge packs them
+  (`capImages`); a picture the world's models embed several times is decoded once and shared (`shareImages`, SHA-1 of
+  the embedded bytes → one three.js `Source`). People keep their own images, so letting one go never closes a shared one.
+- **One parse at a time** (`MOB.parse`): parse + cel cooking of several models no longer stack their peaks.
+- **Audio** (`audio/audio.js` `LRU_MOBILE`): one decoded track (a fight: its track and its layer), two ambience beds; a
+  deck that has faded out lets its track go at once (a track decoded but not yet started — a fight's track waiting for
+  its layer — is kept 10 s); the asset store does not keep the compressed bytes. Also fixed for every tier: `evict()`
+  removed entries from the list it was walking, so it skipped one and could drop the newest track.
+
+### Measured
+Headless Chrome (`tools/cdp.mjs`) with the phone emulation of `play.mjs --mobile` (touch, `mobile: true`, dpr 3, the
+mobile tier picked by itself), held upright at boot (390×844: the turn card), turned sideways once the world is ready
+(844×390), 20 s walking + 40 s flying, sound on, local server. JS heap = CDP `Runtime.getHeapUsage` used size;
+ArrayBuffers = its `backingStorageSize` (geometry arrays, decoded audio, Rapier's wasm memory); GPU estimate = every
+texture / buffer / renderbuffer allocation hooked at the WebGL call (per mip level, freed on delete) + the canvas × 3;
+decoded audio = the audio cache's decoded ids × their PCM size; footprints = macOS `footprint` of Chrome's renderer and
+GPU processes (Chrome's own overhead included; not what iOS counts, but the same direction).
+
+Boot on the local server (one run each; the dad7567 run predates the audio-cache column):
+
+| MB | dad7567 | ae1a808 | main 29c845d | this branch |
+|---|---|---|---|---|
+| world ready (s) | 6.8 | 6.5 | 6.3 | 7.4 |
+| models parsed (GLB MB) | 395 (150) | 395 (150) | 396 (153) | 377 (102) |
+| JS heap peak | 226 | 200 | 189 | 214 |
+| ArrayBuffers peak (geometry, PCM, wasm) | 619 | 613 | 752 | 512 |
+| GPU estimate peak (of it textures) | 639 (495) | 639 (495) | 646 (502) | 389 (245) |
+| decoded audio peak / at the end | – | 230 / 230 | 230 / 230 | 117 / 84 |
+| **JS heap + GPU, peak** | **864** | **825** | **827** | **604** |
+| **JS heap + ArrayBuffers + GPU, peak** | **1483** | **1438** | **1579** | **1116** |
+| same, after the minute of play | 1460 | 1398 | 1418 | 1037 |
+| Chrome renderer footprint peak | 2015 | 1964 | 2131 | 1489 |
+| Chrome GPU process footprint peak | 1180 | 1209 | 1177 | 886 |
+
+The same over a 4G-like link (`Network.emulateNetworkConditions` 20 Mbit/s, 80 ms; 30 s of play; footprints not sampled
+often enough on this run to quote). On main the GPU estimate climbs from 333 to 646 MB in the 25 s after the world is
+ready, while the other people's models stream in. One parse at a time costs nothing on this link (on the local server
+~1 s: world ready 6.3 → 6.6–7.4 s):
+
+| MB | main, 20 Mbit/s 80 ms | this branch, same link |
+|---|---|---|
+| world ready (s) | 58.2 | 56.7 |
+| models parsed (GLB MB) | 396 (153) | 377 (102) |
+| JS heap peak | 194 | 160 |
+| ArrayBuffers peak (geometry, PCM, wasm) | 623 | 481 |
+| GPU estimate peak (of it textures) | 646 (500) | 389 (245) |
+| decoded audio peak / at the end | 230 / 230 | 117 / 84 |
+| **JS heap + GPU, peak** | **824** | **549** |
+| **JS heap + ArrayBuffers + GPU, peak** | **1447** | **1029** |
+| same, after the minute of play | 1401 | 1020 |
+
+Where the rest goes now (after the minute, phones): City of Magic geometry ~81 MB (CPU copies, built for the whole map at
+boot), the terrain data texture 2560² RGBA16F 52 MB CPU + 52 MB GPU (craters rewrite it, ground queries read it),
+Rapier's wasm ~66 MB, the raw sculpt models' geometry ~28 MB, the post targets at 1080 lines ~50 MB GPU, the flora
+impostor bake targets ~55 MB GPU (their depth buffers stay after the bake), four people (her + the cast at home) ~40 MB
+of geometry + ~25 MB of cel arrays. iOS itself was not measured here; the director's iPhone is the real test.

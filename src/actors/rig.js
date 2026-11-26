@@ -225,6 +225,8 @@ export function createActor(assetId, opts = {}) {
   const boneNames = { ...DEFAULT_BONES, ...(info.bones || {}) };
   let model = G.assets?.ready?.(assetId) ? G.assets.model(assetId) : null;
   if (!model) { model = placeholderModel(); if (G.assets?.has?.(assetId)) G.assets.want?.(assetId); }
+  // phones: the asset store lets a person's model go once no actor holds it (core/assets.js MOB); dropped once in dispose()
+  let held = !model.userData.placeholder && !!G.assets?.hold?.(assetId);
   const group = new THREE.Group();
   group.name = 'actor:' + assetId;
   group.add(model);
@@ -1052,6 +1054,7 @@ export function createActor(assetId, opts = {}) {
       const sk = new Set();
       model.traverse((m) => { if (m.isSkinnedMesh && m.skeleton) sk.add(m.skeleton); });
       for (const k of sk) { try { k.dispose(); } catch (e) { /* already gone */ } }
+      if (held) { held = false; G.assets?.drop?.(assetId); }
     },
   };
 

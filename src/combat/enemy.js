@@ -14,6 +14,23 @@ const _v = new THREE.Vector3(), _w = new THREE.Vector3();
 const GRAV = 22;
 let nextId = 1;
 const actorPool = new Map();
+// phones (core/assets.js MOB): a pooled humanoid foe holds its person's model; one not reused for POOL_IDLE s is freed
+// so the asset store can let that model go (checked on any foe's build / dispose, at most every 5 s)
+const POOL_IDLE = 60;
+let poolCheck = 0;
+function drainPool() {
+  const now = G.time.real;
+  if (!G.quality?.mobile || now - poolCheck < 5) return;
+  poolCheck = now;
+  for (const p of actorPool.values()) {
+    for (let i = p.length - 1; i >= 0; i--) {
+      const a = p[i];
+      if (now - (a._pooledAt ?? now) < POOL_IDLE) continue;
+      p.splice(i, 1);
+      try { a.dispose(); a.model?.traverse((o) => { if (o.isSkinnedMesh && o.skeleton) o.skeleton.dispose(); }); } catch (e) { G.reportError('combat:actor', e); }
+    }
+  }
+}
 
 const EL_TEXT = { fire: 0xffa055, water: 0x7fd4ff, ice: 0xcff6ff, wind: 0xb6f5d0, thunder: 0xd2a8ff, earth: 0xe0b878, sun: 0xffe08a, moon: 0xc8b8ff };
 
@@ -94,6 +111,7 @@ export class Enemy {
 
   build(opts = {}) {
     const def = this.def;
+    drainPool();
     if (def.humanoid) {
       const key = def.asset + '|' + (def.tint || '');
       const pool = actorPool.get(key);
@@ -355,7 +373,7 @@ export class Enemy {
       a.footGround = null;
       let p = actorPool.get(this._actorKey);
       if (!p) actorPool.set(this._actorKey, (p = []));
-      if (p.length < 4 && !this.def.noPool && !a.placeholder) { a.stop?.('upper', 0); a.play('idle', { fade: 0 }); p.push(a); }
+      if (p.length < 4 && !this.def.noPool && !a.placeholder) { a.stop?.('upper', 0); a.play('idle', { fade: 0 }); a._pooledAt = G.time.real; p.push(a); }
       else { try { a.dispose(); a.model?.traverse((o) => { if (o.isSkinnedMesh && o.skeleton) o.skeleton.dispose(); }); } catch (e) { G.reportError('combat:actor', e); } }
       this.actor = null;
     }
