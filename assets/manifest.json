@@ -13345,7 +13345,7 @@
   "source": "https://freesound.org/people/baryy/sounds/409146/",
   "duration": 28.5,
   "loop": true,
-  "notes": "Sunny meadow: birds, bees and a light breeze.",
+  "notes": "Sunny meadow: birds and a light breeze. Cleaned from the recording: insect flybys at the microphone (a ~215 Hz wingbeat buzz), a steady 145 Hz hum and a 14.7 kHz recorder whine.",
   "preload": false
  },
  "amb_forest_dusk": {
@@ -13400,7 +13400,7 @@
   "source": "https://freesound.org/people/laughatlantic/sounds/528067/",
   "duration": 21,
   "loop": true,
-  "notes": "Water gently lapping on a lake shore.",
+  "notes": "Water gently lapping on a lake shore. Cleaned from the recording: steady 13.7 kHz and 15.4 kHz recorder whines.",
   "preload": false
  },
  "amb_rain": {

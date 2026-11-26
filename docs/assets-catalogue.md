@@ -382,8 +382,8 @@
 ## amb_ (10)
 - `amb_fire` — 27.8s — Crackling fireplace / campfire.
 - `amb_forest_dusk` — 28.5s — Subdued late-autumn forest evening; dusk woods.
-- `amb_lake` — 21.0s — Water gently lapping on a lake shore.
-- `amb_meadow` — 28.5s — Sunny meadow: birds, bees and a light breeze.
+- `amb_lake` — 21.0s — Water gently lapping on a lake shore. Cleaned from the recording: steady 13.7 kHz and 15.4 kHz recorder whines.
+- `amb_meadow` — 28.5s — Sunny meadow: birds and a light breeze. Cleaned from the recording: insect flybys at the microphone (a ~215 Hz wingbeat buzz), a steady 145 Hz hum and a 14.7 kHz recorder whine.
 - `amb_mountain` — 28.5s — Cold rolling mountain wind.
 - `amb_night` — 28.5s — Calm night with crickets.
 - `amb_rain` — 25.5s — Steady rain.
