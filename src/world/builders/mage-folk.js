@@ -381,6 +381,13 @@ export function mageResidents(ctx) {
       old.tick(time);
       return;
     }
+    // phones: the city life let its baked bodies go (far away, life/city-flyers.js unload): this pool of them goes too,
+    // and is built again from the new bodies when she comes back
+    if (live && live.st.bodies !== live.bodies) {
+      for (const M of live.pool.meshes) if (M) for (const m of M) { m.geometry.dispose(); root.remove(m); }
+      for (const k in live.props) { live.props[k].geometry.dispose(); root.remove(live.props[k]); }
+      live = null;
+    }
     if (!live) {
       const ph = G.life?.city?.phase;
       if (!G.life?.city || ph === 'off') { failed = true; return; }

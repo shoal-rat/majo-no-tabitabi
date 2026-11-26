@@ -4,6 +4,11 @@ import { ANCHORS } from '../data/world.js';
 
 const SAVE_KEY = 'majo_no_tabitabi_episodes_save_v1';
 const SETTINGS_KEY = 'majo_no_tabitabi_settings_v1';
+// phones (docs/api/perf.md "Phone memory, round 2"): set in this tab's sessionStorage while she is on her journey; a page
+// that comes back with it (iOS threw the tab away and Safari reloaded it, or a lost GPU context: core/boot.js) skips
+// the title and continues the save. Quitting to the title clears it. Not part of the save.
+const RESUME_KEY = 'majo_no_tabitabi_resume';
+const AUTOSAVE_MS = 45000, AUTOSAVE_MOBILE_MS = 20000;
 
 /** A brand-new game. Add new persistent fields HERE (with defaults) so old saves keep loading. */
 export function defaultState() {
@@ -102,6 +107,8 @@ function sanitizeMerge(base, extra) {
 export function createSave(G) {
   let store = null;
   try { store = window.localStorage; store.getItem('x'); } catch (e) { store = null; }
+  let session = null;
+  try { session = window.sessionStorage; session.getItem('x'); } catch (e) { session = null; }
   let lastWrite = 0;
 
   const save = {
@@ -136,10 +143,19 @@ export function createSave(G) {
     },
     /** Delete the stored save. */
     erase() { try { store?.removeItem(SAVE_KEY); } catch (e) { /* ignore */ } },
-    /** Called by the core loop: quiet autosave every 45 s of play. */
+    /** Called by the core loop: quiet autosave every 45 s of play (phones: every 20 s). */
     tick() {
       if (G.mode !== 'play' || this.disabled) return;
-      if (performance.now() - lastWrite > 45000) this.write(true);
+      if (performance.now() - lastWrite > (G.quality?.mobile ? AUTOSAVE_MOBILE_MS : AUTOSAVE_MS)) this.write(true);
+    },
+    /**
+     * Phones: a quick way back after the tab was thrown away mid-play. set() while she is on her journey (boot.js), clear()
+     * before going back to the title on purpose (menu quit), pending() at boot: true = skip the title, continue the save.
+     */
+    resume: {
+      set() { try { session?.setItem(RESUME_KEY, '1'); } catch (e) { /* private mode: no quick comeback */ } },
+      clear() { try { session?.removeItem(RESUME_KEY); } catch (e) { /* ignore */ } },
+      pending() { try { return session?.getItem(RESUME_KEY) === '1'; } catch (e) { return false; } },
     },
     loadSettings() {
       let s = defaultSettings();

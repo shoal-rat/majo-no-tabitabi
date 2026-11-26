@@ -630,6 +630,7 @@ export function createMenu(host, stage, providers) {
     if (!ok) return;
     quitting = true;
     try { G.save?.write(); } catch (e) { G.reportError('ui:quit', e); }
+    G.save?.resume?.clear?.();   // back to the title on purpose: the reload must not resume (phones, core/save.js)
     await stage.fade(1, 0.7, '#07060e');
     UI.reload();
   }

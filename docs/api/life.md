@@ -186,6 +186,11 @@ two near LODs. Near-LOD budgets for the whole town (high: 4 at LOD0, 24 at LOD1;
 (LOD0 ≤ 14 m, LOD1 ≤ 55 m); agents beyond 700 m (flyers) / 280 m (balcony folk) / 150 m (street folk) or outside the
 frustum (beyond 20–25 m) are not drawn. No per-frame allocations in the update / draw loops. Counts scale with
 `G.quality.density` (× 0.7 more on low).
+**Phones** (phone memory round 2, docs/api/perf.md): a minute beyond 2 km from the city, the baked bodies, pools, trails and
+crowds are let go (`unload()`: ~40 MB of geometry, its GPU buffers and the bone textures; `phase` back to 'wait', `st.gen`
++1) and baked again when she comes within 1500 m; `builders/mage-folk.js` drops its residents' pool of the same bodies
+and builds it again from the new ones.
+
 **API** (`G.life.city`): `phase` ('wait' | 'loading' | 'live' | 'off'), `flyers`, `crowds.folk`, `plan`, `load()` (tests:
 start baking now), `clear()`, `stats()` → { flyers, visible, modes, escorts, perches, lanes, spires, streets, crowd,
 draws, tris, ms, keepOut }. Also in `G.life.stats().city`. Tests only: `G.life.city.st.forceLod`; a view-only camera

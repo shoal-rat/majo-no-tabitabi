@@ -251,6 +251,7 @@ export const skySystem = {
     preset.tone = G.params.tone === '0' ? 0 : 1; // ?tone=0: the old ACES fit (look-round A/B)
     preset.cloudUniforms = dome.uniforms;
     preset.quality = q.name;
+    preset.mobile = !!q.mobile;   // phones: lighter targets (render/post.js createPipeline)
     preset.sunShadow = sun.shadow;
     const pipe = createPipeline(renderer, scene, G.camera, preset);
     Object.assign(pipe.scenePass.compMat.uniforms, {

@@ -70,6 +70,19 @@ void main() {
   }
 }`;
 
+/** Detach and delete a render target's depth renderbuffer (three made it; nothing draws into the target again). */
+function dropDepth(r, rt) {
+  const p = r.properties.get(rt), rb = p.__webglDepthbuffer;
+  if (!rb || Array.isArray(rb)) return;
+  const gl = r.getContext();
+  r.setRenderTarget(rt);
+  gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.RENDERBUFFER, null);
+  gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_STENCIL_ATTACHMENT, gl.RENDERBUFFER, null);
+  gl.deleteRenderbuffer(rb);
+  p.__webglDepthbuffer = undefined;
+  rt.depthBuffer = false;
+}
+
 /**
  * Bake impostor frames for the given models. models: [{ model }] (near models in model space).
  * Returns { albedo, normal, cols, rows, cell, info: [{ cx, cy, cz, he }] } or null when no renderer is present.
@@ -148,6 +161,9 @@ export function bakeImpostors(G, models, cell) {
     }
     rt.scissorTest = false; rt.viewport.set(0, 0, W, H);
   }
+  // phones (docs/api/perf.md "Phone memory, round 2"): the depth buffers were for the bake only; the atlases are only
+  // sampled from now on. 2 × 11.8 MB at the mobile cell size
+  if (G.quality?.mobile) for (const rt of [rtA, rtN]) dropDepth(r, rt);
   r.setRenderTarget(prevRT);
   r.setClearColor(prevCol, prevA);
   r.autoClear = prevAuto; r.shadowMap.autoUpdate = prevShadow;

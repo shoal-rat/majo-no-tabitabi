@@ -221,6 +221,7 @@ export function createAssets(G) {
   const enterParse = () => (gate.n < MOB.parse ? (gate.n++, null) : new Promise((r) => gate.q.push(r)));
   const leaveParse = () => { const nx = gate.q.shift(); if (nx) nx(); else gate.n--; };
   const holds = new Map(), idleSince = new Map();
+  const peopleSize = new Map();   // phones: id -> bytes a person's model holds (geometry + cel arrays + decoded images; membudget.js)
   let sweeper = 0;
   const releasable = (id) => id.startsWith('char_') && !!manifest[id]?.clipsFrom;   // people (the animation files stay)
   function stat(id) {
@@ -544,6 +545,27 @@ export function createAssets(G) {
     }
   }
 
+  /** Phones: what a parsed model holds, roughly: its geometry arrays (CPU; the GPU copy is counted by render/residency.js
+   *  while it is drawn), its cel texture arrays (GPU, with mips) and its decoded images (CPU). */
+  function modelBytes(root) {
+    const geos = new Set(), texs = new Set();
+    root.traverse((o) => {
+      if (o.geometry) geos.add(o.geometry);
+      for (const m of [].concat(o.material || [])) if (m) {
+        for (const k in m) if (m[k]?.isTexture) texs.add(m[k]);
+        for (const U of [m.uniforms, m.celU]) if (U) for (const u of Object.values(U)) { const v = u?.value; if (v?.isTexture) texs.add(v); else if (Array.isArray(v)) for (const x of v) if (x?.isTexture) texs.add(x); }
+      }
+    });
+    let n = 0;
+    for (const g of geos) { for (const k in g.attributes) n += g.attributes[k].array?.byteLength || 0; if (g.index) n += g.index.array.byteLength; }
+    for (const t of texs) {
+      const im = t.image || {};
+      if (t.name === 'celArray') n += (im.width || 0) * (im.height || 0) * (im.depth || 1) * 4 * 4 / 3;
+      else if (im.width && !im.data) n += im.width * im.height * 4;
+    }
+    return n;
+  }
+
   /** Phones: an actor (rig.js) shows this model; true when it should call drop(id) when it goes. */
   function hold(id) {
     if (!mob() || !releasable(id) || !gltfs.has(id)) return false;
@@ -565,7 +587,7 @@ export function createAssets(G) {
     const g = gltfs.get(id);
     idleSince.delete(id); holds.delete(id);
     if (!g) return;
-    gltfs.delete(id); pending.delete(id); castPre.delete(id);
+    gltfs.delete(id); pending.delete(id); castPre.delete(id); peopleSize.delete(id);
     const s = st.get(id); if (s) { s.got = 0; s.fails = 0; s.failedAt = 0; }
     const geos = new Set(), mats = new Set(), texs = new Set();
     const texOf = (v) => { if (v && v.isTexture) texs.add(v); else if (Array.isArray(v)) for (const x of v) if (x && x.isTexture) texs.add(x); };
@@ -635,6 +657,7 @@ export function createAssets(G) {
     t0 = performance.now();
     if (HEROINE_ASSETS.has(id)) bindFlightCloth(gltf);
     if (info.toon !== false) toonify(gltf.scene, { id, ...(info.mats && !orig ? { mats: info.mats } : {}) });
+    if (mob() && releasable(id)) peopleSize.set(id, modelBytes(gltf.scene));
     assetStat(grp, 'cookMs', performance.now() - t0);
     // perf pass (boot / memory): the parser keeps the whole GLB binary chunk, every buffer-view copy and the compressed
     // images in its cache for the life of the model; nothing reads them after parsing (geometry and textures hold
@@ -826,6 +849,8 @@ export function createAssets(G) {
     held: () => ({ held: [...holds].filter(([, n]) => n > 0).map(([id]) => id), idle: [...idleSince.keys()], released: api.released || 0 }),
     /** Tests: let go every idle person's model now (as if MOB.releaseMs had passed). */
     releaseIdle() { for (const id of [...idleSince.keys()]) if ((holds.get(id) || 0) === 0) letGo(id); },
+    /** Phones: bytes held by the people's models now loaded (estimate; core/membudget.js). */
+    peopleBytes() { let n = 0; for (const [id, b] of peopleSize) if (gltfs.has(id)) n += b; return n; },
     texture(id) {
       if (textures.has(id)) return textures.get(id);
       const info = manifest[id];
