@@ -105,3 +105,17 @@ the cue list, the two themes and how to render). Engine changes in `src/audio/`:
   of track, so 100–200 s files are 38–75 MB each. Phones: `LRU_MOBILE` (music 1, ambience 2; a fight's track and its
   layer are both in use, so both stay), and `updateMusic` lets a deck's track go as soon as it has faded out.
 
+
+## Ambience cleanup round (2026-11)
+Players heard a faint mosquito-like buzz on the title and in day play. Its source was the `amb_meadow` field recording
+(the day bed, which also plays under the title): insects passing the microphone (a ~215 Hz wingbeat with harmonics up
+to ~3 kHz, several passes per 28.5 s loop, up to −13 dBFS in the file), a steady 145.2 Hz hum and a 14.7 kHz recorder
+whine. `amb_lake` had two steady recorder whines (13.7 and 15.4 kHz). Both files were cleaned in place:
+- narrow notches on the steady lines;
+- meadow only: 110–1600 Hz limited to the bed's own background level (per-bin 40th percentile over the loop,
+  smoothed across ±100 Hz, +3 dB), and the tracked harmonics of each insect pass up to 4 kHz pulled down to it;
+- processed circularly (the loop seam is unchanged), same length and format (Ogg Opus 48 kHz stereo).
+Birdsong (2–10 kHz) and the breeze are kept. The score, the synth voices and the runtime graph were checked and are
+clean: with every bus silenced the output is digital silence, and the score's voices alias below −60 dB.
+To hear or measure what the game outputs, `node tools/play.mjs --audio` taps the master output (`T.record(name, s)`
+writes `<out>/<name>.wav`, see the header of `tools/play.mjs`).
