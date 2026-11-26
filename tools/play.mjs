@@ -35,6 +35,9 @@
 // --fault    sub:stall|fail[:n][,…]  the first n (default 1) requests whose URL contains `sub` hang with no answer
 //            (stall: a dead connection) or are reset (fail). E.g. --fault elaina_apprentice.glb:stall,prop_:fail:3
 //            The script can end every fault at once: window.__mvFaults('off') (e.g. "the connection came back").
+// --audio    sound on (mute=0) and a tap on everything that reaches the speakers (the master output, after the
+//            compressor), recorded on the audio thread into <out>/<name>.wav (stereo 32-bit float):
+//               await T.record('name', seconds)   or   T.recStart('name') … await T.recStop()   -> { file, seconds, sr }
 // --hidden   boot in a background tab (another tab in front, real background throttling) until the game is ready
 // --boot-timeout s  how long to wait for the game to become ready (default: --timeout, 90..240)
 // Without a script: waits 2.5 s and saves final.png.
@@ -68,7 +71,8 @@ const { server, url } = await serveGame({ getBuild: async () => b, port: profPor
 const usp = new URLSearchParams(opt('params') || '');
 const TITLE = args.includes('--title'); // real flow: boot -> title screen -> the script picks new / continue (saving enabled)
 if (!TITLE) usp.set('autostart', '1');
-if (!usp.has('mute')) usp.set('mute', '1');
+const AUDIO = args.includes('--audio');
+if (!usp.has('mute')) usp.set('mute', AUDIO ? '0' : '1');
 if (opt('quality')) usp.set('quality', opt('quality'));
 
 const HIDDEN = args.includes('--hidden');
@@ -134,6 +138,80 @@ page.on('Runtime.bindingCalled', async (p) => {
   page.send('Runtime.evaluate', { expression: `window.__mvShotDone(${JSON.stringify(String(p.payload || 'shot'))})` }).catch(() => {});
 });
 
+const recs = new Map(); // --audio: name -> { sr, parts: [Buffer] } until the last chunk arrives
+if (AUDIO) {
+  // every connect() into a speaker also feeds a tap bus; an AudioWorklet copies the tap's PCM on the audio thread
+  await page.send('Page.addScriptToEvaluateOnNewDocument', { source: `(() => {
+    const connect = AudioNode.prototype.connect;
+    AudioNode.prototype.connect = function (dest, ...rest) {
+      const r = connect.call(this, dest, ...rest);
+      if (dest instanceof AudioDestinationNode) {
+        let t = window.__mvTap;
+        if (!t || t.ctx !== this.context) t = window.__mvTap = { ctx: this.context, bus: new GainNode(this.context), connect };
+        connect.call(this, t.bus);
+      }
+      return r;
+    };
+  })();` });
+  await page.send('Runtime.addBinding', { name: '__mvAudio' });
+  page.on('Runtime.bindingCalled', (p) => {
+    if (p.name !== '__mvAudio') return;
+    let m; try { m = JSON.parse(p.payload); } catch (e) { note('error', 'audio chunk unreadable'); return; }
+    const r = recs.get(m.name) || { sr: m.sr, parts: [] };
+    recs.set(m.name, r);
+    if (m.b64) r.parts.push(Buffer.from(m.b64, 'base64'));
+    if (!m.last) return;
+    recs.delete(m.name);
+    const pcm = Buffer.concat(r.parts), h = Buffer.alloc(44);
+    h.write('RIFF', 0); h.writeUInt32LE(36 + pcm.length, 4); h.write('WAVEfmt ', 8); h.writeUInt32LE(16, 16);
+    h.writeUInt16LE(3, 20); h.writeUInt16LE(2, 22); h.writeUInt32LE(r.sr, 24); h.writeUInt32LE(r.sr * 8, 28);
+    h.writeUInt16LE(8, 32); h.writeUInt16LE(32, 34); h.write('data', 36); h.writeUInt32LE(pcm.length, 40);
+    fs.writeFileSync(path.join(outDir, String(m.name).replace(/[^\w.-]/g, '_') + '.wav'), Buffer.concat([h, pcm]));
+    page.send('Runtime.evaluate', { expression: `window.__mvAudioDone(${JSON.stringify(m.name)})` }).catch(() => {});
+  });
+}
+const AUDIO_HELPERS = `(() => {
+  const T = window.__T, done = {};
+  window.__mvAudioDone = (n) => { const r = done[n]; delete done[n]; if (r) r(); };
+  const SRC = "class Tap extends AudioWorkletProcessor { constructor() { super(); this.on = true; this.n = 0; this.L = new Float32Array(8192); this.R = new Float32Array(8192);"
+    + " this.port.onmessage = (e) => { if (e.data === 'stop') { this.flush(); this.on = false; this.port.postMessage('stopped'); } }; }"
+    + " flush() { if (this.n) this.port.postMessage([this.L.slice(0, this.n), this.R.slice(0, this.n)]); this.n = 0; }"
+    + " process(inp) { if (!this.on) return false; const i = inp[0], L = i && i[0], R = (i && i[1]) || L;"
+    + " for (let k = 0; k < 128; k++) { this.L[this.n] = L ? L[k] : 0; this.R[this.n] = R ? R[k] : 0; this.n++; }"
+    + " if (this.n >= 8192) this.flush(); return true; } } registerProcessor('mv-tap', Tap);";
+  let cur = null, mod = null;
+  T.recStart = async (name) => {
+    const t = window.__mvTap;
+    if (!t) throw new Error('no audio reached the speakers yet (is the game muted?)');
+    if (cur) throw new Error('already recording ' + cur.name);
+    if (!mod) mod = t.ctx.audioWorklet.addModule(URL.createObjectURL(new Blob([SRC], { type: 'text/javascript' })));
+    await mod;
+    const node = new AudioWorkletNode(t.ctx, 'mv-tap', { numberOfInputs: 1, numberOfOutputs: 1, channelCount: 2, channelCountMode: 'explicit' });
+    const rec = cur = { name, node, chunks: [], frames: 0, sr: t.ctx.sampleRate };
+    rec.stopped = new Promise((res) => { node.port.onmessage = (e) => { if (e.data === 'stopped') res(); else { rec.chunks.push(e.data); rec.frames += e.data[0].length; } }; });
+    t.connect.call(t.bus, node); t.connect.call(node, t.ctx.destination);
+  };
+  T.recStop = async () => {
+    const rec = cur; if (!rec) return null;
+    cur = null;
+    rec.node.port.postMessage('stop'); await rec.stopped;
+    try { window.__mvTap.bus.disconnect(rec.node); rec.node.disconnect(); } catch (e) { /* gone */ }
+    const out = new Float32Array(rec.frames * 2); let o = 0;
+    for (const [L, R] of rec.chunks) for (let k = 0; k < L.length; k++) { out[o++] = L[k]; out[o++] = R[k]; }
+    const bytes = new Uint8Array(out.buffer), STEP = 768 * 1024;
+    const fin = new Promise((res) => { done[rec.name] = res; });
+    for (let at = 0; at < bytes.length || at === 0; at += STEP) {
+      let s = ''; const sub = bytes.subarray(at, at + STEP);
+      for (let k = 0; k < sub.length; k += 0x8000) s += String.fromCharCode.apply(null, sub.subarray(k, k + 0x8000));
+      window.__mvAudio(JSON.stringify({ name: rec.name, sr: rec.sr, b64: btoa(s), last: at + STEP >= bytes.length }));
+      if (!bytes.length) break;
+    }
+    await fin;
+    return { file: rec.name + '.wav', seconds: +(rec.frames / rec.sr).toFixed(2), sr: rec.sr };
+  };
+  T.record = async (name, sec) => { await T.recStart(name); await T.wait(sec * 1000); return T.recStop(); };
+})()`;
+
 let code = 0;
 let result;
 const t0 = Date.now();
@@ -165,6 +243,7 @@ try {
   } else {
     console.log(`ready in ${((Date.now() - t0) / 1000).toFixed(1)} s`);
     try {
+      if (AUDIO) await page.evaluate(AUDIO_HELPERS);
       if (MOBILE) await page.evaluate(`(() => { const T = window.__T, act = new Map(), wait = {}; let seq = 0;
         window.__mvTouchDone = (n) => { const r = wait[n]; delete wait[n]; if (r) r(); };
         const send = (type) => new Promise((res) => { const n = ++seq; wait[n] = res; window.__mvTouch(JSON.stringify({ seq: n, type, points: [...act].map(([id, p]) => ({ id, x: p.x, y: p.y, radiusX: 8, radiusY: 8, force: 1 })) })); });
